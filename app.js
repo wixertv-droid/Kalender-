@@ -325,28 +325,31 @@ function renderWeek() {
         }
     });
 }
-
 /**
  * 6. INITIALISIERUNG BEIM START & PWA SETUP
  */
 document.addEventListener('DOMContentLoaded', () => {
     ladeUndWendeEinstellungenAn();
-    generiereWochenAnsicht(); // NEU: Baut die Woche erst dynamisch auf
-    renderWeek();             // Dann werden die Termine reingeladen
+    renderWeek();
     updateLiveSystem();
     setInterval(updateLiveSystem, 60000);
 
-    // PWA Service Worker anmelden
+    // VERBESSERTE PWA REGISTRIERUNG
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Fehler:', err));
+        // Nutzt den relativen Pfad, damit es auch auf GitHub Pages funktioniert
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+            .then(reg => console.log('System bereit (Offline-Mode aktiv)', reg))
+            .catch(err => console.log('Offline-System konnte nicht geladen werden:', err));
     }
 
-    // SICHERHEITS-LOADER
+    // SICHERHEITS-LOADER (Verschwindet nach Boot-Vorgang)
     setTimeout(() => {
         const loader = document.getElementById('app-loader');
         if (loader) {
             loader.style.opacity = '0';
             setTimeout(() => loader.remove(), 500);
         }
-    }, 800);
+    }, 400);
 });
+
+

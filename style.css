@@ -1,0 +1,520 @@
+/* ==========================================================================
+   AGENDA 2050 - ULTIMATIVE ZENTRALE CSS ENGINE (VOLLSTÄNDIG)
+   ========================================================================== */
+
+:root {
+    /* Neon Farbpalette */
+    --neon-pink: #ff2a6d;
+    --neon-gold: #e5b05c;
+    --neon-cyan: #05d9e8;
+    --neon-red: #ff003c;
+    --neon-green: #39ff14;
+    
+    /* Hintergrund & Glas-Effekte */
+    --bg-deep: #050109;
+    --glass-bg: rgba(20, 5, 15, 0.85);
+    --glass-border: rgba(255, 42, 109, 0.3);
+    
+    /* Dynamische Kategorien (Werden von JS überschrieben) */
+    --color-kat1: #e5b05c;
+    --color-kat2: #ff2a6d;
+    --color-kat3: #05d9e8;
+}
+
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+}
+
+body { 
+    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; 
+    background: radial-gradient(circle at top right, #1a000d, var(--bg-deep) 85%);
+    color: #ffffff; 
+    min-height: 100vh; 
+    overflow-x: hidden;
+    line-height: 1.6;
+    font-size: 22px; 
+}
+
+/* Container-Standard für volle Breite auf Tablets */
+.dashboard, .wochen-container, .settings-container, .tag-detail-container, .kunden-container, .jahr-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: 25px;
+    padding-right: 25px;
+}
+
+/* =========================================
+   2. SYSTEM-LOADER
+   ========================================= */
+.loader-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--bg-deep); display: flex; flex-direction: column;
+    justify-content: center; align-items: center; z-index: 10000;
+    transition: opacity 0.5s ease, visibility 0.5s;
+}
+
+.cyber-spinner {
+    width: 80px; height: 80px;
+    border: 5px solid var(--glass-border);
+    border-top: 5px solid var(--neon-pink);
+    border-radius: 50%;
+    animation: spin 1s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    box-shadow: 0 0 25px rgba(255, 42, 109, 0.5);
+}
+
+.loader-text {
+    margin-top: 30px; font-size: 0.9rem; letter-spacing: 6px;
+    color: var(--neon-pink); text-transform: uppercase;
+    text-shadow: 0 0 10px var(--neon-pink); animation: blink 2s infinite;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* =========================================
+   3. DASHBOARD / HEADER
+   ========================================= */
+.dashboard {
+    background: var(--glass-bg);
+    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    padding-top: 15px; padding-bottom: 15px;
+    display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0; z-index: 1000;
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+}
+
+.header-info { text-align: center; }
+
+.titel-neon {
+    color: var(--neon-pink); font-size: 1.6rem; font-weight: 900;
+    text-transform: uppercase; letter-spacing: 5px;
+    text-shadow: 0 0 15px var(--neon-pink);
+}
+
+.countdown-pulsing {
+    background: rgba(255, 42, 109, 0.1); border: 1px solid var(--neon-pink);
+    color: var(--neon-gold); padding: 6px 18px; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 2px; margin-top: 8px; display: inline-block;
+    box-shadow: 0 0 15px rgba(255, 42, 109, 0.3);
+    animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 5px rgba(255, 42, 109, 0.3); transform: scale(1); }
+    50% { box-shadow: 0 0 20px rgba(255, 42, 109, 0.7); transform: scale(1.02); }
+}
+
+.btn-cyber {
+    width: 65px; height: 65px; border-radius: 18px;
+    background: rgba(255, 255, 255, 0.05); border: 1px solid transparent;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer; font-size: 1.8rem; transition: all 0.3s ease;
+}
+
+.btn-settings { color: var(--neon-cyan); border-color: var(--neon-cyan); box-shadow: inset 0 0 15px rgba(5,217,232,0.15); }
+.btn-add { color: var(--neon-pink); border-color: var(--neon-pink); box-shadow: inset 0 0 15px rgba(255,42,109,0.15); }
+.btn-cyber:hover { background: rgba(255,255,255,0.1); transform: translateY(-3px); }
+.btn-cyber:active { transform: scale(0.9); }
+
+/* =========================================
+   4. WOCHENÜBERSICHT (woche.html)
+   ========================================= */
+.wochen-container { padding-top: 30px; padding-bottom: 60px; }
+
+.tag-zeile {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 30px; padding: 25px; margin-bottom: 30px;
+    position: relative; transition: all 0.3s ease; cursor: pointer;
+}
+
+.tag-zeile:hover { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.15); }
+
+.tag-zeile.heute {
+    background: rgba(229, 176, 92, 0.05);
+    border: 1px solid var(--neon-gold);
+    box-shadow: 0 0 30px rgba(229, 176, 92, 0.15);
+}
+
+.tag-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
+
+.tag-name {
+    font-size: 1.1rem; font-weight: 900; text-transform: uppercase;
+    color: #888; letter-spacing: 3px;
+}
+.heute .tag-name { color: var(--neon-gold); text-shadow: 0 0 10px rgba(229, 176, 92, 0.5); }
+
+.timeline-horizontal {
+    width: 100%; height: 75px; background: rgba(0, 0, 0, 0.7);
+    border-radius: 40px; position: relative; overflow: hidden;
+    box-shadow: inset 0 5px 25px rgba(0,0,0,0.9);
+    background-image: 
+        repeating-linear-gradient(to right, transparent, transparent calc(12.5% - 1px), rgba(255,255,255,0.15) 12.5%),
+        repeating-linear-gradient(to right, transparent, transparent calc(4.16% - 1px), rgba(255,255,255,0.03) 4.16%);
+}
+
+.timeline-skala {
+    display: flex; justify-content: space-between; padding: 12px 25px 0;
+    font-size: 0.75rem; font-weight: bold; color: #555; letter-spacing: 2px;
+}
+
+/* =========================================
+   5. TERMIN-BALKEN & LIVE LINIE
+   ========================================= */
+.termin-segment {
+    position: absolute; height: 100%; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; border-radius: 8px;
+    border-left: 2px solid rgba(255, 255, 255, 0.4);
+    border-right: 2px solid rgba(0, 0, 0, 0.5);
+    padding: 0 15px; transition: transform 0.2s; z-index: 5;
+    overflow: hidden;
+}
+
+.termin-segment:hover { transform: scaleY(1.05); z-index: 10; }
+
+.termin-segment.kat1 { background: var(--color-kat1); box-shadow: 0 0 25px var(--color-kat1); }
+.termin-segment.kat2 { background: var(--color-kat2); box-shadow: 0 0 25px var(--color-kat2); }
+.termin-segment.kat3 { background: var(--color-kat3); box-shadow: 0 0 25px var(--color-kat3); }
+
+.status-label {
+    font-size: 0.8rem; font-weight: 900; color: #ffffff;
+    text-transform: uppercase; text-shadow: 2px 2px 5px rgba(0,0,0,0.9);
+    white-space: nowrap; pointer-events: none;
+}
+
+.jetzt-linie-horizontal {
+    position: absolute; top: 0; bottom: 0; width: 4px;
+    background: var(--neon-red); box-shadow: 0 0 25px var(--neon-red);
+    z-index: 100; pointer-events: none;
+}
+
+/* =========================================
+   6. MODAL / POP-UP (Global für Termine)
+   ========================================= */
+.modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(15px);
+    z-index: 5000; justify-content: center; align-items: center;
+}
+
+.modal-content {
+    background: #0a0a0d; border: 2px solid var(--neon-pink); border-radius: 40px;
+    padding: 45px; width: 95%; max-width: 550px;
+    box-shadow: 0 0 60px rgba(255, 42, 109, 0.4);
+    animation: slideUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+@keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.form-title { color: var(--neon-pink); font-size: 1.5rem; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 30px; }
+.form-group { margin-bottom: 25px; }
+.form-group label { display: block; font-size: 0.85rem; color: #777; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; font-weight: bold; }
+
+.cyber-input-full, .cyber-select {
+    width: 100%; padding: 20px; background: rgba(255,255,255,0.05); border: 1px solid #333;
+    color: #fff; border-radius: 18px; font-size: 1.2rem; transition: 0.3s; font-family: inherit;
+}
+.cyber-input-full:focus, .cyber-select:focus { border-color: var(--neon-cyan); background: rgba(255,255,255,0.08); box-shadow: 0 0 20px rgba(5, 217, 232, 0.3); }
+
+textarea.cyber-input-full {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.5;
+}
+
+.btn-save {
+    width: 100%; background: var(--neon-pink); color: white; border: none;
+    padding: 22px; border-radius: 20px; font-weight: 900; font-size: 1.2rem;
+    text-transform: uppercase; letter-spacing: 4px; cursor: pointer;
+    box-shadow: 0 10px 30px rgba(255, 42, 109, 0.4); margin-top: 15px; transition: 0.3s;
+}
+.btn-save:active { transform: scale(0.98); }
+
+/* =========================================
+   7. EINSTELLUNGEN (einstellungen.html)
+   ========================================= */
+.settings-container { padding-top: 40px; padding-bottom: 80px; max-width: 900px; }
+
+.settings-card {
+    background: var(--glass-bg); padding: 35px; border-radius: 35px;
+    border: 1px solid var(--glass-border); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); margin-bottom: 35px;
+}
+
+.setting-title {
+    color: var(--neon-cyan); margin-bottom: 30px; font-size: 1.2rem; text-transform: uppercase;
+    letter-spacing: 3px; border-bottom: 2px solid rgba(5, 217, 232, 0.3); padding-bottom: 15px; font-weight: 900;
+}
+
+.setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 20px; }
+.setting-label { font-size: 1.1rem; color: #fff; font-weight: bold; letter-spacing: 1px; }
+
+/* Cyber Switch (Wochenstart) */
+.cyber-switch { position: relative; display: inline-block; width: 80px; height: 40px; }
+.cyber-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.8); transition: .4s; border-radius: 40px; border: 2px solid var(--neon-pink); box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+.slider:before { position: absolute; content: ""; height: 28px; width: 28px; left: 4px; bottom: 4px; background-color: var(--neon-pink); transition: .4s cubic-bezier(0.68, -0.55, 0.265, 1.55); border-radius: 50%; box-shadow: 0 0 15px var(--neon-pink); }
+input:checked + .slider { border-color: var(--neon-cyan); }
+input:checked + .slider:before { transform: translateX(40px); background-color: var(--neon-cyan); box-shadow: 0 0 15px var(--neon-cyan); }
+.switch-text { font-size: 1.1rem; color: var(--neon-gold); margin-left: 20px; font-weight: 900; text-shadow: 0 0 10px rgba(229, 176, 92, 0.5); }
+
+/* Kategorien Setup & Plattformen */
+.kat-row { display: flex; gap: 25px; align-items: center; margin-bottom: 30px; background: rgba(255, 255, 255, 0.03); padding: 25px; border-radius: 25px; border: 1px solid rgba(255, 255, 255, 0.05); }
+.color-preview-wrapper { position: relative; width: 80px; height: 80px; border-radius: 18px; overflow: hidden; border: 3px solid #444; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.color-picker { position: absolute; top: -10px; left: -10px; width: 100px; height: 100px; cursor: pointer; background: none; border: none; }
+.input-wrapper { flex-grow: 1; }
+.input-label { font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: bold; display: block; margin-bottom: 10px; letter-spacing: 2px; }
+
+/* Danger Zone */
+.danger-zone { margin-top: 60px; padding: 40px; border: 2px dashed var(--neon-red); border-radius: 30px; text-align: center; background: rgba(255, 0, 60, 0.05); }
+.danger-title { color: var(--neon-red); font-weight: 900; font-size: 1.5rem; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 4px; text-shadow: 0 0 15px rgba(255, 0, 60, 0.4); }
+.danger-text { color: #aaa; font-size: 1.1rem; margin-bottom: 30px; line-height: 1.6; }
+.btn-danger { background: rgba(255, 0, 60, 0.2); border: 2px solid var(--neon-red); color: white; padding: 20px 40px; border-radius: 18px; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 1.2rem; width: 100%; box-shadow: 0 0 20px rgba(255, 0, 60, 0.3); transition: 0.3s; letter-spacing: 2px; }
+.btn-danger:hover { background: var(--neon-red); box-shadow: 0 0 35px var(--neon-red); }
+
+/* =========================================
+   8. TAGESANSICHT VERTIKALE TIMELINE (tag.html)
+   ========================================= */
+.tag-detail-container { padding-top: 40px; padding-bottom: 120px; max-width: 1000px; margin: 0 auto; }
+.datum-anzeige { font-size: 1.2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; color: var(--neon-gold); margin-top: 5px; text-shadow: 0 0 15px rgba(229, 176, 92, 0.5); }
+.empty-state { text-align: center; padding: 60px 20px; color: #666; font-size: 1.3rem; letter-spacing: 3px; text-transform: uppercase; border: 2px dashed #333; border-radius: 25px; margin-top: 30px; font-weight: bold; }
+
+.vertical-timeline {
+    position: relative;
+    padding-left: 100px;
+    margin-top: 40px;
+}
+
+.vertical-timeline::before {
+    content: '';
+    position: absolute;
+    top: 0; 
+    left: 80px; 
+    width: 4px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 40px;
+}
+
+.timeline-time {
+    position: absolute;
+    left: -100px; 
+    top: 35px;
+    width: 70px;
+    text-align: right;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 10px rgba(5, 217, 232, 0.4);
+    letter-spacing: 1px;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -29.5px; 
+    top: 38px;
+    width: 22px;
+    height: 22px;
+    background: var(--bg-deep);
+    border: 4px solid; 
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.termin-karte {
+    background: var(--glass-bg); 
+    padding: 30px; 
+    border-radius: 25px; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6); 
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-left: 6px solid; 
+    margin-left: 20px;
+}
+
+.termin-karte:hover { transform: translateX(5px); box-shadow: 0 15px 40px rgba(0,0,0,0.8); }
+
+.slot-inhalt { flex-grow: 1; display: flex; flex-direction: column; gap: 12px; }
+.termin-info-name { font-size: 1.6rem; font-weight: 900; color: #ffffff; letter-spacing: 2px; text-transform: uppercase; }
+.termin-info-zeit { font-size: 1.1rem; color: #aaa; display: flex; align-items: center; gap: 15px; }
+
+.termin-info-kontakt { font-size: 1rem; color: var(--neon-cyan); background: rgba(5, 217, 232, 0.1); padding: 8px 18px; border-radius: 12px; display: inline-block; width: fit-content; border: 1px solid rgba(5, 217, 232, 0.3); font-weight: bold; }
+.termin-info-notiz { font-size: 1rem; color: #ddd; background: rgba(255, 255, 255, 0.05); padding: 18px; border-radius: 15px; margin-top: 5px; line-height: 1.5; border-left: 4px solid #555; }
+
+.btn-delete {
+    background: rgba(255, 0, 60, 0.1); border: 2px solid var(--neon-red); color: var(--neon-red);
+    padding: 15px 25px; border-radius: 15px; cursor: pointer; font-size: 1.1rem; font-weight: bold;
+    text-transform: uppercase; letter-spacing: 2px; transition: 0.3s; box-shadow: 0 0 15px rgba(255, 0, 60, 0.2);
+}
+.btn-delete:hover { background: var(--neon-red); color: white; box-shadow: 0 0 25px var(--neon-red); transform: scale(1.05); }
+
+/* =========================================
+   9. KUNDEN DATENBANK (kunden.html)
+   ========================================= */
+.kunden-container { padding-top: 30px; padding-bottom: 100px; max-width: 1000px; margin: 0 auto; }
+
+.search-bar {
+    width: 100%; padding: 22px 25px; background: rgba(255, 255, 255, 0.03);
+    border: 2px solid var(--neon-cyan); border-radius: 20px; color: white;
+    font-size: 1.2rem; margin-bottom: 30px; box-shadow: 0 0 15px rgba(5, 217, 232, 0.2);
+    transition: 0.3s; font-family: inherit;
+}
+.search-bar:focus { outline: none; box-shadow: 0 0 25px rgba(5, 217, 232, 0.5); background: rgba(255, 255, 255, 0.08); }
+
+.kunden-liste { display: grid; grid-template-columns: 1fr; gap: 25px; }
+
+@media(min-width: 768px) { .kunden-liste { grid-template-columns: 1fr 1fr; } }
+
+.kunden-karte {
+    background: var(--glass-bg); border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 25px; padding: 30px; display: flex; align-items: flex-start; gap: 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5); transition: 0.3s; position: relative;
+}
+.kunden-karte:hover { border-color: var(--neon-pink); transform: translateY(-5px); box-shadow: 0 15px 40px rgba(255, 42, 109, 0.2); }
+
+.kunden-avatar {
+    width: 90px; height: 90px; border-radius: 50%; background-color: rgba(255, 42, 109, 0.1);
+    border: 2px solid var(--neon-pink); display: flex; justify-content: center; align-items: center;
+    font-size: 2.5rem; font-weight: bold; color: var(--neon-pink); background-size: cover;
+    background-position: center; flex-shrink: 0; box-shadow: 0 0 15px rgba(255, 42, 109, 0.4);
+}
+
+.kunden-info { flex-grow: 1; }
+.kunden-name { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: white; margin-bottom: 8px; }
+.kunden-kontakt { font-size: 1rem; color: var(--neon-cyan); margin-bottom: 12px; display: inline-block; background: rgba(5, 217, 232, 0.1); padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(5, 217, 232, 0.3); font-weight: bold; }
+.kunden-notiz { font-size: 0.95rem; color: #aaa; line-height: 1.5; background: rgba(0, 0, 0, 0.3); padding: 15px; border-radius: 15px; border-left: 3px solid #555; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+
+.btn-delete-kunde {
+    position: absolute; top: 20px; right: 20px; background: none; border: none; color: #555;
+    font-size: 1.5rem; cursor: pointer; transition: 0.3s;
+}
+.btn-delete-kunde:hover { color: var(--neon-red); text-shadow: 0 0 15px var(--neon-red); transform: scale(1.2); }
+
+.image-upload-wrapper { display: flex; align-items: center; gap: 25px; margin-bottom: 25px; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 20px; border: 1px dashed var(--neon-cyan); }
+.image-preview { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--neon-cyan); display: flex; justify-content: center; align-items: center; color: var(--neon-cyan); font-size: 2rem; background-size: cover; background-position: center; flex-shrink: 0; box-shadow: 0 0 15px rgba(5,217,232,0.3); }
+.upload-btn-label { background: rgba(5, 217, 232, 0.1); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); padding: 15px 25px; border-radius: 15px; cursor: pointer; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; font-size: 1rem; transition: 0.3s; }
+.upload-btn-label:hover { background: var(--neon-cyan); color: black; box-shadow: 0 0 20px var(--neon-cyan); }
+input[type="file"] { display: none; }
+
+/* =========================================
+   10. MEDIA QUERIES (TABLET / MOBILE FIXES)
+   ========================================= */
+@media (max-width: 1024px) {
+    body { font-size: 20px; }
+    .titel-neon { font-size: 1.4rem; }
+    .tag-zeile { padding: 20px; margin-bottom: 20px; }
+    .timeline-horizontal { height: 65px; }
+    .btn-cyber { width: 55px; height: 55px; font-size: 1.5rem; }
+}
+
+@media (max-width: 768px) {
+    /* Timeline Mobile */
+    .vertical-timeline { padding-left: 70px; }
+    .vertical-timeline::before { left: 55px; }
+}
+
+/* =========================================
+   11. JAHRESKALENDER (jahr.html)
+   ========================================= */
+.jahr-container {
+    padding: 30px 25px 100px 25px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Tablet: 2 Spalten, Desktop: 3 Spalten */
+@media(min-width: 768px) { .jahr-container { grid-template-columns: repeat(2, 1fr); } }
+@media(min-width: 1200px) { .jahr-container { grid-template-columns: repeat(3, 1fr); } }
+
+.monat-karte {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 25px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.monat-titel {
+    color: var(--neon-cyan);
+    font-size: 1.4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    text-align: center;
+    text-shadow: 0 0 10px rgba(5, 217, 232, 0.4);
+}
+
+.kalender-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* Erzwingt exakt 7 Spalten */
+    gap: 6px;
+    text-align: center;
+}
+
+.kalender-wochentag {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding-bottom: 10px;
+}
+
+.kalender-tag {
+    aspect-ratio: 1 / 1; /* Macht die Felder quadratisch */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.1rem;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+/* Der Hover-Effekt für die ganze Woche */
+.kalender-tag:hover, .kalender-tag.hover-woche {
+    background: rgba(5, 217, 232, 0.2) !important;
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 15px rgba(5, 217, 232, 0.4);
+    z-index: 5;
+}
+
+.kalender-tag.heute-markierung {
+    background: rgba(229, 176, 92, 0.15);
+    border: 2px solid var(--neon-gold);
+    color: var(--neon-gold);
+    font-weight: bold;
+}
+
+.kalender-tag.leer {
+    background: transparent;
+    cursor: default;
+}
+
+.kalender-tag.leer:hover {
+    box-shadow: none;
+    border-color: transparent;
+    background: transparent;
+}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lade Daten...</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="loader-container">
+        <div class="jarvis-ring">
+            <div class="loader-text" id="prozent">0%</div>
+        </div>
+        <div class="loader-status" id="status-text">Analysiere Sektor...</div>
+    </div>
+
+    <script>
+        let prozent = 0;
+        const anzeige = document.getElementById('prozent');
+        const statusText = document.getElementById('status-text');
+        
+        // Ziel auslesen (Standard: woche.html)
+        const ziel = localStorage.getItem('ladeZiel') || 'woche.html';
+
+        const interval = setInterval(() => {
+            prozent += Math.floor(Math.random() * 15) + 5; 
+            if(prozent > 100) prozent = 100;
+            
+            anzeige.innerText = prozent + '%';
+
+            if(prozent > 50) {
+                if(ziel === 'einstellungen.html') statusText.innerText = "Lade Konfiguration...";
+                else if(ziel === 'tag.html') statusText.innerText = "Lade Tagesansicht...";
+                else statusText.innerText = "Synchronisiere Woche...";
+            }
+            
+            if(prozent === 100) {
+                statusText.innerText = "BEREIT";
+                statusText.style.color = "var(--neon-gold)";
+                clearInterval(interval);
+                
+                setTimeout(() => {
+                    window.location.href = ziel;
+                }, 300);
+            }
+        }, 40);
+    </script>
+</body>
+</html>

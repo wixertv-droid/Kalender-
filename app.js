@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (PWA READY)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V2.0 - DYNAMISCHER KALENDER)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -50,6 +50,59 @@ function ladeUndWendeEinstellungenAn() {
         }
     } catch (e) {
         console.error("Fehler in ladeUndWendeEinstellungenAn:", e);
+    }
+}
+
+/**
+ * NEU V2.0: WOCHENANSICHT DYNAMISCH GENERIEREN
+ */
+function generiereWochenAnsicht() {
+    const container = document.querySelector('.wochen-container');
+    // Nur ausführen, wenn wir uns auf der Wochen-Seite befinden
+    if (!container) return; 
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let startDatum = new Date();
+    
+    // Wenn ein Datum in der URL übergeben wurde (aus dem Jahreskalender), nutze dieses
+    if (urlParams.get('d')) {
+        startDatum = new Date(urlParams.get('d'));
+    }
+
+    // Finde den Montag der aktuellen Woche
+    let tag = startDatum.getDay();
+    let diff = startDatum.getDate() - tag + (tag === 0 ? -6 : 1);
+    let montag = new Date(startDatum.setDate(diff));
+
+    const wochentage = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+    const heuteISO = new Date().toISOString().split('T')[0];
+
+    container.innerHTML = ''; // Container leeren
+
+    for (let i = 0; i < 7; i++) {
+        let aktuellesDatum = new Date(montag);
+        aktuellesDatum.setDate(montag.getDate() + i);
+        
+        let isoDatum = aktuellesDatum.toISOString().split('T')[0];
+        let tagZahl = String(aktuellesDatum.getDate()).padStart(2, '0');
+        let monatZahl = String(aktuellesDatum.getMonth() + 1).padStart(2, '0');
+        
+        let isHeute = (isoDatum === heuteISO) ? 'heute' : '';
+        let timelineId = (isoDatum === heuteISO) ? 'id="timeline-heute"' : '';
+
+        // Titel der Seite anpassen (Monat / Jahr anzeigen)
+        if (i === 0 && document.getElementById('header-monat')) {
+            const monate = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+            document.getElementById('header-monat').innerText = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}`;
+        }
+
+        container.innerHTML += `
+            <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" onclick="location.href='tag.html?d=${isoDatum}'">
+                <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
+                <div class="timeline-horizontal" ${timelineId}></div>
+                <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+            </div>
+        `;
     }
 }
 
@@ -278,16 +331,17 @@ function renderWeek() {
  */
 document.addEventListener('DOMContentLoaded', () => {
     ladeUndWendeEinstellungenAn();
-    renderWeek();
+    generiereWochenAnsicht(); // NEU: Baut die Woche erst dynamisch auf
+    renderWeek();             // Dann werden die Termine reingeladen
     updateLiveSystem();
     setInterval(updateLiveSystem, 60000);
 
-    // PWA Service Worker anmelden (Macht die App installierbar)
+    // PWA Service Worker anmelden
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW Fehler:', err));
     }
 
-    // SICHERHEITS-LOADER (Verschwindet immer)
+    // SICHERHEITS-LOADER
     setTimeout(() => {
         const loader = document.getElementById('app-loader');
         if (loader) {

@@ -40,7 +40,7 @@ body {
 }
 
 /* Container-Standard für volle Breite auf Tablets */
-.dashboard, .wochen-container, .settings-container, .tag-detail-container, .kunden-container {
+.dashboard, .wochen-container, .settings-container, .tag-detail-container, .kunden-container, .jahr-container {
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
@@ -426,4 +426,95 @@ input[type="file"] { display: none; }
     /* Timeline Mobile */
     .vertical-timeline { padding-left: 70px; }
     .vertical-timeline::before { left: 55px; }
-   
+}
+
+/* =========================================
+   11. JAHRESKALENDER (jahr.html)
+   ========================================= */
+.jahr-container {
+    padding: 30px 25px 100px 25px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Tablet: 2 Spalten, Desktop: 3 Spalten */
+@media(min-width: 768px) { .jahr-container { grid-template-columns: repeat(2, 1fr); } }
+@media(min-width: 1200px) { .jahr-container { grid-template-columns: repeat(3, 1fr); } }
+
+.monat-karte {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 25px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.monat-titel {
+    color: var(--neon-cyan);
+    font-size: 1.4rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    text-align: center;
+    text-shadow: 0 0 10px rgba(5, 217, 232, 0.4);
+}
+
+.kalender-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr); /* Erzwingt exakt 7 Spalten */
+    gap: 6px;
+    text-align: center;
+}
+
+.kalender-wochentag {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding-bottom: 10px;
+}
+
+.kalender-tag {
+    aspect-ratio: 1 / 1; /* Macht die Felder quadratisch */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.1rem;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+/* Der Hover-Effekt für die ganze Woche */
+.kalender-tag:hover, .kalender-tag.hover-woche {
+    background: rgba(5, 217, 232, 0.2) !important;
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 15px rgba(5, 217, 232, 0.4);
+    z-index: 5;
+}
+
+.kalender-tag.heute-markierung {
+    background: rgba(229, 176, 92, 0.15);
+    border: 2px solid var(--neon-gold);
+    color: var(--neon-gold);
+    font-weight: bold;
+}
+
+.kalender-tag.leer {
+    background: transparent;
+    cursor: default;
+}
+
+.kalender-tag.leer:hover {
+    box-shadow: none;
+    border-color: transparent;
+    background: transparent;
+}

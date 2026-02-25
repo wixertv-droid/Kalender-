@@ -45,61 +45,23 @@
     </div>
 
     <div class="dashboard">
-        <div class="btn-cyber btn-settings" onclick="location.href='einstellungen.html'">⚙️</div>
+        <div style="display: flex; gap: 15px;">
+            <div class="btn-cyber btn-settings" onclick="location.href='einstellungen.html'" title="Einstellungen">⚙️</div>
+            <div class="btn-cyber" onclick="location.href='jahr.html'" title="Jahreskalender" style="color: var(--neon-cyan); border-color: var(--neon-cyan);">📅</div>
+        </div>
         
         <div class="header-info">
-            <div class="titel-neon">Agenda 2050</div>
+            <div class="titel-neon" id="header-monat">SYNCING...</div>
             <div id="header-countdown" class="countdown-pulsing">SYSTEM READY</div>
         </div>
 
         <div style="display: flex; gap: 15px;">
-            <div class="btn-cyber" onclick="location.href='kunden.html'" style="color: var(--neon-cyan); border-color: var(--neon-cyan);">👥</div>
-            <div class="btn-cyber btn-add" onclick="openModal()">➕</div>
+            <div class="btn-cyber" onclick="location.href='kunden.html'" title="Kunden Datenbank" style="color: var(--neon-cyan); border-color: var(--neon-cyan);">👥</div>
+            <div class="btn-cyber btn-add" onclick="openModal()" title="Neuer Termin">➕</div>
         </div>
     </div>
 
     <div class="wochen-container">
-        <div class="tag-zeile" data-datum="2026-02-23" onclick="location.href='tag.html?d=2026-02-23'">
-            <div class="tag-header"><span class="tag-name">Montag <small>23.02.</small></span></div>
-            <div class="timeline-horizontal"></div>
-            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-        </div>
-
-        <div class="tag-zeile" data-datum="2026-02-24" onclick="location.href='tag.html?d=2026-02-24'">
-            <div class="tag-header"><span class="tag-name">Dienstag <small>24.02.</small></span></div>
-            <div class="timeline-horizontal"></div>
-            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-        </div>
-
-        <div class="tag-zeile heute" data-datum="2026-02-25" onclick="location.href='tag.html?d=2026-02-25'">
-            <div class="tag-header"><span class="tag-name">Mittwoch <small>25.02.</small></span></div>
-            <div class="timeline-horizontal" id="timeline-heute"></div>
-            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-        </div>
-
-        <div class="tag-zeile" data-datum="2026-02-26" onclick="location.href='tag.html?d=2026-02-26'">
-            <div class="tag-header"><span class="tag-name">Donnerstag <small>26.02.</small></span></div>
-            <div class="timeline-horizontal"></div>
-            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-        </div>
-
-        <div class="tag-zeile" data-datum="2026-02-27" onclick="location.href='tag.html?d=2026-02-27'">
-            <div class="tag-header"><span class="tag-name">Freitag <small>27.02.</small></span></div>
-            <div class="timeline-horizontal"></div>
-            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-        </div>
-
-        <div class="tag-zeile" data-datum="2026-02-28" onclick="location.href='tag.html?d=2026-02-28'">
-            <div class="tag-header"><span class="tag-name">Samstag <small>28.02.</small></span></div>
-            <div class="timeline-horizontal"></div>
-            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-        </div>
-
-        <div class="tag-zeile" data-datum="2026-03-01" onclick="location.href='tag.html?d=2026-03-01'">
-            <div class="tag-header"><span class="tag-name">Sonntag <small>01.03.</small></span></div>
-            <div class="timeline-horizontal"></div>
-            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-        </div>
     </div>
 
     <div class="modal-overlay" id="terminModal">
@@ -160,11 +122,19 @@
             } else { vBox.style.display = 'none'; }
         }
 
-        // Datum für das Modal voreinstellen (Heute)
+        // Datum für das Modal voreinstellen (Wählt heute ODER den Tag aus der URL)
         document.addEventListener('DOMContentLoaded', () => {
             const dInput = document.getElementById('terminDatum');
-            // Nutzt das aktuelle Datum Deiner Zeitzone
-            if(dInput) dInput.value = new Date().toLocaleDateString('en-CA'); 
+            const urlParams = new URLSearchParams(window.location.search);
+            if(dInput) {
+                // Wenn wir aus dem Kalender auf ein Datum geklickt haben, nimmt das Plus-Icon dieses Datum!
+                if(urlParams.get('d')) {
+                    dInput.value = urlParams.get('d');
+                } else {
+                    const heute = new Date();
+                    dInput.value = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                }
+            }
         });
     </script>
 

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Agenda 2050 | Kunden Datenbank</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff2a6d">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+
+    <div class="loader-container" id="app-loader">
+        <div class="cyber-spinner"></div>
+        <div class="loader-text">LOADING DATABASE...</div>
+    </div>
+
+    <div class="dashboard">
+        <div class="btn-cyber btn-settings" onclick="location.href='woche.html'" title="Zurück">⬅️</div>
+        
+        <div class="header-info">
+            <div class="titel-neon">Kunden DB</div>
+            <div class="countdown-pulsing">Stamm & Kontakte</div>
+        </div>
+        
+        <div class="btn-cyber btn-add" onclick="openKundenModal(false)" title="Neuen Kunden anlegen">➕</div>
+    </div>
+
+    <div class="kunden-container">
+        <input type="text" id="sucheKunden" class="search-bar" placeholder="🔍 Kundenname suchen..." onkeyup="sucheAusfuehren()">
+
+        <div id="kunden-liste" class="kunden-liste">
+            </div>
+    </div>
+
+    <div class="modal-overlay" id="kundenModal">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <div class="form-title" id="kundenModalTitle">Neues Profil</div>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                <div style="flex: 1; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px dashed var(--neon-cyan); text-align: center;">
+                    <div id="imagePreview1" style="width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--neon-cyan); margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; color: var(--neon-cyan); font-size: 1.5rem; background-size: cover; background-position: center;">📷</div>
+                    <label style="background: rgba(5, 217, 232, 0.1); color: var(--neon-cyan); padding: 8px 15px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem; display: inline-block;">
+                        Bild 1
+                        <input type="file" accept="image/*" style="display: none;" onchange="handleImageUpload(event, 1)">
+                    </label>
+                </div>
+                <div style="flex: 1; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px; border: 1px dashed var(--neon-pink); text-align: center;">
+                    <div id="imagePreview2" style="width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--neon-pink); margin: 0 auto 10px; display: flex; justify-content: center; align-items: center; color: var(--neon-pink); font-size: 1.5rem; background-size: cover; background-position: center;">📷</div>
+                    <label style="background: rgba(255, 42, 109, 0.1); color: var(--neon-pink); padding: 8px 15px; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: 0.8rem; display: inline-block;">
+                        Bild 2
+                        <input type="file" accept="image/*" style="display: none;" onchange="handleImageUpload(event, 2)">
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Kundenname</label>
+                <input type="text" id="kundeName" class="cyber-input-full" placeholder="Name für Sync...">
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1.2;">
+                    <label>Plattform</label>
+                    <select id="kundePlattform" class="cyber-select"></select>
+                </div>
+                <div class="form-group" style="flex: 2;">
+                    <label>Username / Nummer</label>
+                    <input type="text" id="kundeKontakt" class="cyber-input-full" placeholder="...">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Direkter Profil-Link (URL)</label>
+                <input type="url" id="kundeLink" class="cyber-input-full" placeholder="https://instagram.com/user...">
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Preis (Betrag)</label>
+                    <input type="number" id="kundePreis" class="cyber-input-full" placeholder="z.B. 150">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Präferenz (AO / Save)</label>
+                    <select id="kundeStatus" class="cyber-select">
+                        <option value="none">Keine Wahl</option>
+                        <option value="AO">AO (Alles ohne mit Test)</option>
+                        <option value="Save">Save (Alles mit Kondom)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Dauerhafte Notizen</label>
+                <textarea id="kundeNotizen" class="cyber-input-full" rows="3" placeholder="Vorlieben, wichtige Infos..."></textarea>
+            </div>
+
+            <button class="btn-save" onclick="saveKunde()">PROFIL SPEICHERN</button>
+            <button onclick="closeKundenModal()" style="width:100%; background:none; border:none; color:#666; margin-top:15px; cursor:pointer; text-transform:uppercase; font-size:1.1rem; letter-spacing:2px; font-weight:bold;">Abbrechen</button>
+        </div>
+    </div>
+
+    <script>
+        let currentBild1 = ""; 
+        let currentBild2 = "";
+        let bearbeitungsKundeId = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderKunden();
+            setTimeout(() => { if(document.getElementById('app-loader')) document.getElementById('app-loader').remove(); }, 500);
+        });
+
+        // Bild-Kompressor
+        function handleImageUpload(event, bildNummer) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const MAX_SIZE = 400; 
+                    let width = img.width, height = img.height;
+                    if (width > height) { if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; } }
+                    else { if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; } }
+                    canvas.width = width; canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.7);
+                    const preview = document.getElementById('imagePreview' + bildNummer);
+                    preview.style.backgroundImage = `url(${compressed})`;
+                    preview.innerHTML = ""; 
+                    if(bildNummer === 1) currentBild1 = compressed;
+                    if(bildNummer === 2) currentBild2 = compressed;
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        // Modal öffnen
+        function openKundenModal(id) {
+            bearbeitungsKundeId = id;
+            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon' };
+            const platDropdown = document.getElementById('kundePlattform');
+            platDropdown.innerHTML = `<option value="none">Keine Plattform</option><option value="${settings.plat1}">${settings.plat1}</option><option value="${settings.plat2}">${settings.plat2}</option><option value="${settings.plat3}">${settings.plat3}</option><option value="${settings.plat4}">${settings.plat4}</option>`;
+
+            if (id) {
+                document.getElementById('kundenModalTitle').innerText = "Profil bearbeiten";
+                const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+                const k = kunden.find(x => x.id === id);
+                if (k) {
+                    document.getElementById('kundeName').value = k.name;
+                    document.getElementById('kundePlattform').value = k.plattform || 'none';
+                    document.getElementById('kundeKontakt').value = k.kontakt || '';
+                    document.getElementById('kundeLink').value = k.link || '';
+                    document.getElementById('kundePreis').value = k.preis || '';
+                    document.getElementById('kundeStatus').value = k.status || 'none';
+                    document.getElementById('kundeNotizen').value = k.notizen || '';
+                    currentBild1 = k.bild1 || ""; currentBild2 = k.bild2 || "";
+                    document.getElementById('imagePreview1').style.backgroundImage = currentBild1 ? `url(${currentBild1})` : 'none';
+                    document.getElementById('imagePreview1').innerHTML = currentBild1 ? '' : '📷';
+                    document.getElementById('imagePreview2').style.backgroundImage = currentBild2 ? `url(${currentBild2})` : 'none';
+                    document.getElementById('imagePreview2').innerHTML = currentBild2 ? '' : '📷';
+                }
+            } else {
+                document.getElementById('kundenModalTitle').innerText = "Neues Profil";
+                document.getElementById('kundeName').value = '';
+                document.getElementById('kundeLink').value = '';
+                document.getElementById('kundePreis').value = '';
+                document.getElementById('kundeStatus').value = 'none';
+                document.getElementById('kundeKontakt').value = '';
+                document.getElementById('kundeNotizen').value = '';
+                currentBild1 = ""; currentBild2 = "";
+                document.getElementById('imagePreview1').style.backgroundImage = 'none'; document.getElementById('imagePreview1').innerHTML = "📷";
+                document.getElementById('imagePreview2').style.backgroundImage = 'none'; document.getElementById('imagePreview2').innerHTML = "📷";
+            }
+            document.getElementById('kundenModal').style.display = 'flex';
+        }
+
+        function closeKundenModal() { document.getElementById('kundenModal').style.display = 'none'; }
+
+        // Speichern
+        function saveKunde() {
+            const name = document.getElementById('kundeName').value;
+            if (!name) { alert("Bitte Name eingeben!"); return; }
+            const data = {
+                id: bearbeitungsKundeId || Date.now(),
+                name: name.trim(),
+                plattform: document.getElementById('kundePlattform').value,
+                kontakt: document.getElementById('kundeKontakt').value,
+                link: document.getElementById('kundeLink').value,
+                preis: document.getElementById('kundePreis').value,
+                status: document.getElementById('kundeStatus').value,
+                notizen: document.getElementById('kundeNotizen').value,
+                bild1: currentBild1, bild2: currentBild2
+            };
+            let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            if (bearbeitungsKundeId) {
+                const idx = kunden.findIndex(x => x.id === bearbeitungsKundeId);
+                if (idx !== -1) kunden[idx] = data;
+            } else { kunden.push(data); }
+            localStorage.setItem('appKunden', JSON.stringify(kunden));
+            closeKundenModal(); renderKunden();
+        }
+
+        function sucheAusfuehren() { renderKunden(document.getElementById('sucheKunden').value); }
+
+        // Rendern
+        function renderKunden(filter = "") {
+            const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            const liste = document.getElementById('kunden-liste');
+            liste.innerHTML = '';
+            const gefiltert = kunden.filter(k => k.name.toLowerCase().includes(filter.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name));
+
+            gefiltert.forEach(k => {
+                const bg = k.bild1 ? `url(${k.bild1})` : 'none';
+                const linkHTML = k.link ? `<div style="margin-top:5px;"><a href="${k.link}" target="_blank" style="color:var(--neon-cyan); text-decoration:none; font-size:0.9rem;">🔗 Profil öffnen</a></div>` : '';
+                
+                // Preis & Präferenz Anzeige
+                let preisStatusHTML = '';
+                if (k.preis || (k.status && k.status !== 'none')) {
+                    const statusText = k.status === 'AO' ? 'AO (Alles ohne mit Test)' : (k.status === 'Save' ? 'Save (Alles mit Kondom)' : '');
+                    const statusColor = k.status === 'AO' ? '#ffcc00' : '#00ff00';
+                    const preisText = k.preis ? `💰 ${k.preis}€` : '';
+                    
+                    preisStatusHTML = `
+                        <div style="margin-top: 5px;">
+                            <span style="color:var(--neon-gold); font-weight:bold; font-size:1.1rem;">${preisText}</span>
+                            <div style="color:${statusColor}; font-size:0.85rem; font-weight:900; letter-spacing:0.5px; margin-top:2px;">${statusText}</div>
+                        </div>
+                    `;
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'kunden-karte';
+                card.innerHTML = `
+                    <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 15px;">
+                        <button onclick="openKundenModal(${k.id})" style="background:none; border:none; font-size:1.3rem; cursor:pointer;">✏️</button>
+                        <button onclick="deleteKunde(${k.id})" style="background:none; border:none; color:#444; font-size:1.3rem; cursor:pointer;">✖</button>
+                    </div>
+                    <div class="kunden-avatar" style="background-image: ${bg}">${k.bild1 ? '' : k.name[0]}</div>
+                    <div class="kunden-info">
+                        <div class="kunden-name">${k.name}</div>
+                        <div style="font-size:0.9rem; color:#888;">${k.plattform !== 'none' ? k.plattform + ': ' : ''}${k.kontakt}</div>
+                        ${preisStatusHTML}
+                        ${linkHTML}
+                        <div style="font-size:0.85rem; color:#666; margin-top:8px; font-style:italic;">${k.notizen || ''}</div>
+                    </div>
+                `;
+                liste.appendChild(card);
+            });
+        }
+
+        function deleteKunde(id) {
+            if (confirm("Profil löschen?")) {
+                let k = JSON.parse(localStorage.getItem('appKunden')) || [];
+                localStorage.setItem('appKunden', JSON.stringify(k.filter(x => x.id !== id)));
+                renderKunden();
+            }
+        }
+    </script>
+</body>
+</html>

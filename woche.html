@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Agenda 2050 | Wochenplaner</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff2a6d">
+    <link rel="apple-touch-icon" href="icon.png">
+    
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+
+    <style>
+        /* Suchvorschläge Dropdown (Cyber-Style) */
+        #kundenVorschlaege {
+            position: absolute;
+            z-index: 1000;
+            width: 100%;
+            background: #0a0a0d;
+            border: 1px solid var(--neon-cyan);
+            max-height: 250px;
+            overflow-y: auto;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.9);
+        }
+
+        .vorschlag-item {
+            padding: 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #1a1a1a;
+            color: var(--neon-cyan);
+            transition: background 0.2s;
+        }
+
+        .vorschlag-item:hover { background: rgba(5, 217, 232, 0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="loader-container" id="app-loader">
+        <div class="cyber-spinner"></div>
+        <div class="loader-text">SCANNING TIMELINE...</div>
+    </div>
+
+    <div class="dashboard">
+        <div class="btn-cyber btn-settings" onclick="location.href='einstellungen.html'">⚙️</div>
+        
+        <div class="header-info">
+            <div class="titel-neon">Agenda 2050</div>
+            <div id="header-countdown" class="countdown-pulsing">SYSTEM READY</div>
+        </div>
+
+        <div style="display: flex; gap: 15px;">
+            <div class="btn-cyber" onclick="location.href='kunden.html'" style="color: var(--neon-cyan); border-color: var(--neon-cyan);">👥</div>
+            <div class="btn-cyber btn-add" onclick="openModal()">➕</div>
+        </div>
+    </div>
+
+    <div class="wochen-container">
+        <div class="tag-zeile" data-datum="2026-02-23" onclick="location.href='tag.html?d=2026-02-23'">
+            <div class="tag-header"><span class="tag-name">Montag <small>23.02.</small></span></div>
+            <div class="timeline-horizontal"></div>
+            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        </div>
+
+        <div class="tag-zeile" data-datum="2026-02-24" onclick="location.href='tag.html?d=2026-02-24'">
+            <div class="tag-header"><span class="tag-name">Dienstag <small>24.02.</small></span></div>
+            <div class="timeline-horizontal"></div>
+            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        </div>
+
+        <div class="tag-zeile heute" data-datum="2026-02-25" onclick="location.href='tag.html?d=2026-02-25'">
+            <div class="tag-header"><span class="tag-name">Mittwoch <small>25.02.</small></span></div>
+            <div class="timeline-horizontal" id="timeline-heute"></div>
+            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        </div>
+
+        <div class="tag-zeile" data-datum="2026-02-26" onclick="location.href='tag.html?d=2026-02-26'">
+            <div class="tag-header"><span class="tag-name">Donnerstag <small>26.02.</small></span></div>
+            <div class="timeline-horizontal"></div>
+            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        </div>
+
+        <div class="tag-zeile" data-datum="2026-02-27" onclick="location.href='tag.html?d=2026-02-27'">
+            <div class="tag-header"><span class="tag-name">Freitag <small>27.02.</small></span></div>
+            <div class="timeline-horizontal"></div>
+            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        </div>
+
+        <div class="tag-zeile" data-datum="2026-02-28" onclick="location.href='tag.html?d=2026-02-28'">
+            <div class="tag-header"><span class="tag-name">Samstag <small>28.02.</small></span></div>
+            <div class="timeline-horizontal"></div>
+            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        </div>
+
+        <div class="tag-zeile" data-datum="2026-03-01" onclick="location.href='tag.html?d=2026-03-01'">
+            <div class="tag-header"><span class="tag-name">Sonntag <small>01.03.</small></span></div>
+            <div class="timeline-horizontal"></div>
+            <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="terminModal">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <div class="form-title">System-Eintrag</div>
+            
+            <div class="form-group" style="position: relative;">
+                <label>Kunde / Bezeichnung</label>
+                <input type="text" id="terminName" class="cyber-input-full" placeholder="Name tippen..." onkeyup="sucheKundeFuerTermin()" autocomplete="off">
+                <div id="kundenVorschlaege" style="display: none;"></div>
+            </div>
+
+            <div class="form-group"><label>Kategorie-Typ</label><select id="terminKategorie" class="cyber-select"></select></div>
+            <div class="form-group"><label>Datum</label><input type="date" id="terminDatum" class="cyber-input-full"></div>
+
+            <div style="display:flex; gap:15px;">
+                <div class="form-group" style="flex:1;"><label>Startzeit</label><input type="time" id="terminStart" class="cyber-input-full"></div>
+                <div class="form-group" style="flex:1;"><label>Endzeit</label><input type="time" id="terminEnde" class="cyber-input-full"></div>
+            </div>
+
+            <div class="form-group"><label>Kontakt-Plattform</label><select id="terminPlattform" class="cyber-select" onchange="toggleKontaktFeld()"></select></div>
+            <div class="form-group" id="kontaktContainer" style="display: none;"><label>Nummer / Username</label><input type="text" id="terminKontakt" class="cyber-input-full"></div>
+            <div class="form-group"><label>Notizen</label><textarea id="terminNotizen" class="cyber-input-full" rows="3"></textarea></div>
+
+            <button class="btn-save" onclick="saveAppointment()">SPEICHERN</button>
+            <button onclick="closeModal()" style="width:100%; background:none; border:none; color:#666; margin-top:15px; cursor:pointer; text-transform:uppercase; font-size:1.1rem; letter-spacing:2px; font-weight:bold;">Abbrechen</button>
+        </div>
+    </div>
+
+    <script>
+        // --- AUTO-FILL FUNKTION (Speziell für die Woche) ---
+        function sucheKundeFuerTermin() {
+            const input = document.getElementById('terminName').value.toLowerCase();
+            const vBox = document.getElementById('kundenVorschlaege');
+            const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            
+            if (input.length < 1) { vBox.style.display = 'none'; return; }
+            
+            const treffer = kunden.filter(k => k.name.toLowerCase().includes(input));
+            
+            if (treffer.length > 0) {
+                vBox.innerHTML = '';
+                treffer.forEach(k => {
+                    const d = document.createElement('div');
+                    d.className = 'vorschlag-item';
+                    d.innerHTML = `<strong>${k.name}</strong><br><small>${k.plattform || ''}</small>`;
+                    d.onclick = () => {
+                        document.getElementById('terminName').value = k.name;
+                        document.getElementById('terminPlattform').value = k.plattform || 'none';
+                        document.getElementById('terminKontakt').value = k.kontakt || '';
+                        document.getElementById('terminNotizen').value = k.notizen || '';
+                        if(typeof toggleKontaktFeld === 'function') toggleKontaktFeld();
+                        vBox.style.display = 'none';
+                    };
+                    vBox.appendChild(d);
+                });
+                vBox.style.display = 'block';
+            } else { vBox.style.display = 'none'; }
+        }
+
+        // Datum für das Modal voreinstellen (Heute)
+        document.addEventListener('DOMContentLoaded', () => {
+            const dInput = document.getElementById('terminDatum');
+            // Nutzt das aktuelle Datum Deiner Zeitzone
+            if(dInput) dInput.value = new Date().toLocaleDateString('en-CA'); 
+        });
+    </script>
+
+</body>
+</html>

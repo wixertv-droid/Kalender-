@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Boot // 2050</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="loader-container">
+        <div class="jarvis-ring">
+            <div class="loader-text" id="prozent">0%</div>
+        </div>
+        <div class="loader-status" id="status-text">System initialisieren...</div>
+    </div>
+
+    <script>
+        let prozent = 0;
+        const anzeige = document.getElementById('prozent');
+        const statusText = document.getElementById('status-text');
+
+        // Simuliert den Ladevorgang
+        const interval = setInterval(() => {
+            // Zufällige Sprünge für ein realistisches Lade-Gefühl
+            prozent += Math.floor(Math.random() * 5) + 1; 
+            if(prozent > 100) prozent = 100;
+            
+            anzeige.innerText = prozent + '%';
+
+            // Coole Hacker/System-Texte, während es lädt
+            if(prozent > 30) statusText.innerText = "Lade Datenbank...";
+            if(prozent > 70) statusText.innerText = "Entschlüssele Kalender...";
+            
+            // Wenn 100% erreicht sind
+            if(prozent === 100) {
+                statusText.innerText = "ZUGRIFF GEWÄHRT";
+                statusText.style.color = "var(--neon-gold)";
+                clearInterval(interval);
+                
+                // Nach einer halben Sekunde zur Wochenübersicht (woche.html) springen
+                setTimeout(() => {
+                    window.location.href = 'woche.html';
+                }, 500);
+            }
+        }, 50); // Geschwindigkeit des Ladevorgangs (50 Millisekunden)
+    </script>
+</body>
+</html>

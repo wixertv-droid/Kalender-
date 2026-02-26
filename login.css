@@ -2,11 +2,12 @@
     --neon-cyan: #05d9e8;
     --neon-pink: #ff2a6d;
     --neon-green: #39ff14;
-    --bg-deep: #0a0a0d;
+    --bg-deep: #050508; /* Noch dunkler, leicht bläulich wie im Kino */
 }
 
 body {
     background: var(--bg-deep);
+    background-image: radial-gradient(circle at center, #0a1118 0%, #000000 100%);
     margin: 0;
     height: 100vh;
     display: flex;
@@ -16,34 +17,106 @@ body {
     font-family: 'Courier New', monospace;
 }
 
-/* Mehr Platz für den gesamten Container */
+/* CRT Scanline Effekt über dem ganzen Bildschirm */
+.scanlines {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+    background-size: 100% 4px;
+    z-index: 999;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
 .loader-container {
     position: relative;
-    width: 400px;
-    height: 500px; 
+    width: 450px;
+    height: 550px; 
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
 }
 
-/* Der Ring wird größer (360px statt 300px), damit alles entspannt reinpasst */
-.cyber-ring {
+/* --- J.A.R.V.I.S. RING SYSTEM --- */
+.ring-group {
     position: absolute;
-    width: 360px;
-    height: 360px;
-    border: 4px solid var(--neon-cyan);
-    border-bottom-color: transparent;
-    border-radius: 50%;
-    box-shadow: 0 0 20px rgba(5, 217, 232, 0.3);
-    animation: slow-spin 10s linear infinite;
+    width: 400px;
+    height: 400px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     z-index: 1;
-    pointer-events: none; 
+    pointer-events: none;
 }
 
-@keyframes slow-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+/* Äußerer gestrichelter Ring (Rückwärts) */
+.ring-outer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 2px dashed rgba(5, 217, 232, 0.3);
+    border-radius: 50%;
+    animation: spin-reverse 25s linear infinite;
+}
 
-/* Der innere Content exakt zentrieren */
+/* Der Haupt-Ring (Den du vorher hattest) */
+.ring-main {
+    position: absolute;
+    width: 88%;
+    height: 88%;
+    border: 3px solid var(--neon-cyan);
+    border-bottom-color: transparent;
+    border-left-color: rgba(5, 217, 232, 0.2);
+    border-radius: 50%;
+    box-shadow: 0 0 15px rgba(5, 217, 232, 0.4), inset 0 0 10px rgba(5, 217, 232, 0.2);
+    animation: spin-forward 8s linear infinite;
+    transition: all 0.5s ease;
+}
+
+/* Innerer gepunkteter Ring (Schnell vorwärts) */
+.ring-inner {
+    position: absolute;
+    width: 76%;
+    height: 76%;
+    border: 2px dotted rgba(5, 217, 232, 0.5);
+    border-radius: 50%;
+    animation: spin-forward 15s linear infinite;
+}
+
+/* Feines Fadenkreuz im Hintergrund */
+.hud-crosshair {
+    position: absolute;
+    width: 120%;
+    height: 120%;
+}
+.hud-crosshair::before {
+    content: ''; position: absolute;
+    top: 50%; left: 0; width: 100%; height: 1px;
+    background: rgba(5, 217, 232, 0.15);
+}
+.hud-crosshair::after {
+    content: ''; position: absolute;
+    top: 0; left: 50%; width: 1px; height: 100%;
+    background: rgba(5, 217, 232, 0.15);
+}
+
+/* Kleine Deko-Texte am Ring */
+.deco-data {
+    position: absolute;
+    font-size: 0.6rem;
+    color: var(--neon-cyan);
+    opacity: 0.5;
+    letter-spacing: 1px;
+}
+.top-left { top: 10%; left: 10%; }
+.bottom-right { bottom: 10%; right: 10%; }
+
+/* --- ANIMATIONEN --- */
+@keyframes spin-forward { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes spin-reverse { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+
+/* --- INHALT --- */
 .gateway-content {
     z-index: 10;
     display: flex;
@@ -52,23 +125,24 @@ body {
     justify-content: center;
 }
 
-/* Die Punkte rücken etwas näher zusammen, haben aber nach unten genug Luft */
 .pin-display {
     display: flex;
     gap: 15px;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 .pin-dot {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border: 2px solid var(--neon-cyan);
     border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    box-shadow: 0 0 5px rgba(5, 217, 232, 0.3);
 }
 
 .pin-dot.filled {
     background: var(--neon-cyan);
-    box-shadow: 0 0 12px var(--neon-cyan);
+    box-shadow: 0 0 15px var(--neon-cyan);
 }
 
 .numpad {
@@ -77,47 +151,60 @@ body {
     gap: 12px;
 }
 
-/* Tasten minimal kompakter (50px statt 55px), damit sie besser in den Kreis passen */
+/* Numpad Tasten - Etwas eckiger für den Tech-Look */
 .num-btn {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 1px solid rgba(5, 217, 232, 0.4);
-    background: rgba(10, 10, 13, 0.8);
+    width: 52px;
+    height: 52px;
+    border-radius: 12px; /* Eckiger statt komplett rund! */
+    border: 1px solid rgba(5, 217, 232, 0.3);
+    background: rgba(5, 217, 232, 0.05);
     color: var(--neon-cyan);
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 1.4rem;
     cursor: pointer;
-    transition: 0.1s;
+    transition: 0.2s;
     touch-action: manipulation;
+    backdrop-filter: blur(4px);
 }
 
 .num-btn:active {
     background: var(--neon-cyan);
-    color: black;
+    color: var(--bg-deep);
     transform: scale(0.9);
+    box-shadow: 0 0 20px var(--neon-cyan);
 }
 
+/* Sonder-Buttons */
+.action-btn { font-size: 1.2rem; font-weight: bold; }
+.error-btn { color: var(--neon-pink); border-color: rgba(255, 42, 109, 0.4); }
+.error-btn:active { background: var(--neon-pink); box-shadow: 0 0 20px var(--neon-pink); }
+
+.reset-btn { color: #888; border-color: rgba(255,255,255,0.1); font-size: 1rem; }
+.reset-btn:active { background: #888; color: black; box-shadow: 0 0 20px #888; }
+
+
+/* System Texte */
 .loader-text {
-    font-size: 2.5rem;
+    font-size: 3rem;
     font-weight: 900;
     color: var(--neon-cyan);
-    text-shadow: 0 0 15px var(--neon-cyan);
+    text-shadow: 0 0 20px var(--neon-cyan);
 }
 
-/* Status-Text weiter nach unten gerückt */
 .loader-status {
     position: absolute;
     bottom: 20px;
     width: 100%;
     text-align: center;
-    letter-spacing: 2px;
-    font-size: 0.9rem;
+    letter-spacing: 3px;
+    font-size: 0.8rem;
     color: var(--neon-cyan);
     text-transform: uppercase;
+    opacity: 0.8;
 }
 
-.ring-error { border-color: var(--neon-pink); animation: shake 0.4s ease !important; }
+/* Fehler Animation (wird vom JS an ring-main geschickt) */
+.ring-error { border-color: var(--neon-pink) !important; animation: shake 0.4s ease !important; box-shadow: 0 0 20px var(--neon-pink) !important; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }

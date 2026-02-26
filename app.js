@@ -1,8 +1,10 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V2.0 - DYNAMISCHER KALENDER)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V2.1 - DYNAMISCHE ARBEITSZEIT)
    ========================================================================== */
 
 const DEFAULTS = {
+    arbeitsStart: '08:00',
+    arbeitsEnde: '22:00',
     wochenstart: 'MO',
     kat1_name: 'VIP', kat1_farbe: '#e5b05c',
     kat2_name: 'Stamm', kat2_farbe: '#ff2a6d',
@@ -22,75 +24,61 @@ function ladeUndWendeEinstellungenAn() {
         root.style.setProperty('--color-kat1', settings.kat1_farbe || DEFAULTS.kat1_farbe);
         root.style.setProperty('--color-kat2', settings.kat2_farbe || DEFAULTS.kat2_farbe);
         root.style.setProperty('--color-kat3', settings.kat3_farbe || DEFAULTS.kat3_farbe);
-
-        if (document.getElementById('kat1_name')) {
-            document.getElementById('kat1_name').value = settings.kat1_name || DEFAULTS.kat1_name;
-            document.getElementById('kat1_farbe').value = settings.kat1_farbe || DEFAULTS.kat1_farbe;
-            document.getElementById('kat2_name').value = settings.kat2_name || DEFAULTS.kat2_name;
-            document.getElementById('kat2_farbe').value = settings.kat2_farbe || DEFAULTS.kat2_farbe;
-            document.getElementById('kat3_name').value = settings.kat3_name || DEFAULTS.kat3_name;
-            document.getElementById('kat3_farbe').value = settings.kat3_farbe || DEFAULTS.kat3_farbe;
-            
-            document.getElementById('plat1_name').value = settings.plat1 || DEFAULTS.plat1;
-            document.getElementById('plat2_name').value = settings.plat2 || DEFAULTS.plat2;
-            document.getElementById('plat3_name').value = settings.plat3 || DEFAULTS.plat3;
-            document.getElementById('plat4_name').value = settings.plat4 || DEFAULTS.plat4;
-
-            const toggle = document.getElementById('wochenstartToggle');
-            if (toggle) toggle.checked = (settings.wochenstart === 'SO');
-        }
-
-        const wochenContainer = document.querySelector('.wochen-container');
-        if (wochenContainer) {
-            const zeilen = document.querySelectorAll('.tag-zeile');
-            if (zeilen.length === 7) {
-                const sonntag = zeilen[6]; 
-                sonntag.style.order = (settings.wochenstart === 'SO') ? "-1" : "7";
-            }
-        }
     } catch (e) {
         console.error("Fehler in ladeUndWendeEinstellungenAn:", e);
     }
 }
 
 /**
- * NEU V2.0: WOCHENANSICHT DYNAMISCH GENERIEREN
+ * 2. WOCHENANSICHT DYNAMISCH GENERIEREN (inkl. neuer Zeitskala)
  */
 function generiereWochenAnsicht() {
     const container = document.querySelector('.wochen-container');
-    // Nur ausführen, wenn wir uns auf der Wochen-Seite befinden
     if (!container) return; 
 
     const urlParams = new URLSearchParams(window.location.search);
     let startDatum = new Date();
-    
-    // Wenn ein Datum in der URL übergeben wurde (aus dem Jahreskalender), nutze dieses
-    if (urlParams.get('d')) {
-        startDatum = new Date(urlParams.get('d'));
-    }
+    if (urlParams.get('d')) startDatum = new Date(urlParams.get('d'));
 
-    // Finde den Montag der aktuellen Woche
     let tag = startDatum.getDay();
     let diff = startDatum.getDate() - tag + (tag === 0 ? -6 : 1);
     let montag = new Date(startDatum.setDate(diff));
 
     const wochentage = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-    const heuteISO = new Date().toISOString().split('T')[0];
+    const heute = new Date();
+    const heuteISO = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-    container.innerHTML = ''; // Container leeren
+    // Skala aus Arbeitszeit berechnen
+    const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
+    const aStart = settings.arbeitsStart || "08:00";
+    const aEnde = settings.arbeitsEnde || "20:00";
+    
+    const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
+    const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
+    
+    // Viertel-Schritte berechnen
+    const viertel = (endeMin - startMin) / 4;
+    const q1Min = Math.floor(startMin + viertel);
+    const midMin = Math.floor(startMin + viertel * 2);
+    const q3Min = Math.floor(startMin + viertel * 3);
+    
+    const timeStr = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    const skalaHTML = `<span>${aStart}</span><span>${timeStr(q1Min)}</span><span>${timeStr(midMin)}</span><span>${timeStr(q3Min)}</span><span>${aEnde}</span>`;
+
+    container.innerHTML = ''; 
 
     for (let i = 0; i < 7; i++) {
         let aktuellesDatum = new Date(montag);
         aktuellesDatum.setDate(montag.getDate() + i);
         
-        let isoDatum = aktuellesDatum.toISOString().split('T')[0];
+        // Robustes ISO Format
+        let isoDatum = new Date(aktuellesDatum.getTime() - (aktuellesDatum.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
         let tagZahl = String(aktuellesDatum.getDate()).padStart(2, '0');
         let monatZahl = String(aktuellesDatum.getMonth() + 1).padStart(2, '0');
         
         let isHeute = (isoDatum === heuteISO) ? 'heute' : '';
         let timelineId = (isoDatum === heuteISO) ? 'id="timeline-heute"' : '';
 
-        // Titel der Seite anpassen (Monat / Jahr anzeigen)
         if (i === 0 && document.getElementById('header-monat')) {
             const monate = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
             document.getElementById('header-monat').innerText = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}`;
@@ -100,14 +88,14 @@ function generiereWochenAnsicht() {
             <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" onclick="location.href='tag.html?d=${isoDatum}'">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
                 <div class="timeline-horizontal" ${timelineId}></div>
-                <div class="timeline-skala"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+                <div class="timeline-skala">${skalaHTML}</div>
             </div>
         `;
     }
 }
 
 /**
- * 2. MODAL STEUERUNG (Öffnen, Schließen, Felder umschalten)
+ * 3. MODAL STEUERUNG
  */
 function openModal() {
     const modal = document.getElementById('terminModal');
@@ -128,19 +116,17 @@ function openModal() {
     if (platDropdown) {
         platDropdown.innerHTML = `
             <option value="none">Keine Plattform</option>
-            <option value="${settings.plat1}">${settings.plat1}</option>
-            <option value="${settings.plat2}">${settings.plat2}</option>
-            <option value="${settings.plat3}">${settings.plat3}</option>
-            <option value="${settings.plat4}">${settings.plat4}</option>
+            <option value="${settings.plat1 || 'WhatsApp'}">${settings.plat1 || 'WhatsApp'}</option>
+            <option value="${settings.plat2 || 'Instagram'}">${settings.plat2 || 'Instagram'}</option>
+            <option value="${settings.plat3 || 'Telegram'}">${settings.plat3 || 'Telegram'}</option>
+            <option value="${settings.plat4 || 'Telefon'}">${settings.plat4 || 'Telefon'}</option>
         `;
     }
 
     const nameInput = document.getElementById('terminName');
     if (nameInput) nameInput.value = '';
-    
     const kontaktInput = document.getElementById('terminKontakt');
     if (kontaktInput) kontaktInput.value = '';
-    
     const notizInput = document.getElementById('terminNotizen');
     if (notizInput) notizInput.value = '';
     
@@ -153,7 +139,6 @@ function openModal() {
 function closeModal() {
     const modal = document.getElementById('terminModal');
     if (modal) modal.style.display = 'none';
-    
     const vBox = document.getElementById('kundenVorschlaege');
     if (vBox) vBox.style.display = 'none';
 }
@@ -167,7 +152,7 @@ function toggleKontaktFeld() {
 }
 
 /**
- * 3. TERMIN SPEICHERN & AUTOMATISCHE KUNDEN-ANLAGE
+ * 4. TERMIN SPEICHERN & AUTO-KUNDEN-ANLAGE
  */
 function saveAppointment() {
     try {
@@ -185,7 +170,6 @@ function saveAppointment() {
             return;
         }
 
-        // KUNDEN-DATENBANK AUTO-SYNC
         let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
         let kundeGefunden = false;
 
@@ -201,18 +185,14 @@ function saveAppointment() {
                 name: name.trim(),
                 plattform: plattform !== 'none' ? plattform : '',
                 kontakt: kontakt.trim(),
-                link: '',
-                preis: '',
-                status: 'none',
+                link: '', preis: '', status: 'none',
                 notizen: 'Automatisch durch Termin erstellt.',
-                bild1: '',
-                bild2: ''
+                bild1: '', bild2: ''
             };
             kunden.push(neuerKunde);
             localStorage.setItem('appKunden', JSON.stringify(kunden));
         }
 
-        // TERMIN SPEICHERN
         const neuerTermin = {
             id: Date.now(),
             name: name.trim(),
@@ -232,36 +212,52 @@ function saveAppointment() {
         closeModal();
         location.reload();
     } catch (e) {
-        console.error("Fehler beim Speichern des Termins:", e);
+        console.error("Fehler beim Speichern:", e);
     }
 }
 
 /**
- * 4. LIVE-SYSTEM (Woche)
+ * 5. LIVE-SYSTEM (Rote Linie) - Dynamisch nach Arbeitszeit
  */
 function updateLiveSystem() {
     const containerHeute = document.getElementById('timeline-heute');
     if (containerHeute) {
+        const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
+        const aStart = settings.arbeitsStart || "08:00";
+        const aEnde = settings.arbeitsEnde || "20:00";
+        
+        const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
+        const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
+        const gesamtArbeitsMin = endeMin - startMin;
+
         const jetzt = new Date();
         const aktuelleMinuten = jetzt.getHours() * 60 + jetzt.getMinutes();
-        const prozentPosition = (aktuelleMinuten / 1440) * 100;
         
         let linie = document.getElementById('rote-linie');
-        if (!linie) {
-            linie = document.createElement('div');
-            linie.id = 'rote-linie';
-            linie.className = 'jetzt-linie-horizontal';
-            containerHeute.appendChild(linie);
+        
+        // Nur anzeigen, wenn wir in der Arbeitszeit sind!
+        if(aktuelleMinuten >= startMin && aktuelleMinuten <= endeMin) {
+            const prozentPosition = ((aktuelleMinuten - startMin) / gesamtArbeitsMin) * 100;
+            
+            if (!linie) {
+                linie = document.createElement('div');
+                linie.id = 'rote-linie';
+                linie.className = 'jetzt-linie-horizontal';
+                containerHeute.appendChild(linie);
+            }
+            linie.style.left = prozentPosition + '%';
+            linie.style.display = 'block';
+        } else if (linie) {
+            linie.style.display = 'none';
         }
-        linie.style.left = prozentPosition + '%';
     }
 
     const countdownElement = document.getElementById('header-countdown');
     if (countdownElement) {
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-        const jetzt = new Date();
-        const heuteISO = jetzt.toISOString().split('T')[0];
-        const jetztTotalMin = jetzt.getHours() * 60 + jetzt.getMinutes();
+        const heute = new Date();
+        const heuteISO = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+        const jetztTotalMin = heute.getHours() * 60 + heute.getMinutes();
 
         let baldigeTermine = termine
             .filter(t => t.datum === heuteISO)
@@ -285,7 +281,7 @@ function updateLiveSystem() {
 }
 
 /**
- * 5. WOCHENPLAN RENDERN
+ * 6. WOCHENPLAN RENDERN - Dynamisch nach Arbeitszeit
  */
 function renderWeek() {
     const wochenContainer = document.querySelector('.wochen-container');
@@ -293,6 +289,12 @@ function renderWeek() {
 
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
+
+    const aStart = settings.arbeitsStart || "08:00";
+    const aEnde = settings.arbeitsEnde || "20:00";
+    const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
+    const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
+    const gesamtArbeitsMin = endeMin - startMin;
 
     document.querySelectorAll('.termin-segment').forEach(el => el.remove());
 
@@ -302,14 +304,20 @@ function renderWeek() {
             const timeline = tagZeile.querySelector('.timeline-horizontal');
             if (timeline) {
                 const startArray = t.start.split(':');
-                const startMinuten = parseInt(startArray[0]) * 60 + parseInt(startArray[1]);
+                const tStartMin = parseInt(startArray[0]) * 60 + parseInt(startArray[1]);
                 const endeArray = t.ende.split(':');
-                const endeMinuten = parseInt(endeArray[0]) * 60 + parseInt(endeArray[1]);
-                const dauerInMinuten = endeMinuten - startMinuten;
+                const tEndeMin = parseInt(endeArray[0]) * 60 + parseInt(endeArray[1]);
 
-                if (dauerInMinuten > 0) {
-                    const linksPosition = (startMinuten / 1440) * 100;
-                    const breite = (dauerInMinuten / 1440) * 100;
+                // Nur Termine anzeigen, die irgendwie in die Arbeitszeit fallen
+                if (tEndeMin > startMin && tStartMin < endeMin) {
+                    
+                    // Termine "kappen", falls sie vor/nach der Arbeitszeit liegen
+                    let anzeigeStart = tStartMin < startMin ? startMin : tStartMin;
+                    let anzeigeEnde = tEndeMin > endeMin ? endeMin : tEndeMin;
+                    let anzeigeDauer = anzeigeEnde - anzeigeStart;
+
+                    const linksPosition = ((anzeigeStart - startMin) / gesamtArbeitsMin) * 100;
+                    const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
 
                     const segment = document.createElement('div');
                     segment.className = `termin-segment ${t.kat}`;
@@ -325,24 +333,25 @@ function renderWeek() {
         }
     });
 }
+
 /**
- * 6. INITIALISIERUNG BEIM START & PWA SETUP
+ * 7. INITIALISIERUNG BEIM START & PWA SETUP
  */
 document.addEventListener('DOMContentLoaded', () => {
     ladeUndWendeEinstellungenAn();
-    renderWeek();
+    generiereWochenAnsicht(); 
+    renderWeek();             
     updateLiveSystem();
     setInterval(updateLiveSystem, 60000);
 
-    // VERBESSERTE PWA REGISTRIERUNG
+    // ROBUSTER PWA SERVICE WORKER (FÜR GITHUB PAGES)
     if ('serviceWorker' in navigator) {
-        // Nutzt den relativen Pfad, damit es auch auf GitHub Pages funktioniert
         navigator.serviceWorker.register('./sw.js', { scope: './' })
-            .then(reg => console.log('System bereit (Offline-Mode aktiv)', reg))
-            .catch(err => console.log('Offline-System konnte nicht geladen werden:', err));
+            .then(reg => console.log('System bereit (Offline-Mode aktiv)'))
+            .catch(err => console.log('Offline-System Fehler:', err));
     }
 
-    // SICHERHEITS-LOADER (Verschwindet nach Boot-Vorgang)
+    // SICHERHEITS-LOADER
     setTimeout(() => {
         const loader = document.getElementById('app-loader');
         if (loader) {
@@ -351,5 +360,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 400);
 });
-
-
+       

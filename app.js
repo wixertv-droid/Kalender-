@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.4 - MIDNIGHT 00:00 FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.5 - THE FLAG FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -112,7 +112,6 @@ async function initCloud() {
     }
 }
 
-// HILFSFUNKTION FÜR KORREKTE ZEITEN (INKL. MITTERNACHT)
 function parseTimeStr(timeStr, defaultStr) {
     if (!timeStr || !timeStr.includes(':')) timeStr = defaultStr;
     const parts = timeStr.split(':');
@@ -123,15 +122,13 @@ function parseTimeStr(timeStr, defaultStr) {
     return h * 60 + m;
 }
 
-// ZENTRALE FUNKTION UM ARBEITSZEITEN ZU BERECHNEN
 function getArbeitsZeiten(settings) {
     let startMin = parseTimeStr(settings.arbeitsStart, "08:00");
     let endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
     
-    // DER MAGISCHE FIX: Wenn Ende auf 00:00 steht, ist es Minute 1440 (Mitternacht!)
     if (settings.arbeitsEnde === "00:00" || endeMin === 0) endeMin = 1440;
     
-    if (endeMin <= startMin) endeMin = startMin + 60; // Failsafe
+    if (endeMin <= startMin) endeMin = startMin + 60; 
     return { startMin, endeMin, gesamtArbeitsMin: endeMin - startMin };
 }
 
@@ -206,10 +203,11 @@ function generiereWochenAnsicht() {
             document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
+        // HIER IST DER FIX: overflow: visible statt hidden, damit das Fähnchen aus dem Balken gucken darf!
         container.innerHTML += `
             <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;" onclick="window.location.href='tag.html?d=${isoDatum}'">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
-                <div class="timeline-horizontal" ${timelineId} style="background-image: repeating-linear-gradient(to right, transparent, transparent 24.8%, rgba(255,255,255,0.06) 25%); overflow: hidden;"></div>
+                <div class="timeline-horizontal" ${timelineId} style="background-image: repeating-linear-gradient(to right, transparent, transparent 24.8%, rgba(255,255,255,0.06) 25%); overflow: visible;"></div>
                 <div class="timeline-skala">${skalaHTML}</div>
             </div>
         `;
@@ -310,13 +308,13 @@ function saveAppointment() {
         
         let nStartMin = parseTimeStr(start, "00:00");
         let nEndeMin = parseTimeStr(ende, "23:59");
-        if (ende === "00:00" || nEndeMin === 0) nEndeMin = 1440; // Mitternachts-Fix
+        if (ende === "00:00" || nEndeMin === 0) nEndeMin = 1440; 
         
         const overlap = termine.find(t => {
             if (t.datum === datum && t.id !== currentEditId) {
                 let eStartMin = parseTimeStr(t.start, "00:00");
                 let eEndeMin = parseTimeStr(t.ende, "23:59");
-                if (t.ende === "00:00" || eEndeMin === 0) eEndeMin = 1440; // Mitternachts-Fix
+                if (t.ende === "00:00" || eEndeMin === 0) eEndeMin = 1440; 
                 return (nStartMin < eEndeMin && nEndeMin > eStartMin);
             }
             return false;
@@ -438,12 +436,13 @@ function updateLiveSystem() {
             containerHeute.appendChild(linie);
         }
         
-        linie.innerHTML = `<div style="position: absolute; top: -24px; left: -16px; background: #0a0a0d; color: var(--neon-pink, #ff2a6d); font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--neon-pink, #ff2a6d); box-shadow: 0 0 6px rgba(255, 42, 109, 0.6); z-index: 10; white-space: nowrap;">${uhrzeit}${feierabendText}</div>`;
+        // Das Fähnchen! Positioniert über dem Kasten (-26px top).
+        linie.innerHTML = `<div style="position: absolute; top: -26px; left: -16px; background: var(--bg-deep, #0a0a0d); color: white; font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--neon-pink, #ff2a6d); box-shadow: 0 0 10px rgba(255, 42, 109, 0.6); z-index: 50; white-space: nowrap;">${uhrzeit}${feierabendText}</div>`;
         linie.style.left = prozentPosition + '%';
         linie.style.display = 'block';
         
         if (feierabendText !== "") {
-            linie.style.opacity = '0.4';
+            linie.style.opacity = '0.6';
         } else {
             linie.style.opacity = '1';
         }
@@ -517,7 +516,7 @@ function renderWeek() {
                 try {
                     let tStartMin = parseTimeStr(t.start, "00:00");
                     let tEndeMin = parseTimeStr(t.ende, "23:59");
-                    if (t.ende === "00:00" || tEndeMin === 0) tEndeMin = 1440; // Mitternachts-Fix für den Termin
+                    if (t.ende === "00:00" || tEndeMin === 0) tEndeMin = 1440; 
 
                     let anzeigeStart = tStartMin;
                     let anzeigeEnde = tEndeMin;

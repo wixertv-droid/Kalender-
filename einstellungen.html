@@ -41,7 +41,18 @@
                 </div>
             </div>
         </div>
-
+<div class="settings-card" style="border-color: var(--neon-pink);">
+            <div class="setting-title" style="color: var(--neon-pink);">Sicherheits-Protokoll (PIN)</div>
+            <div class="form-group">
+                <label class="input-label">Aktuelle PIN</label>
+                <input type="number" id="oldPin" class="cyber-input-full" placeholder="****">
+            </div>
+            <div class="form-group">
+                <label class="input-label">Neue PIN</label>
+                <input type="number" id="newPin" class="cyber-input-full" placeholder="4 Ziffern">
+            </div>
+            <button onclick="changeSystemPin()" style="background: var(--neon-pink); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px;">PIN ÄNDERN</button>
+        </div>
         <div class="settings-card">
             <div class="setting-title">Kategorie-Verschlüsselung</div>
             

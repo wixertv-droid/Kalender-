@@ -9,8 +9,19 @@
 </head>
 <body>
 
+    <div class="scanlines"></div>
+
     <div class="loader-container">
-        <div id="cyberRing" class="cyber-ring"></div>
+        
+        <div class="ring-group">
+            <div class="hud-crosshair"></div>
+            <div class="ring-outer"></div>
+            <div id="cyberRing" class="ring-main"></div>
+            <div class="ring-inner"></div>
+            
+            <div class="deco-data top-left">SYS.CORE // 89.4%</div>
+            <div class="deco-data bottom-right">AUTH.REQ // 0x4F</div>
+        </div>
 
         <div class="gateway-content">
             <div id="pinBox">
@@ -34,13 +45,15 @@
                 <div class="num-btn" onclick="addNumber('7')">7</div>
                 <div class="num-btn" onclick="addNumber('8')">8</div>
                 <div class="num-btn" onclick="addNumber('9')">9</div>
-                <div class="num-btn" onclick="clearPin()" style="color: var(--neon-pink);">✖</div>
+                
+                <div class="num-btn action-btn error-btn" onclick="clearPin()">✖</div>
                 <div class="num-btn" onclick="addNumber('0')">0</div>
-                <div class="num-btn" style="opacity:0; pointer-events:none;"></div>
+                
+                <div class="num-btn action-btn reset-btn" onclick="alert('SYSTEM-HINWEIS: Passwort-Wiederherstellung per Mail folgt in einem der nächsten Updates!')">?</div>
             </div>
         </div>
 
-        <div class="loader-status" id="status-text">SYSTEM GESPERRT</div>
+        <div class="loader-status" id="status-text">AWAITING INPUT...</div>
     </div>
 
     <script src="login.js"></script>

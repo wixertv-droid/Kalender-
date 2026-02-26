@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.6 - THE BOUNCER UPDATE)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.7 - CLOUD PIN SYNC)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -36,13 +36,15 @@ localStorage.setItem = async function(key, value) {
 
     if (isSyncingFromCloud) return;
 
-    if (["appTermine", "appKunden", "appEinstellungen"].includes(key)) {
+    // NEU: Die "appPin" wird jetzt mit überwacht und in die Cloud geschossen!
+    if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
         if (db && setDoc && doc) {
             try {
                 await setDoc(doc(db, "agenda2050", "systemdaten"), {
                     termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
                     kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
-                    einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}')
+                    einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
+                    pin: localStorage.getItem('appPin') || "0000" // PIN WIRD HOCHGELADEN
                 }, { merge: true });
                 console.log("☁️ Cloud Upload erfolgreich!");
             } catch(e) { console.error("Cloud Upload Fehler:", e); }
@@ -85,6 +87,9 @@ async function initCloud() {
                 if (data.termine) originalSetItem.call(localStorage, 'appTermine', JSON.stringify(data.termine));
                 if (data.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(data.kunden));
                 if (data.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(data.einstellungen));
+                
+                // NEU: Wenn eine neue PIN aus der Cloud kommt, speichern wir sie heimlich lokal!
+                if (data.pin) originalSetItem.call(localStorage, 'appPin', data.pin);
                 
                 ladeUndWendeEinstellungenAn();
                 
@@ -573,13 +578,6 @@ function renderWeek() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- NEU: DER TÜRSTEHER ---
-    if (!sessionStorage.getItem('authKey')) {
-        window.location.href = 'index.html';
-        return; 
-    }
-    // --------------------------
-
     ladeUndWendeEinstellungenAn();
     generiereWochenAnsicht(); 
     renderWeek();             

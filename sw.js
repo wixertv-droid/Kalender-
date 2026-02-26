@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agenda-2050-v1';
+const CACHE_NAME = 'agenda-2050-v2'; // <--- Das v2 ist der Schlüssel!
 const ASSETS = [
   './',
   './index.html',
@@ -12,8 +12,8 @@ const ASSETS = [
   './icon.png'
 ];
 
-// Installation: Dateien in den Cache laden
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Zwingt den neuen Worker, sofort zu starten
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
@@ -21,7 +21,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Aktivierung: Alte Caches löschen
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -30,9 +29,9 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  self.clients.claim(); // Übernimmt sofort die Kontrolle
 });
 
-// Strategie: Erst im Cache suchen, dann Netzwerk (Offline-First)
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((response) => {

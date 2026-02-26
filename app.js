@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.1 - VIEWPORT & CLAMP FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.2 - CLEAN VIEWPORT)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -156,7 +156,7 @@ function generiereWochenAnsicht() {
     
     let startMin = parseTimeStr(aStart, "08:00");
     let endeMin = parseTimeStr(aEnde, "22:00");
-    if (endeMin <= startMin) endeMin = startMin + 60; // Failsafe
+    if (endeMin <= startMin) endeMin = startMin + 60; 
     
     const viertel = (endeMin - startMin) / 4;
     const q1Min = Math.floor(startMin + viertel);
@@ -192,7 +192,7 @@ function generiereWochenAnsicht() {
         container.innerHTML += `
             <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;" onclick="window.location.href='tag.html?d=${isoDatum}'">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
-                <div class="timeline-horizontal" ${timelineId} style="background-image: repeating-linear-gradient(to right, transparent, transparent 24.8%, rgba(255,255,255,0.06) 25%);"></div>
+                <div class="timeline-horizontal" ${timelineId} style="background-image: repeating-linear-gradient(to right, transparent, transparent 24.8%, rgba(255,255,255,0.06) 25%); overflow: hidden;"></div>
                 <div class="timeline-skala">${skalaHTML}</div>
             </div>
         `;
@@ -387,7 +387,7 @@ function updateLiveSystem() {
         
         let startMin = parseTimeStr(settings.arbeitsStart, "08:00");
         let endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
-        if (endeMin <= startMin) endeMin = startMin + 60; // Failsafe
+        if (endeMin <= startMin) endeMin = startMin + 60; 
         
         const gesamtArbeitsMin = endeMin - startMin;
 
@@ -400,23 +400,24 @@ function updateLiveSystem() {
         
         let linie = document.getElementById('rote-linie');
         
-        // FIX: Rote Linie klemmt sich an den Rand, wenn die Zeit außerhalb liegt!
-        let anzeigeMinuten = aktuelleMinuten;
-        if (anzeigeMinuten < startMin) anzeigeMinuten = startMin;
-        if (anzeigeMinuten > endeMin) anzeigeMinuten = endeMin;
-        
-        const prozentPosition = ((anzeigeMinuten - startMin) / gesamtArbeitsMin) * 100;
-        
-        if (!linie) {
-            linie = document.createElement('div');
-            linie.id = 'rote-linie';
-            linie.className = 'jetzt-linie-horizontal';
-            containerHeute.appendChild(linie);
+        // Die rote Linie wird NUR gezeichnet, wenn wir uns innerhalb der Arbeitszeit befinden
+        if(aktuelleMinuten >= startMin && aktuelleMinuten <= endeMin && gesamtArbeitsMin > 0) {
+            const prozentPosition = ((aktuelleMinuten - startMin) / gesamtArbeitsMin) * 100;
+            
+            if (!linie) {
+                linie = document.createElement('div');
+                linie.id = 'rote-linie';
+                linie.className = 'jetzt-linie-horizontal';
+                containerHeute.appendChild(linie);
+            }
+            
+            linie.innerHTML = `<div style="position: absolute; top: -24px; left: -16px; background: #0a0a0d; color: var(--neon-pink, #ff2a6d); font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--neon-pink, #ff2a6d); box-shadow: 0 0 6px rgba(255, 42, 109, 0.6); z-index: 10;">${uhrzeit}</div>`;
+            linie.style.left = prozentPosition + '%';
+            linie.style.display = 'block';
+        } else if (linie) {
+            // Nach Feierabend oder davor? Weg mit dem Strich!
+            linie.style.display = 'none';
         }
-        
-        linie.innerHTML = `<div style="position: absolute; top: -24px; left: -16px; background: #0a0a0d; color: var(--neon-pink, #ff2a6d); font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--neon-pink, #ff2a6d); box-shadow: 0 0 6px rgba(255, 42, 109, 0.6); z-index: 10;">${uhrzeit}</div>`;
-        linie.style.left = prozentPosition + '%';
-        linie.style.display = 'block';
     }
 
     const countdownElement = document.getElementById('header-countdown');
@@ -470,7 +471,7 @@ function renderWeek() {
 
     let startMin = parseTimeStr(settings.arbeitsStart, "08:00");
     let endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
-    if (endeMin <= startMin) endeMin = startMin + 60; // Failsafe
+    if (endeMin <= startMin) endeMin = startMin + 60; 
     
     const gesamtArbeitsMin = endeMin - startMin;
 
@@ -489,43 +490,34 @@ function renderWeek() {
                     const tStartMin = parseTimeStr(t.start, "00:00");
                     const tEndeMin = parseTimeStr(t.ende, "23:59");
 
-                    let anzeigeStart = tStartMin;
-                    let anzeigeEnde = tEndeMin;
+                    // Der Termin wird NUR gezeichnet, wenn er sich mit der Arbeitszeit überschneidet
+                    if (tEndeMin > startMin && tStartMin < endeMin) {
+                        let anzeigeStart = tStartMin < startMin ? startMin : tStartMin;
+                        let anzeigeEnde = tEndeMin > endeMin ? endeMin : tEndeMin;
+                        let anzeigeDauer = anzeigeEnde - anzeigeStart;
 
-                    // FIX: Edge-Clamping für Termine außerhalb des Sichtfensters
-                    if (tEndeMin <= startMin) {
-                        anzeigeStart = startMin;
-                        anzeigeEnde = startMin + (gesamtArbeitsMin * 0.04); 
-                    } else if (tStartMin >= endeMin) {
-                        anzeigeStart = endeMin - (gesamtArbeitsMin * 0.04);
-                        anzeigeEnde = endeMin;
-                    } else {
-                        if (anzeigeStart < startMin) anzeigeStart = startMin;
-                        if (anzeigeEnde > endeMin) anzeigeEnde = endeMin;
+                        if (anzeigeDauer < (gesamtArbeitsMin * 0.03)) anzeigeDauer = gesamtArbeitsMin * 0.03;
+
+                        const linksPosition = ((anzeigeStart - startMin) / gesamtArbeitsMin) * 100;
+                        const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
+
+                        const segment = document.createElement('div');
+                        const safeKat = t.kat || 'kat1';
+                        segment.className = `termin-segment ${safeKat}`;
+                        segment.style.left = linksPosition + '%';
+                        segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
+                        
+                        const katName = settings[safeKat + "_name"] || "Termin";
+                        
+                        segment.innerHTML = `
+                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
+                                <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
+                                <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${t.start} - ${t.ende}</span>
+                            </div>
+                        `;
+                        
+                        timeline.appendChild(segment);
                     }
-
-                    let anzeigeDauer = anzeigeEnde - anzeigeStart;
-                    if (anzeigeDauer < (gesamtArbeitsMin * 0.03)) anzeigeDauer = gesamtArbeitsMin * 0.03;
-
-                    const linksPosition = ((anzeigeStart - startMin) / gesamtArbeitsMin) * 100;
-                    const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
-
-                    const segment = document.createElement('div');
-                    const safeKat = t.kat || 'kat1';
-                    segment.className = `termin-segment ${safeKat}`;
-                    segment.style.left = linksPosition + '%';
-                    segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
-                    
-                    const katName = settings[safeKat + "_name"] || "Termin";
-                    
-                    segment.innerHTML = `
-                        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
-                            <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
-                            <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${t.start} - ${t.ende}</span>
-                        </div>
-                    `;
-                    
-                    timeline.appendChild(segment);
                 } catch (e) {
                     console.error("Fehler beim Malen des Blocks:", e);
                 }

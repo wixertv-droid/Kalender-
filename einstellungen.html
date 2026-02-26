@@ -27,6 +27,21 @@
 
     <div class="settings-container">
         
+        <div class="settings-card" style="border-color: var(--neon-pink);">
+            <div class="setting-title" style="color: var(--neon-pink);">Sicherheits-Protokoll (PIN)</div>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Ändere den Zugangscode für die App (Standard: 0000).</p>
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label class="input-label">Aktuelle PIN</label>
+                    <input type="password" id="oldPin" class="cyber-input-full" placeholder="****" inputmode="numeric">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label class="input-label">Neue PIN</label>
+                    <input type="password" id="newPin" class="cyber-input-full" placeholder="4 Ziffern" inputmode="numeric">
+                </div>
+            </div>
+            <button onclick="changeSystemPin()" style="background: var(--neon-pink); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; text-transform: uppercase; letter-spacing: 2px;">PIN Aktualisieren</button>
+        </div>
         <div class="settings-card">
             <div class="setting-title">Zeit-Matrix (Arbeitszeit)</div>
             <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Definiert die Breite der Timeline in der Wochenansicht.</p>
@@ -41,18 +56,7 @@
                 </div>
             </div>
         </div>
-<div class="settings-card" style="border-color: var(--neon-pink);">
-            <div class="setting-title" style="color: var(--neon-pink);">Sicherheits-Protokoll (PIN)</div>
-            <div class="form-group">
-                <label class="input-label">Aktuelle PIN</label>
-                <input type="number" id="oldPin" class="cyber-input-full" placeholder="****">
-            </div>
-            <div class="form-group">
-                <label class="input-label">Neue PIN</label>
-                <input type="number" id="newPin" class="cyber-input-full" placeholder="4 Ziffern">
-            </div>
-            <button onclick="changeSystemPin()" style="background: var(--neon-pink); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px;">PIN ÄNDERN</button>
-        </div>
+
         <div class="settings-card">
             <div class="setting-title">Kategorie-Verschlüsselung</div>
             
@@ -145,7 +149,9 @@
                 if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
             }, 400);
         });
-function changeSystemPin() {
+
+        // NEU: PIN ÄNDERN FUNKTION
+        function changeSystemPin() {
             const oldInput = document.getElementById('oldPin').value;
             const newInput = document.getElementById('newPin').value;
             const currentPin = localStorage.getItem('appPin') || "0000";
@@ -164,6 +170,7 @@ function changeSystemPin() {
             document.getElementById('oldPin').value = '';
             document.getElementById('newPin').value = '';
         }
+
         function saveSystemSettings() {
             const btn = document.getElementById('save-btn');
             btn.innerText = "SAVING...";

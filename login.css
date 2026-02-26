@@ -1,0 +1,101 @@
+:root {
+    --neon-cyan: #05d9e8;
+    --neon-pink: #ff2a6d;
+    --neon-green: #39ff14;
+    --bg-deep: #0a0a0d;
+}
+
+/* Container Tuning */
+.loader-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: var(--bg-deep);
+    overflow: hidden;
+}
+
+/* Dein 270 Grad Jarvis-Ring */
+.cyber-ring {
+    position: absolute;
+    width: 320px;
+    height: 320px;
+    border: 4px solid var(--neon-cyan);
+    border-bottom-color: transparent; /* 270 Grad */
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(5, 217, 232, 0.4);
+    animation: slow-spin 10s linear infinite;
+    transition: all 0.5s ease;
+}
+
+@keyframes slow-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* PIN-Anzeige */
+.pin-display {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.pin-dot {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--neon-cyan);
+    border-radius: 50%;
+    transition: 0.2s;
+}
+
+.pin-dot.filled {
+    background: var(--neon-cyan);
+    box-shadow: 0 0 10px var(--neon-cyan);
+}
+
+/* Das Numpad im Ring */
+.numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.num-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 1px solid rgba(5, 217, 232, 0.3);
+    color: var(--neon-cyan);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.4rem;
+    cursor: pointer;
+    transition: 0.1s;
+}
+
+.num-btn:active {
+    background: var(--neon-cyan);
+    color: black;
+    box-shadow: 0 0 15px var(--neon-cyan);
+}
+
+/* Wenn PIN falsch wackelt der Ring */
+.ring-error {
+    border-color: var(--neon-pink);
+    animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+/* Status Text unter dem Ring */
+.loader-status {
+    margin-top: 50px;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--neon-cyan);
+}

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V2.1 - DYNAMISCHE ARBEITSZEIT)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.0 - CLOUD SYNC EDITION)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -12,9 +12,100 @@ const DEFAULTS = {
     plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon'
 };
 
-/**
- * 1. EINSTELLUNGEN LADEN & ANWENDEN
- */
+/* ==========================================================================
+   >>> FIREBASE CLOUD ANBINDUNG (MAGIC SYNC) <<<
+   ========================================================================== */
+const firebaseConfig = {
+    apiKey: "AIzaSyAEUmqJJVTb-6HLJelRavBYX7HYbYgAOk4",
+    authDomain: "project-905317930122069871.firebaseapp.com",
+    projectId: "project-905317930122069871",
+    storageBucket: "project-905317930122069871.firebasestorage.app",
+    messagingSenderId: "614371371179",
+    appId: "1:614371371179:web:c79cabf95b410b70142fee"
+};
+
+let db, setDoc, doc;
+let isSyncingFromCloud = false;
+
+// Wir fangen jeden lokalen Speichervorgang ab
+const originalSetItem = localStorage.setItem;
+
+localStorage.setItem = async function(key, value) {
+    originalSetItem.apply(this, arguments); // Zuerst blitzschnell lokal speichern
+
+    // Wenn wir die Daten gerade frisch aus der Cloud geladen haben, laden wir sie nicht gleich wieder hoch (Endlosschleife verhindern)
+    if (isSyncingFromCloud) return;
+
+    // Nur unsere 3 Haupt-Datenbanken in die Cloud pushen
+    if (["appTermine", "appKunden", "appEinstellungen"].includes(key)) {
+        if (db && setDoc && doc) {
+            try {
+                await setDoc(doc(db, "agenda2050", "systemdaten"), {
+                    termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
+                    kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
+                    einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}')
+                }, { merge: true });
+                console.log("☁️ Data synced to Cloud");
+            } catch(e) { console.error("Cloud Upload Fehler:", e); }
+        }
+    }
+};
+
+async function initCloud() {
+    try {
+        // Firebase dynamisch laden (blockiert die App nicht beim Start)
+        const fbApp = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js");
+        const fbDb = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+        
+        const app = fbApp.initializeApp(firebaseConfig);
+        db = fbDb.getFirestore(app);
+        doc = fbDb.doc;
+        setDoc = fbDb.setDoc;
+        const onSnapshot = fbDb.onSnapshot;
+
+        // Visuelles Feedback
+        const hdCountdown = document.getElementById('header-countdown');
+        if(hdCountdown) {
+            hdCountdown.innerText = "CLOUD CONNECTED";
+            hdCountdown.style.color = "var(--neon-green)";
+            hdCountdown.style.borderColor = "var(--neon-green)";
+            hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
+        }
+
+        // LIVE-SYNC: Überwacht die Cloud auf Änderungen von anderen Geräten
+        onSnapshot(doc(db, "agenda2050", "systemdaten"), (docSnap) => {
+            if (docSnap.exists()) {
+                isSyncingFromCloud = true; // System sperren
+                const data = docSnap.data();
+                
+                if (data.termine) originalSetItem.call(localStorage, 'appTermine', JSON.stringify(data.termine));
+                if (data.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(data.kunden));
+                if (data.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(data.einstellungen));
+                
+                // Wenn sich was geändert hat, Oberfläche neu zeichnen
+                ladeUndWendeEinstellungenAn();
+                if(typeof renderWeek === 'function') renderWeek();
+                if(typeof renderKunden === 'function') renderKunden();
+                if(typeof renderTimeline === 'function') {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const d = urlParams.get('d') || new Date().toISOString().split('T')[0];
+                    renderTimeline(d);
+                }
+                
+                isSyncingFromCloud = false; // System freigeben
+            }
+        });
+
+    } catch(e) {
+        console.log("Offline-Modus aktiv (Cloud nicht erreichbar)");
+    }
+}
+
+
+/* ==========================================================================
+   >>> LOKALE FUNKTIONEN (UI & RENDER LOGIK) <<<
+   ========================================================================== */
+
 function ladeUndWendeEinstellungenAn() {
     try {
         const gespeicherteDaten = localStorage.getItem('appEinstellungen');
@@ -24,14 +115,9 @@ function ladeUndWendeEinstellungenAn() {
         root.style.setProperty('--color-kat1', settings.kat1_farbe || DEFAULTS.kat1_farbe);
         root.style.setProperty('--color-kat2', settings.kat2_farbe || DEFAULTS.kat2_farbe);
         root.style.setProperty('--color-kat3', settings.kat3_farbe || DEFAULTS.kat3_farbe);
-    } catch (e) {
-        console.error("Fehler in ladeUndWendeEinstellungenAn:", e);
-    }
+    } catch (e) { console.error("Fehler in ladeUndWendeEinstellungenAn:", e); }
 }
 
-/**
- * 2. WOCHENANSICHT DYNAMISCH GENERIEREN (inkl. neuer Zeitskala)
- */
 function generiereWochenAnsicht() {
     const container = document.querySelector('.wochen-container');
     if (!container) return; 
@@ -48,7 +134,6 @@ function generiereWochenAnsicht() {
     const heute = new Date();
     const heuteISO = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-    // Skala aus Arbeitszeit berechnen
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
     const aStart = settings.arbeitsStart || "08:00";
     const aEnde = settings.arbeitsEnde || "22:00";
@@ -56,7 +141,6 @@ function generiereWochenAnsicht() {
     const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
     const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
     
-    // Viertel-Schritte berechnen
     const viertel = (endeMin - startMin) / 4;
     const q1Min = Math.floor(startMin + viertel);
     const midMin = Math.floor(startMin + viertel * 2);
@@ -71,7 +155,6 @@ function generiereWochenAnsicht() {
         let aktuellesDatum = new Date(montag);
         aktuellesDatum.setDate(montag.getDate() + i);
         
-        // Robustes ISO Format
         let isoDatum = new Date(aktuellesDatum.getTime() - (aktuellesDatum.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
         let tagZahl = String(aktuellesDatum.getDate()).padStart(2, '0');
         let monatZahl = String(aktuellesDatum.getMonth() + 1).padStart(2, '0');
@@ -94,9 +177,6 @@ function generiereWochenAnsicht() {
     }
 }
 
-/**
- * 3. MODAL STEUERUNG
- */
 function openModal() {
     const modal = document.getElementById('terminModal');
     if (!modal) return;
@@ -106,9 +186,9 @@ function openModal() {
     const catDropdown = document.getElementById('terminKategorie');
     if (catDropdown) {
         catDropdown.innerHTML = `
-            <option value="kat1">${settings.kat1_name}</option>
-            <option value="kat2">${settings.kat2_name}</option>
-            <option value="kat3">${settings.kat3_name}</option>
+            <option value="kat1">${settings.kat1_name || 'VIP'}</option>
+            <option value="kat2">${settings.kat2_name || 'Stamm'}</option>
+            <option value="kat3">${settings.kat3_name || 'Neu'}</option>
         `;
     }
 
@@ -151,9 +231,6 @@ function toggleKontaktFeld() {
     }
 }
 
-/**
- * 4. TERMIN SPEICHERN & AUTO-KUNDEN-ANLAGE
- */
 function saveAppointment() {
     try {
         const name = document.getElementById('terminName').value;
@@ -166,7 +243,7 @@ function saveAppointment() {
         const notizen = document.getElementById('terminNotizen').value;
 
         if (!name || !datum || !start || !ende) {
-            alert("Bitte alle Pflichtfelder (Name, Datum, Zeit) ausfüllen.");
+            alert("Bitte alle Pflichtfelder ausfüllen.");
             return;
         }
 
@@ -211,14 +288,9 @@ function saveAppointment() {
 
         closeModal();
         location.reload();
-    } catch (e) {
-        console.error("Fehler beim Speichern:", e);
-    }
+    } catch (e) { console.error("Fehler beim Speichern:", e); }
 }
 
-/**
- * 5. LIVE-SYSTEM (Rote Linie) - Dynamisch nach Arbeitszeit
- */
 function updateLiveSystem() {
     const containerHeute = document.getElementById('timeline-heute');
     if (containerHeute) {
@@ -235,10 +307,8 @@ function updateLiveSystem() {
         
         let linie = document.getElementById('rote-linie');
         
-        // Nur anzeigen, wenn wir in der Arbeitszeit sind!
         if(aktuelleMinuten >= startMin && aktuelleMinuten <= endeMin) {
             const prozentPosition = ((aktuelleMinuten - startMin) / gesamtArbeitsMin) * 100;
-            
             if (!linie) {
                 linie = document.createElement('div');
                 linie.id = 'rote-linie';
@@ -251,38 +321,8 @@ function updateLiveSystem() {
             linie.style.display = 'none';
         }
     }
-
-    const countdownElement = document.getElementById('header-countdown');
-    if (countdownElement) {
-        const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-        const heute = new Date();
-        const heuteISO = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-        const jetztTotalMin = heute.getHours() * 60 + heute.getMinutes();
-
-        let baldigeTermine = termine
-            .filter(t => t.datum === heuteISO)
-            .map(t => {
-                const s = t.start.split(':');
-                return { ...t, startInMin: (parseInt(s[0]) || 0) * 60 + (parseInt(s[1]) || 0) };
-            })
-            .filter(t => t.startInMin > jetztTotalMin)
-            .sort((a, b) => a.startInMin - b.startInMin);
-
-        if (baldigeTermine.length > 0) {
-            const naechster = baldigeTermine[0];
-            const diff = naechster.startInMin - jetztTotalMin;
-            const h = Math.floor(diff / 60);
-            const m = diff % 60;
-            countdownElement.innerText = `NÄCHSTER: ${h > 0 ? h + 'H ' : ''}${m}M`;
-        } else {
-            countdownElement.innerText = "KEINE TERMINE";
-        }
-    }
 }
 
-/**
- * 6. WOCHENPLAN RENDERN - Dynamisch nach Arbeitszeit
- */
 function renderWeek() {
     const wochenContainer = document.querySelector('.wochen-container');
     if (!wochenContainer) return;
@@ -308,10 +348,7 @@ function renderWeek() {
                 const endeArray = t.ende.split(':');
                 const tEndeMin = parseInt(endeArray[0]) * 60 + parseInt(endeArray[1]);
 
-                // Nur Termine anzeigen, die irgendwie in die Arbeitszeit fallen
                 if (tEndeMin > startMin && tStartMin < endeMin) {
-                    
-                    // Termine "kappen", falls sie vor/nach der Arbeitszeit liegen
                     let anzeigeStart = tStartMin < startMin ? startMin : tStartMin;
                     let anzeigeEnde = tEndeMin > endeMin ? endeMin : tEndeMin;
                     let anzeigeDauer = anzeigeEnde - anzeigeStart;
@@ -335,7 +372,7 @@ function renderWeek() {
 }
 
 /**
- * 7. INITIALISIERUNG BEIM START & PWA SETUP
+ * 8. INITIALISIERUNG
  */
 document.addEventListener('DOMContentLoaded', () => {
     ladeUndWendeEinstellungenAn();
@@ -344,14 +381,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLiveSystem();
     setInterval(updateLiveSystem, 60000);
 
-    // ROBUSTER PWA SERVICE WORKER (FÜR GITHUB PAGES)
+    // Initialisiert die Firebase Cloud!
+    initCloud();
+
+    // PWA Service Worker (für Offline PWA)
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js', { scope: './' })
-            .then(reg => console.log('System bereit (Offline-Mode aktiv)'))
-            .catch(err => console.log('Offline-System Fehler:', err));
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(err => console.log('SW Fehler:', err));
     }
 
-    // SICHERHEITS-LOADER
     setTimeout(() => {
         const loader = document.getElementById('app-loader');
         if (loader) {
@@ -360,4 +397,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 400);
 });
-       
+   

@@ -2,7 +2,7 @@
     --neon-cyan: #05d9e8;
     --neon-pink: #ff2a6d;
     --neon-green: #39ff14;
-    --bg-deep: #050508; /* Noch dunkler, leicht bläulich wie im Kino */
+    --bg-deep: #020205; /* Fast Pechschwarz für extremen Kontrast */
 }
 
 body {
@@ -17,16 +17,29 @@ body {
     font-family: 'Courier New', monospace;
 }
 
-/* CRT Scanline Effekt über dem ganzen Bildschirm */
+/* BEWEGLICHE Hologramm-Streifen (Scanlines) */
 .scanlines {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
-    background-size: 100% 4px;
+    background: repeating-linear-gradient(to bottom, transparent, transparent 3px, rgba(5, 217, 232, 0.05) 4px);
     z-index: 999;
     pointer-events: none;
-    opacity: 0.6;
+    animation: scanline-shift 10s linear infinite;
 }
+@keyframes scanline-shift { 0% { background-position: 0 0; } 100% { background-position: 0 100vh; } }
+
+/* Leuchtender Projektor-Fleck in der Mitte */
+.loader-container::before {
+    content: '';
+    position: absolute;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(5, 217, 232, 0.15) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    animation: pulse-glow 4s infinite alternate;
+}
+@keyframes pulse-glow { 0% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
 
 .loader-container {
     position: relative;
@@ -38,79 +51,89 @@ body {
     align-items: center;
 }
 
-/* --- J.A.R.V.I.S. RING SYSTEM --- */
+/* --- J.A.R.V.I.S. RING SYSTEM (Schwebend) --- */
 .ring-group {
     position: absolute;
-    width: 400px;
-    height: 400px;
+    width: 420px;
+    height: 420px;
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1;
     pointer-events: none;
+    animation: float-hud 6s ease-in-out infinite;
 }
+@keyframes float-hud { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
 
-/* Äußerer gestrichelter Ring (Rückwärts) */
+/* Äußerer gestrichelter Ring - Deutlich breiter und heller */
 .ring-outer {
     position: absolute;
     width: 100%;
     height: 100%;
-    border: 2px dashed rgba(5, 217, 232, 0.3);
+    border: 4px dashed rgba(5, 217, 232, 0.4);
     border-radius: 50%;
-    animation: spin-reverse 25s linear infinite;
+    box-shadow: 0 0 25px rgba(5, 217, 232, 0.2);
+    animation: spin-reverse 20s linear infinite;
 }
 
-/* Der Haupt-Ring (Den du vorher hattest) */
+/* Der Haupt-Ring - Extremes Neon! */
 .ring-main {
     position: absolute;
-    width: 88%;
-    height: 88%;
-    border: 3px solid var(--neon-cyan);
+    width: 85%;
+    height: 85%;
+    border: 4px solid var(--neon-cyan);
     border-bottom-color: transparent;
-    border-left-color: rgba(5, 217, 232, 0.2);
+    border-left-color: rgba(5, 217, 232, 0.1);
     border-radius: 50%;
-    box-shadow: 0 0 15px rgba(5, 217, 232, 0.4), inset 0 0 10px rgba(5, 217, 232, 0.2);
-    animation: spin-forward 8s linear infinite;
+    box-shadow: 0 0 30px var(--neon-cyan), inset 0 0 20px rgba(5, 217, 232, 0.5);
+    animation: spin-forward 6s linear infinite;
     transition: all 0.5s ease;
 }
 
-/* Innerer gepunkteter Ring (Schnell vorwärts) */
+/* Innerer Ring - Schnell und aggressiv entgegengesetzt */
 .ring-inner {
     position: absolute;
-    width: 76%;
-    height: 76%;
-    border: 2px dotted rgba(5, 217, 232, 0.5);
+    width: 70%;
+    height: 70%;
+    border: 3px dotted rgba(5, 217, 232, 0.8);
     border-radius: 50%;
-    animation: spin-forward 15s linear infinite;
+    animation: spin-forward 4s linear infinite reverse;
 }
 
-/* Feines Fadenkreuz im Hintergrund */
+/* Fadenkreuz - Leuchtend */
 .hud-crosshair {
     position: absolute;
-    width: 120%;
-    height: 120%;
+    width: 130%;
+    height: 130%;
 }
 .hud-crosshair::before {
     content: ''; position: absolute;
-    top: 50%; left: 0; width: 100%; height: 1px;
-    background: rgba(5, 217, 232, 0.15);
+    top: 50%; left: 0; width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(5, 217, 232, 0.6), transparent);
 }
 .hud-crosshair::after {
     content: ''; position: absolute;
-    top: 0; left: 50%; width: 1px; height: 100%;
-    background: rgba(5, 217, 232, 0.15);
+    top: 0; left: 50%; width: 2px; height: 100%;
+    background: linear-gradient(180deg, transparent, rgba(5, 217, 232, 0.6), transparent);
 }
 
-/* Kleine Deko-Texte am Ring */
+/* Kleine Deko-Texte am Ring - Flackernd */
 .deco-data {
     position: absolute;
-    font-size: 0.6rem;
+    font-size: 0.65rem;
     color: var(--neon-cyan);
-    opacity: 0.5;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 5px var(--neon-cyan);
+    animation: hud-glitch 3s infinite;
 }
-.top-left { top: 10%; left: 10%; }
-.bottom-right { bottom: 10%; right: 10%; }
+.top-left { top: 5%; left: 5%; }
+.bottom-right { bottom: 5%; right: 5%; }
+
+@keyframes hud-glitch {
+    0%, 100% { opacity: 0.8; }
+    5%, 25% { opacity: 0.2; }
+    10%, 30% { opacity: 1; }
+}
 
 /* --- ANIMATIONEN --- */
 @keyframes spin-forward { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -131,80 +154,84 @@ body {
     margin-bottom: 25px;
 }
 
+/* PIN Punkte - Mehr Glow und Bounce-Effekt */
 .pin-dot {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     border: 2px solid var(--neon-cyan);
     border-radius: 50%;
-    background: rgba(0,0,0,0.5);
-    box-shadow: 0 0 5px rgba(5, 217, 232, 0.3);
+    background: rgba(0,0,0,0.8);
+    box-shadow: 0 0 10px rgba(5, 217, 232, 0.4);
+    transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .pin-dot.filled {
     background: var(--neon-cyan);
-    box-shadow: 0 0 15px var(--neon-cyan);
+    box-shadow: 0 0 25px var(--neon-cyan);
+    transform: scale(1.4);
 }
 
 .numpad {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 15px;
 }
 
-/* Numpad Tasten - Etwas eckiger für den Tech-Look */
+/* Numpad Tasten - Starker Glas-Hologramm Effekt */
 .num-btn {
-    width: 52px;
-    height: 52px;
-    border-radius: 12px; /* Eckiger statt komplett rund! */
-    border: 1px solid rgba(5, 217, 232, 0.3);
-    background: rgba(5, 217, 232, 0.05);
+    width: 55px;
+    height: 55px;
+    border-radius: 14px;
+    border: 1px solid rgba(5, 217, 232, 0.5);
+    background: rgba(5, 217, 232, 0.08);
     color: var(--neon-cyan);
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.4rem;
+    font-size: 1.6rem;
+    font-weight: bold;
     cursor: pointer;
-    transition: 0.2s;
+    transition: 0.15s;
     touch-action: manipulation;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px); /* Der Blur-Effekt macht es extrem hochwertig */
+    box-shadow: inset 0 0 15px rgba(5, 217, 232, 0.1);
 }
 
 .num-btn:active {
-    background: var(--neon-cyan);
+    background: rgba(5, 217, 232, 0.9);
     color: var(--bg-deep);
-    transform: scale(0.9);
-    box-shadow: 0 0 20px var(--neon-cyan);
+    transform: scale(0.85);
+    box-shadow: 0 0 35px var(--neon-cyan);
 }
 
-/* Sonder-Buttons */
-.action-btn { font-size: 1.2rem; font-weight: bold; }
-.error-btn { color: var(--neon-pink); border-color: rgba(255, 42, 109, 0.4); }
-.error-btn:active { background: var(--neon-pink); box-shadow: 0 0 20px var(--neon-pink); }
+.action-btn { font-size: 1.3rem; }
+.error-btn { color: var(--neon-pink); border-color: rgba(255, 42, 109, 0.6); }
+.error-btn:active { background: var(--neon-pink); box-shadow: 0 0 30px var(--neon-pink); color: white; }
 
-.reset-btn { color: #888; border-color: rgba(255,255,255,0.1); font-size: 1rem; }
-.reset-btn:active { background: #888; color: black; box-shadow: 0 0 20px #888; }
+.reset-btn { color: #aaa; border-color: rgba(255,255,255,0.2); font-size: 1.2rem; }
+.reset-btn:active { background: #aaa; color: black; box-shadow: 0 0 20px #aaa; }
 
-
-/* System Texte */
 .loader-text {
-    font-size: 3rem;
+    font-size: 3.5rem;
     font-weight: 900;
     color: var(--neon-cyan);
-    text-shadow: 0 0 20px var(--neon-cyan);
+    text-shadow: 0 0 30px var(--neon-cyan);
 }
 
+/* Status Text - Pulsierend */
 .loader-status {
     position: absolute;
     bottom: 20px;
     width: 100%;
     text-align: center;
-    letter-spacing: 3px;
-    font-size: 0.8rem;
+    letter-spacing: 4px;
+    font-size: 0.9rem;
     color: var(--neon-cyan);
     text-transform: uppercase;
-    opacity: 0.8;
+    font-weight: bold;
+    text-shadow: 0 0 10px var(--neon-cyan);
+    animation: pulse-glow 2s infinite alternate;
 }
 
-/* Fehler Animation (wird vom JS an ring-main geschickt) */
-.ring-error { border-color: var(--neon-pink) !important; animation: shake 0.4s ease !important; box-shadow: 0 0 20px var(--neon-pink) !important; }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+.ring-error { border-color: var(--neon-pink) !important; animation: shake 0.3s ease infinite !important; box-shadow: 0 0 40px var(--neon-pink) !important; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-15px); } 75% { transform: translateX(15px); } }

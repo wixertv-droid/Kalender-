@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.7 - TABLET TOUCH FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.8 - TAGESANSICHT RENDER FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -85,9 +85,23 @@ async function initCloud() {
                 if (data.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(data.einstellungen));
                 
                 ladeUndWendeEinstellungenAn();
+                
+                // Woche rendern falls wir in woche.html sind
                 if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
                 if(typeof renderWeek === 'function') renderWeek();
                 if(typeof renderKunden === 'function') renderKunden();
+                
+                // NEU: Tag rendern falls wir in tag.html sind (Live Cloud Updates!)
+                if(typeof renderTimeline === 'function') {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    let d = urlParams.get('d');
+                    if(!d) {
+                        const heute = new Date();
+                        d = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                    }
+                    renderTimeline(d);
+                }
+
                 updateLiveSystem(); 
                 
                 isSyncingFromCloud = false; 
@@ -175,8 +189,6 @@ function generiereWochenAnsicht() {
             document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
-        // TOUCH FIX: style="cursor: pointer; touch-action: manipulation;" zwingt Tablets, den Klick sofort zu akzeptieren.
-        // window.location.href ist zuverlässiger als nur location.href
         container.innerHTML += `
             <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;" onclick="window.location.href='tag.html?d=${isoDatum}'">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
@@ -298,8 +310,21 @@ function saveAppointment() {
 
         closeModal();
         
-        generiereWochenAnsicht();
-        renderWeek();
+        // UI Live Aktualisieren
+        if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
+        if(typeof renderWeek === 'function') renderWeek();
+        
+        // NEU: Tagesansicht sofort aktualisieren, wenn wir dort sind!
+        if(typeof renderTimeline === 'function') {
+            const urlParams = new URLSearchParams(window.location.search);
+            let d = urlParams.get('d');
+            if(!d) {
+                const heute = new Date();
+                d = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            }
+            renderTimeline(d);
+        }
+
         updateLiveSystem();
         
     } catch (e) { console.error("Fehler beim Speichern:", e); }

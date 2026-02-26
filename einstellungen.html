@@ -164,10 +164,21 @@
             setTimeout(() => { location.href = 'woche.html'; }, 800);
         }
 
-        function resetAllData() {
-            if(confirm("SYSTEMWARNUNG: Alle Termine werden gelöscht!")) {
-                localStorage.removeItem('appTermine');
-                location.reload();
+function resetAllData() {
+            if(confirm("SYSTEMWARNUNG: Alle Termine werden unwiderruflich auch in der Cloud gelöscht!")) {
+                
+                // Wir speichern ein leeres Array. Das triggert den Magic-Sync 
+                // und überschreibt die Cloud-Datenbank mit "Nichts"!
+                localStorage.setItem('appTermine', '[]');
+                
+                // Optional: Falls du auch die Kundendatenbank komplett leeren willst, 
+                // entferne die zwei Schrägstriche vor der nächsten Zeile:
+                // localStorage.setItem('appKunden', '[]');
+                
+                // Wir warten eine halbe Sekunde, damit der Cloud-Upload sicher durchgeht, bevor die Seite neu lädt
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
             }
         }
     </script>

@@ -51,7 +51,7 @@ function generiereWochenAnsicht() {
     // Skala aus Arbeitszeit berechnen
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
     const aStart = settings.arbeitsStart || "08:00";
-    const aEnde = settings.arbeitsEnde || "20:00";
+    const aEnde = settings.arbeitsEnde || "22:00";
     
     const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
     const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
@@ -224,7 +224,7 @@ function updateLiveSystem() {
     if (containerHeute) {
         const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
         const aStart = settings.arbeitsStart || "08:00";
-        const aEnde = settings.arbeitsEnde || "20:00";
+        const aEnde = settings.arbeitsEnde || "22:00";
         
         const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
         const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
@@ -291,7 +291,7 @@ function renderWeek() {
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
 
     const aStart = settings.arbeitsStart || "08:00";
-    const aEnde = settings.arbeitsEnde || "20:00";
+    const aEnde = settings.arbeitsEnde || "22:00";
     const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
     const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
     const gesamtArbeitsMin = endeMin - startMin;

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.4 - CLOUD SYNC & UI FIX) 
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.5 - UI & CLICK FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -29,7 +29,6 @@ let isSyncingFromCloud = false;
 
 const originalSetItem = localStorage.setItem;
 
-// Sicherer Interceptor
 localStorage.setItem = async function(key, value) {
     originalSetItem.call(localStorage, key, value);
 
@@ -67,7 +66,9 @@ async function initCloud() {
             hdCountdown.style.borderColor = "var(--neon-green)";
             hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
             
+            // FIX: Setzt den Text zurück, damit der Countdown wieder starten kann!
             setTimeout(() => {
+                hdCountdown.innerText = "SYNCING...";
                 hdCountdown.style.color = "";
                 hdCountdown.style.borderColor = "";
                 hdCountdown.style.textShadow = "";
@@ -75,10 +76,8 @@ async function initCloud() {
             }, 3000);
         }
 
-        // Zeichnet die Matrix einmal lokal vor
         generiereWochenAnsicht();
 
-        // Überwacht die Cloud in Echtzeit
         onSnapshot(doc(db, "agenda2050", "systemdaten"), (docSnap) => {
             if (docSnap.exists()) {
                 isSyncingFromCloud = true; 
@@ -90,7 +89,6 @@ async function initCloud() {
                 
                 ladeUndWendeEinstellungenAn();
                 
-                // WICHTIG: Die Cloud muss auch die grafische Matrix neu zeichnen!
                 if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
                 if(typeof renderWeek === 'function') renderWeek();
                 if(typeof renderKunden === 'function') renderKunden();
@@ -104,7 +102,6 @@ async function initCloud() {
         console.log("Offline-Modus aktiv (Cloud nicht erreichbar)");
     }
 }
-
 
 /* ==========================================================================
    >>> HILFSFUNKTIONEN FÜR KUGELSICHERE ZEITBERECHNUNG <<<
@@ -155,7 +152,6 @@ function generiereWochenAnsicht() {
     const aStart = settings.arbeitsStart || "08:00";
     const aEnde = settings.arbeitsEnde || "22:00";
     
-    // Kugelsichere Zeit-Berechnung
     const startMin = parseTimeStr(aStart, "08:00");
     const endeMin = parseTimeStr(aEnde, "22:00");
     
@@ -190,8 +186,9 @@ function generiereWochenAnsicht() {
             document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
+        // FIX: onclick="..." ist wieder da, damit die Tage klickbar sind!
         container.innerHTML += `
-            <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}">
+            <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" onclick="location.href='tag.html?d=${isoDatum}'">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
                 <div class="timeline-horizontal" ${timelineId}></div>
                 <div class="timeline-skala">${skalaHTML}</div>
@@ -401,7 +398,7 @@ function renderWeek() {
 
     document.querySelectorAll('.termin-segment').forEach(el => el.remove());
 
-    if(gesamtArbeitsMin <= 0) return; // Verhindert Absturz bei fehlerhafter Zeiteingabe
+    if(gesamtArbeitsMin <= 0) return;
 
     termine.forEach(t => {
         const tagZeile = document.querySelector(`.tag-zeile[data-datum="${t.datum}"]`);
@@ -446,10 +443,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initCloud();
 
-    // AUTO-UPDATER FÜR DEN OFFLINE-TRESOR
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {
-            reg.update(); // Zwingt den Browser immer zur neuesten Version!
+            reg.update();
         }).catch(err => console.log('SW Fehler:', err));
     }
 

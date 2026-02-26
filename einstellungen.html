@@ -167,17 +167,22 @@
 function resetAllData() {
             if(confirm("SYSTEMWARNUNG: Alle Termine werden unwiderruflich auch in der CLOUD gelöscht!")) {
                 
-                // Button-Text ändern als visuelles Feedback
+                // Visuelles Feedback
                 const btn = document.querySelector('.btn-danger');
-                if(btn) btn.innerText = "LÖSCHE IN CLOUD...";
+                if(btn) {
+                    btn.innerText = "LÖSCHEN LÄUFT...";
+                    btn.style.opacity = "0.7";
+                }
                 
-                // Leere Liste speichern (triggert den Magic-Sync)
-                localStorage.setItem('appTermine', '[]');
+                // 1. Exakt wie in der Tagesansicht: Ein sauberes, leeres Array speichern!
+                let leereListe = [];
+                localStorage.setItem('appTermine', JSON.stringify(leereListe));
                 
-                // WICHTIG: 1,5 Sekunden warten, damit der Upload nicht abgebrochen wird!
+                // 2. Wir laden nicht die Einstellungsseite neu, sondern springen
+                // nach 1 Sekunde (Upload-Zeit) direkt in den leeren Kalender!
                 setTimeout(() => {
-                    location.reload();
-                }, 1500);
+                    window.location.href = 'woche.html';
+                }, 1000);
             }
         }
     </script>

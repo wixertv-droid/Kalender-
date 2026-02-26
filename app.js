@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.3 - CLOUD & COUNTDOWN FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.4 - CLOUD SYNC & UI FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -29,8 +29,9 @@ let isSyncingFromCloud = false;
 
 const originalSetItem = localStorage.setItem;
 
+// Sicherer Interceptor
 localStorage.setItem = async function(key, value) {
-    originalSetItem.apply(this, arguments);
+    originalSetItem.call(localStorage, key, value);
 
     if (isSyncingFromCloud) return;
 
@@ -74,8 +75,10 @@ async function initCloud() {
             }, 3000);
         }
 
+        // Zeichnet die Matrix einmal lokal vor
         generiereWochenAnsicht();
 
+        // Überwacht die Cloud in Echtzeit
         onSnapshot(doc(db, "agenda2050", "systemdaten"), (docSnap) => {
             if (docSnap.exists()) {
                 isSyncingFromCloud = true; 
@@ -86,6 +89,9 @@ async function initCloud() {
                 if (data.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(data.einstellungen));
                 
                 ladeUndWendeEinstellungenAn();
+                
+                // WICHTIG: Die Cloud muss auch die grafische Matrix neu zeichnen!
+                if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
                 if(typeof renderWeek === 'function') renderWeek();
                 if(typeof renderKunden === 'function') renderKunden();
                 updateLiveSystem(); 
@@ -99,6 +105,19 @@ async function initCloud() {
     }
 }
 
+
+/* ==========================================================================
+   >>> HILFSFUNKTIONEN FÜR KUGELSICHERE ZEITBERECHNUNG <<<
+   ========================================================================== */
+function parseTimeStr(timeStr, defaultStr) {
+    if (!timeStr || !timeStr.includes(':')) timeStr = defaultStr;
+    const parts = timeStr.split(':');
+    let h = parseInt(parts[0], 10);
+    let m = parseInt(parts[1], 10);
+    if (isNaN(h)) h = parseInt(defaultStr.split(':')[0], 10);
+    if (isNaN(m)) m = parseInt(defaultStr.split(':')[1], 10);
+    return h * 60 + m;
+}
 
 /* ==========================================================================
    >>> LOKALE FUNKTIONEN (UI & RENDER LOGIK) <<<
@@ -136,8 +155,9 @@ function generiereWochenAnsicht() {
     const aStart = settings.arbeitsStart || "08:00";
     const aEnde = settings.arbeitsEnde || "22:00";
     
-    const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
-    const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
+    // Kugelsichere Zeit-Berechnung
+    const startMin = parseTimeStr(aStart, "08:00");
+    const endeMin = parseTimeStr(aEnde, "22:00");
     
     const viertel = (endeMin - startMin) / 4;
     const q1Min = Math.floor(startMin + viertel);
@@ -171,7 +191,7 @@ function generiereWochenAnsicht() {
         }
 
         container.innerHTML += `
-            <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" onclick="location.href='tag.html?d=${isoDatum}'">
+            <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
                 <div class="timeline-horizontal" ${timelineId}></div>
                 <div class="timeline-skala">${skalaHTML}</div>
@@ -301,11 +321,9 @@ function updateLiveSystem() {
     const containerHeute = document.getElementById('timeline-heute');
     if (containerHeute) {
         const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
-        const aStart = settings.arbeitsStart || "08:00";
-        const aEnde = settings.arbeitsEnde || "22:00";
         
-        const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
-        const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
+        const startMin = parseTimeStr(settings.arbeitsStart, "08:00");
+        const endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
         const gesamtArbeitsMin = endeMin - startMin;
 
         const jetzt = new Date();
@@ -313,7 +331,7 @@ function updateLiveSystem() {
         
         let linie = document.getElementById('rote-linie');
         
-        if(aktuelleMinuten >= startMin && aktuelleMinuten <= endeMin) {
+        if(aktuelleMinuten >= startMin && aktuelleMinuten <= endeMin && gesamtArbeitsMin > 0) {
             const prozentPosition = ((aktuelleMinuten - startMin) / gesamtArbeitsMin) * 100;
             if (!linie) {
                 linie = document.createElement('div');
@@ -377,23 +395,21 @@ function renderWeek() {
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
 
-    const aStart = settings.arbeitsStart || "08:00";
-    const aEnde = settings.arbeitsEnde || "22:00";
-    const startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
-    const endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
+    const startMin = parseTimeStr(settings.arbeitsStart, "08:00");
+    const endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
     const gesamtArbeitsMin = endeMin - startMin;
 
     document.querySelectorAll('.termin-segment').forEach(el => el.remove());
+
+    if(gesamtArbeitsMin <= 0) return; // Verhindert Absturz bei fehlerhafter Zeiteingabe
 
     termine.forEach(t => {
         const tagZeile = document.querySelector(`.tag-zeile[data-datum="${t.datum}"]`);
         if (tagZeile) {
             const timeline = tagZeile.querySelector('.timeline-horizontal');
-            if (timeline) {
-                const startArray = t.start.split(':');
-                const tStartMin = parseInt(startArray[0]) * 60 + parseInt(startArray[1]);
-                const endeArray = t.ende.split(':');
-                const tEndeMin = parseInt(endeArray[0]) * 60 + parseInt(endeArray[1]);
+            if (timeline && t.start && t.ende) {
+                const tStartMin = parseTimeStr(t.start, "00:00");
+                const tEndeMin = parseTimeStr(t.ende, "23:59");
 
                 if (tEndeMin > startMin && tStartMin < endeMin) {
                     let anzeigeStart = tStartMin < startMin ? startMin : tStartMin;
@@ -430,8 +446,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initCloud();
 
+    // AUTO-UPDATER FÜR DEN OFFLINE-TRESOR
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(err => console.log('SW Fehler:', err));
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {
+            reg.update(); // Zwingt den Browser immer zur neuesten Version!
+        }).catch(err => console.log('SW Fehler:', err));
     }
 
     setTimeout(() => {

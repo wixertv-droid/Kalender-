@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.5 - UI & CLICK FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.6 - LIVE SYNC & RENDER FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -29,6 +29,7 @@ let isSyncingFromCloud = false;
 
 const originalSetItem = localStorage.setItem;
 
+// Sicherer Interceptor (Schickt Daten an die Cloud, wenn sie lokal gespeichert werden)
 localStorage.setItem = async function(key, value) {
     originalSetItem.call(localStorage, key, value);
 
@@ -42,7 +43,7 @@ localStorage.setItem = async function(key, value) {
                     kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
                     einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}')
                 }, { merge: true });
-                console.log("☁️ Data synced to Cloud");
+                console.log("☁️ Cloud Upload erfolgreich!");
             } catch(e) { console.error("Cloud Upload Fehler:", e); }
         }
     }
@@ -66,7 +67,6 @@ async function initCloud() {
             hdCountdown.style.borderColor = "var(--neon-green)";
             hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
             
-            // FIX: Setzt den Text zurück, damit der Countdown wieder starten kann!
             setTimeout(() => {
                 hdCountdown.innerText = "SYNCING...";
                 hdCountdown.style.color = "";
@@ -76,8 +76,7 @@ async function initCloud() {
             }, 3000);
         }
 
-        generiereWochenAnsicht();
-
+        // Überwacht die Cloud in Echtzeit
         onSnapshot(doc(db, "agenda2050", "systemdaten"), (docSnap) => {
             if (docSnap.exists()) {
                 isSyncingFromCloud = true; 
@@ -88,7 +87,6 @@ async function initCloud() {
                 if (data.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(data.einstellungen));
                 
                 ladeUndWendeEinstellungenAn();
-                
                 if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
                 if(typeof renderWeek === 'function') renderWeek();
                 if(typeof renderKunden === 'function') renderKunden();
@@ -101,19 +99,6 @@ async function initCloud() {
     } catch(e) {
         console.log("Offline-Modus aktiv (Cloud nicht erreichbar)");
     }
-}
-
-/* ==========================================================================
-   >>> HILFSFUNKTIONEN FÜR KUGELSICHERE ZEITBERECHNUNG <<<
-   ========================================================================== */
-function parseTimeStr(timeStr, defaultStr) {
-    if (!timeStr || !timeStr.includes(':')) timeStr = defaultStr;
-    const parts = timeStr.split(':');
-    let h = parseInt(parts[0], 10);
-    let m = parseInt(parts[1], 10);
-    if (isNaN(h)) h = parseInt(defaultStr.split(':')[0], 10);
-    if (isNaN(m)) m = parseInt(defaultStr.split(':')[1], 10);
-    return h * 60 + m;
 }
 
 /* ==========================================================================
@@ -152,8 +137,11 @@ function generiereWochenAnsicht() {
     const aStart = settings.arbeitsStart || "08:00";
     const aEnde = settings.arbeitsEnde || "22:00";
     
-    const startMin = parseTimeStr(aStart, "08:00");
-    const endeMin = parseTimeStr(aEnde, "22:00");
+    // Kugelsichere Skalen-Berechnung
+    let startMin = 480; 
+    let endeMin = 1320; 
+    if(aStart.includes(':')) startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
+    if(aEnde.includes(':')) endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
     
     const viertel = (endeMin - startMin) / 4;
     const q1Min = Math.floor(startMin + viertel);
@@ -186,7 +174,6 @@ function generiereWochenAnsicht() {
             document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
-        // FIX: onclick="..." ist wieder da, damit die Tage klickbar sind!
         container.innerHTML += `
             <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" onclick="location.href='tag.html?d=${isoDatum}'">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
@@ -307,7 +294,13 @@ function saveAppointment() {
         localStorage.setItem('appTermine', JSON.stringify(termine));
 
         closeModal();
-        location.reload();
+        
+        // FIX: Kein Seiten-Reload mehr! Dadurch hat die Cloud Zeit, den Termin zu speichern.
+        // Wir zeichnen die UI einfach in Echtzeit neu:
+        generiereWochenAnsicht();
+        renderWeek();
+        updateLiveSystem();
+        
     } catch (e) { console.error("Fehler beim Speichern:", e); }
 }
 
@@ -318,9 +311,12 @@ function updateLiveSystem() {
     const containerHeute = document.getElementById('timeline-heute');
     if (containerHeute) {
         const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
+        const aStart = settings.arbeitsStart || "08:00";
+        const aEnde = settings.arbeitsEnde || "22:00";
         
-        const startMin = parseTimeStr(settings.arbeitsStart, "08:00");
-        const endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
+        let startMin = 480; let endeMin = 1320;
+        if(aStart.includes(':')) startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
+        if(aEnde.includes(':')) endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
         const gesamtArbeitsMin = endeMin - startMin;
 
         const jetzt = new Date();
@@ -352,7 +348,7 @@ function updateLiveSystem() {
         const heuteKalenderTime = new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate()).getTime();
 
         let zukuenftigeTermine = termine
-            .filter(t => t.datum && t.start)
+            .filter(t => t && t.datum && t.start && typeof t.start === 'string' && t.start.includes(':'))
             .map(t => {
                 const parts = t.datum.split('-'); 
                 const timeParts = t.start.split(':'); 
@@ -392,39 +388,52 @@ function renderWeek() {
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
 
-    const startMin = parseTimeStr(settings.arbeitsStart, "08:00");
-    const endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
+    const aStart = settings.arbeitsStart || "08:00";
+    const aEnde = settings.arbeitsEnde || "22:00";
+    
+    let startMin = 480; let endeMin = 1320;
+    if(aStart.includes(':')) startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
+    if(aEnde.includes(':')) endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
     const gesamtArbeitsMin = endeMin - startMin;
 
+    // Alte Blöcke löschen, bevor neue gemalt werden
     document.querySelectorAll('.termin-segment').forEach(el => el.remove());
 
     if(gesamtArbeitsMin <= 0) return;
 
     termine.forEach(t => {
+        // Ignoriere fehlerhafte Termine, damit die App nicht abstürzt
+        if (!t || !t.datum || !t.start || !t.ende || !t.start.includes(':') || !t.ende.includes(':')) return;
+
         const tagZeile = document.querySelector(`.tag-zeile[data-datum="${t.datum}"]`);
         if (tagZeile) {
             const timeline = tagZeile.querySelector('.timeline-horizontal');
-            if (timeline && t.start && t.ende) {
-                const tStartMin = parseTimeStr(t.start, "00:00");
-                const tEndeMin = parseTimeStr(t.ende, "23:59");
+            if (timeline) {
+                try {
+                    const tStartMin = parseInt(t.start.split(':')[0]) * 60 + parseInt(t.start.split(':')[1]);
+                    const tEndeMin = parseInt(t.ende.split(':')[0]) * 60 + parseInt(t.ende.split(':')[1]);
 
-                if (tEndeMin > startMin && tStartMin < endeMin) {
-                    let anzeigeStart = tStartMin < startMin ? startMin : tStartMin;
-                    let anzeigeEnde = tEndeMin > endeMin ? endeMin : tEndeMin;
-                    let anzeigeDauer = anzeigeEnde - anzeigeStart;
+                    if (tEndeMin > startMin && tStartMin < endeMin) {
+                        let anzeigeStart = tStartMin < startMin ? startMin : tStartMin;
+                        let anzeigeEnde = tEndeMin > endeMin ? endeMin : tEndeMin;
+                        let anzeigeDauer = anzeigeEnde - anzeigeStart;
 
-                    const linksPosition = ((anzeigeStart - startMin) / gesamtArbeitsMin) * 100;
-                    const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
+                        const linksPosition = ((anzeigeStart - startMin) / gesamtArbeitsMin) * 100;
+                        const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
 
-                    const segment = document.createElement('div');
-                    segment.className = `termin-segment ${t.kat}`;
-                    segment.style.left = linksPosition + '%';
-                    segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
-                    
-                    const katName = settings[t.kat + "_name"] || "Termin";
-                    segment.innerHTML = `<span class="status-label">${katName}</span>`;
-                    
-                    timeline.appendChild(segment);
+                        const segment = document.createElement('div');
+                        const safeKat = t.kat || 'kat1'; // Fallback falls Kategorie fehlt
+                        segment.className = `termin-segment ${safeKat}`;
+                        segment.style.left = linksPosition + '%';
+                        segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
+                        
+                        const katName = settings[safeKat + "_name"] || "Termin";
+                        segment.innerHTML = `<span class="status-label">${katName}</span>`;
+                        
+                        timeline.appendChild(segment);
+                    }
+                } catch (e) {
+                    console.error("Fehler beim Malen des Blocks:", e);
                 }
             }
         }

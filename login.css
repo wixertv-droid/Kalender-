@@ -16,33 +16,34 @@ body {
     font-family: 'Courier New', monospace;
 }
 
+/* Mehr Platz für den gesamten Container */
 .loader-container {
     position: relative;
-    width: 350px;
-    height: 450px; /* Platz für Status Text unten */
+    width: 400px;
+    height: 500px; 
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
 }
 
-/* Der Ring liegt jetzt HINTER den Tasten (z-index: 1) */
+/* Der Ring wird größer (360px statt 300px), damit alles entspannt reinpasst */
 .cyber-ring {
     position: absolute;
-    width: 300px;
-    height: 300px;
+    width: 360px;
+    height: 360px;
     border: 4px solid var(--neon-cyan);
     border-bottom-color: transparent;
     border-radius: 50%;
     box-shadow: 0 0 20px rgba(5, 217, 232, 0.3);
     animation: slow-spin 10s linear infinite;
     z-index: 1;
-    pointer-events: none; /* WICHTIG: Klicks gehen durch den Ring durch! */
+    pointer-events: none; 
 }
 
 @keyframes slow-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* Der Inhalt liegt VOR dem Ring (z-index: 10) */
+/* Der innere Content exakt zentrieren */
 .gateway-content {
     z-index: 10;
     display: flex;
@@ -51,10 +52,11 @@ body {
     justify-content: center;
 }
 
+/* Die Punkte rücken etwas näher zusammen, haben aber nach unten genug Luft */
 .pin-display {
     display: flex;
     gap: 15px;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
 }
 
 .pin-dot {
@@ -75,9 +77,10 @@ body {
     gap: 12px;
 }
 
+/* Tasten minimal kompakter (50px statt 55px), damit sie besser in den Kreis passen */
 .num-btn {
-    width: 55px;
-    height: 55px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     border: 1px solid rgba(5, 217, 232, 0.4);
     background: rgba(10, 10, 13, 0.8);
@@ -85,7 +88,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     cursor: pointer;
     transition: 0.1s;
     touch-action: manipulation;
@@ -104,9 +107,10 @@ body {
     text-shadow: 0 0 15px var(--neon-cyan);
 }
 
+/* Status-Text weiter nach unten gerückt */
 .loader-status {
     position: absolute;
-    bottom: 0;
+    bottom: 20px;
     width: 100%;
     text-align: center;
     letter-spacing: 2px;

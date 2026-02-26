@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.8 - TAGESANSICHT RENDER FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.9 - EDIT & OVERLAP FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -11,6 +11,9 @@ const DEFAULTS = {
     kat3_name: 'Neu', kat3_farbe: '#05d9e8',
     plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon'
 };
+
+// Globaler Speicher, um zu wissen, ob wir einen NEUEN Termin anlegen oder einen ALTEN bearbeiten
+let currentEditId = null; 
 
 /* ==========================================================================
    >>> FIREBASE CLOUD ANBINDUNG (MAGIC SYNC) <<<
@@ -86,12 +89,10 @@ async function initCloud() {
                 
                 ladeUndWendeEinstellungenAn();
                 
-                // Woche rendern falls wir in woche.html sind
                 if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
                 if(typeof renderWeek === 'function') renderWeek();
                 if(typeof renderKunden === 'function') renderKunden();
                 
-                // NEU: Tag rendern falls wir in tag.html sind (Live Cloud Updates!)
                 if(typeof renderTimeline === 'function') {
                     const urlParams = new URLSearchParams(window.location.search);
                     let d = urlParams.get('d');
@@ -103,7 +104,6 @@ async function initCloud() {
                 }
 
                 updateLiveSystem(); 
-                
                 isSyncingFromCloud = false; 
             }
         });
@@ -199,9 +199,12 @@ function generiereWochenAnsicht() {
     }
 }
 
-function openModal() {
+// NEU: Nimmt optional eine editId entgegen, wenn wir bearbeiten wollen
+function openModal(editId = null) {
     const modal = document.getElementById('terminModal');
     if (!modal) return;
+
+    currentEditId = editId; // Wir merken uns, ob es "Neu" oder "Bearbeiten" ist
 
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
     
@@ -225,15 +228,34 @@ function openModal() {
         `;
     }
 
-    const nameInput = document.getElementById('terminName');
-    if (nameInput) nameInput.value = '';
-    const kontaktInput = document.getElementById('terminKontakt');
-    if (kontaktInput) kontaktInput.value = '';
-    const notizInput = document.getElementById('terminNotizen');
-    if (notizInput) notizInput.value = '';
-    
+    if (editId) {
+        // BEARBEITEN-MODUS: Felder ausfüllen
+        const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+        const t = termine.find(x => x.id === editId);
+        if (t) {
+            document.getElementById('terminName').value = t.name || '';
+            document.getElementById('terminDatum').value = t.datum || '';
+            document.getElementById('terminStart').value = t.start || '';
+            document.getElementById('terminEnde').value = t.ende || '';
+            document.getElementById('terminKategorie').value = t.kat || 'kat1';
+            document.getElementById('terminPlattform').value = t.plattform || 'none';
+            document.getElementById('terminKontakt').value = t.kontakt || '';
+            document.getElementById('terminNotizen').value = t.notizen || '';
+        }
+    } else {
+        // NEU-MODUS: Felder leeren
+        document.getElementById('terminName').value = '';
+        document.getElementById('terminKontakt').value = '';
+        document.getElementById('terminNotizen').value = '';
+        document.getElementById('terminStart').value = '';
+        document.getElementById('terminEnde').value = '';
+    }
+
     const kontaktContainer = document.getElementById('kontaktContainer');
-    if (kontaktContainer) kontaktContainer.style.display = 'none';
+    if (kontaktContainer) {
+        const pValue = document.getElementById('terminPlattform').value;
+        kontaktContainer.style.display = (pValue !== 'none') ? 'block' : 'none';
+    }
 
     modal.style.display = 'flex';
 }
@@ -243,6 +265,7 @@ function closeModal() {
     if (modal) modal.style.display = 'none';
     const vBox = document.getElementById('kundenVorschlaege');
     if (vBox) vBox.style.display = 'none';
+    currentEditId = null; // Zurücksetzen
 }
 
 function toggleKontaktFeld() {
@@ -269,6 +292,31 @@ function saveAppointment() {
             return;
         }
 
+        let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+        
+        // -------------------------------------------------------------
+        // ANTI-DOPPELBUCHUNGS-SYSTEM
+        // -------------------------------------------------------------
+        const nStartMin = parseTimeStr(start, "00:00");
+        const nEndeMin = parseTimeStr(ende, "23:59");
+        
+        const overlap = termine.find(t => {
+            // Wenn der Termin am selben Tag ist UND wir nicht gerade exakt diesen Termin bearbeiten:
+            if (t.datum === datum && t.id !== currentEditId) {
+                const eStartMin = parseTimeStr(t.start, "00:00");
+                const eEndeMin = parseTimeStr(t.ende, "23:59");
+                // Logik: Überschneidung liegt vor, wenn NEUER_START < ALTER_ENDE UND NEUES_ENDE > ALTER_START
+                return (nStartMin < eEndeMin && nEndeMin > eStartMin);
+            }
+            return false;
+        });
+
+        if (overlap) {
+            alert(`⚠️ DOPPELBUCHUNG VERHINDERT!\n\nDu hast zur selben Zeit bereits den Termin "${overlap.name}" (${overlap.start} - ${overlap.ende} Uhr).\nBitte ändere die Zeit.`);
+            return; // Bricht das Speichern ab!
+        }
+        // -------------------------------------------------------------
+
         let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
         let kundeGefunden = false;
 
@@ -292,20 +340,36 @@ function saveAppointment() {
             localStorage.setItem('appKunden', JSON.stringify(kunden));
         }
 
-        const neuerTermin = {
-            id: Date.now(),
-            name: name.trim(),
-            datum: datum,
-            start: start,
-            ende: ende,
-            kat: kat,
-            plattform: plattform,
-            kontakt: kontakt,
-            notizen: notizen
-        };
+        if (currentEditId) {
+            // UPDATE EINES BESTEHENDEN TERMINS
+            const index = termine.findIndex(t => t.id === currentEditId);
+            if(index > -1) {
+                termine[index].name = name.trim();
+                termine[index].datum = datum;
+                termine[index].start = start;
+                termine[index].ende = ende;
+                termine[index].kat = kat;
+                termine[index].plattform = plattform;
+                termine[index].kontakt = kontakt;
+                termine[index].notizen = notizen;
+            }
+            currentEditId = null; // Zurücksetzen
+        } else {
+            // NEUER TERMIN
+            const neuerTermin = {
+                id: Date.now(),
+                name: name.trim(),
+                datum: datum,
+                start: start,
+                ende: ende,
+                kat: kat,
+                plattform: plattform,
+                kontakt: kontakt,
+                notizen: notizen
+            };
+            termine.push(neuerTermin);
+        }
 
-        let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-        termine.push(neuerTermin);
         localStorage.setItem('appTermine', JSON.stringify(termine));
 
         closeModal();
@@ -314,7 +378,6 @@ function saveAppointment() {
         if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
         if(typeof renderWeek === 'function') renderWeek();
         
-        // NEU: Tagesansicht sofort aktualisieren, wenn wir dort sind!
         if(typeof renderTimeline === 'function') {
             const urlParams = new URLSearchParams(window.location.search);
             let d = urlParams.get('d');

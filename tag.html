@@ -235,7 +235,7 @@
             } else { vBox.style.display = 'none'; }
         }
 
-        // --- DETAIL POPUP (Zieht jetzt alle neuen Infos aus der DB) ---
+        // --- DETAIL POPUP ---
         function openDetailModal(id) {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             const t = termine.find(x => x.id === id);
@@ -249,7 +249,6 @@
             document.getElementById('detailKontaktFull').innerText = (t.plattform && t.plattform !== 'none') ? `${t.plattform}: ${t.kontakt}` : 'Kein Kontakt hinterlegt';
             document.getElementById('detailNotizen').innerHTML = (t.notizen || 'Keine Notizen vorhanden').replace(/\n/g, '<br>');
 
-            // PREIS & STATUS ANZEIGEN
             let preisStatusHTML = '';
             if (kunde && (kunde.preis || (kunde.status && kunde.status !== 'none'))) {
                 let preisHTML = kunde.preis ? `<span style="color:var(--neon-gold); font-weight:bold;">💰 ${kunde.preis}€</span>` : '';
@@ -265,14 +264,12 @@
             }
             document.getElementById('detailPreisStatus').innerHTML = preisStatusHTML;
 
-            // PROFIL-LINK ANZEIGEN
             if (kunde && kunde.link) {
                 document.getElementById('detailLink').innerHTML = `<a href="${kunde.link}" target="_blank" style="color:var(--neon-cyan); text-decoration:none;">🔗 Profil im Browser öffnen</a>`;
             } else {
                 document.getElementById('detailLink').innerHTML = '<span style="color:#666;">Kein Link hinterlegt</span>';
             }
 
-            // BILDER ANZEIGEN
             const b = document.getElementById('detailKundenBilder'); 
             b.innerHTML = '';
             if(kunde) {
@@ -318,11 +315,20 @@
             } catch(e) { console.log("Timeline Render Fehler"); }
         }
 
+        // --- DER FIX: LÖSCHEN OHNE NEULADEN ---
         function deleteTermin(id) {
             if(!confirm("Diesen Termin wirklich löschen?")) return;
+            
+            // 1. Lokale Liste holen, Termin filtern und abspeichern (triggert den Cloud-Upload!)
             let t = JSON.parse(localStorage.getItem('appTermine')) || [];
             localStorage.setItem('appTermine', JSON.stringify(t.filter(x => x.id !== id)));
-            location.reload();
+            
+            // 2. Datum aus der URL holen und die Liste fließend neu zeichnen!
+            const urlParams = new URLSearchParams(window.location.search);
+            const d = urlParams.get('d') || new Date().toISOString().split('T')[0];
+            
+            renderTimeline(d); 
+            // Kein location.reload() mehr! Die Cloud speichert jetzt ganz entspannt.
         }
 
         document.addEventListener('DOMContentLoaded', () => {

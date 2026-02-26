@@ -101,7 +101,6 @@
     </div>
 
     <script>
-        // Daten laden
         window.addEventListener('load', () => {
             const saved = localStorage.getItem('appEinstellungen');
             const d = {
@@ -143,7 +142,7 @@
             const newSettings = {
                 arbeitsStart: document.getElementById('arbeitsStart').value || '08:00',
                 arbeitsEnde: document.getElementById('arbeitsEnde').value || '22:00',
-                wochenstart: 'MO', // Fest auf Montag
+                wochenstart: 'MO',
                 kat1_name: document.getElementById('kat1_name').value,
                 kat1_farbe: document.getElementById('kat1_farbe').value,
                 kat2_name: document.getElementById('kat2_name').value,
@@ -164,25 +163,21 @@
             setTimeout(() => { location.href = 'woche.html'; }, 800);
         }
 
-function resetAllData() {
+        function resetAllData() {
             if(confirm("SYSTEMWARNUNG: Alle Termine werden unwiderruflich auch in der CLOUD gelöscht!")) {
-                
-                // Visuelles Feedback
                 const btn = document.querySelector('.btn-danger');
                 if(btn) {
                     btn.innerText = "LÖSCHEN LÄUFT...";
                     btn.style.opacity = "0.7";
                 }
                 
-                // 1. Exakt wie in der Tagesansicht: Ein sauberes, leeres Array speichern!
-                let leereListe = [];
-                localStorage.setItem('appTermine', JSON.stringify(leereListe));
+                // Sauberes Array speichern -> Cloud Sync wird getriggert
+                localStorage.setItem('appTermine', JSON.stringify([]));
                 
-                // 2. Wir laden nicht die Einstellungsseite neu, sondern springen
-                // nach 1 Sekunde (Upload-Zeit) direkt in den leeren Kalender!
+                // 1,5 Sekunden warten (Upload-Zeit) und dann automatisch zurück in die Woche
                 setTimeout(() => {
                     window.location.href = 'woche.html';
-                }, 1000);
+                }, 1500);
             }
         }
     </script>

@@ -2,48 +2,47 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>System Boot // 2050</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="login.css">
 </head>
 <body>
 
     <div class="loader-container">
-        <div class="jarvis-ring">
-            <div class="loader-text" id="prozent">0%</div>
+        <div id="cyberRing" class="cyber-ring"></div>
+
+        <div class="gateway-content">
+            <div id="pinBox">
+                <div class="pin-display">
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div>
+                </div>
+            </div>
+
+            <div id="prozent" class="loader-text" style="display: none;">0%</div>
+
+            <div id="numpadBox" class="numpad">
+                <div class="num-btn" onclick="addNumber('1')">1</div>
+                <div class="num-btn" onclick="addNumber('2')">2</div>
+                <div class="num-btn" onclick="addNumber('3')">3</div>
+                <div class="num-btn" onclick="addNumber('4')">4</div>
+                <div class="num-btn" onclick="addNumber('5')">5</div>
+                <div class="num-btn" onclick="addNumber('6')">6</div>
+                <div class="num-btn" onclick="addNumber('7')">7</div>
+                <div class="num-btn" onclick="addNumber('8')">8</div>
+                <div class="num-btn" onclick="addNumber('9')">9</div>
+                <div class="num-btn" onclick="clearPin()" style="color: var(--neon-pink);">✖</div>
+                <div class="num-btn" onclick="addNumber('0')">0</div>
+                <div class="num-btn" style="opacity:0; pointer-events:none;"></div>
+            </div>
         </div>
-        <div class="loader-status" id="status-text">System initialisieren...</div>
+
+        <div class="loader-status" id="status-text">SYSTEM GESPERRT</div>
     </div>
 
-    <script>
-        let prozent = 0;
-        const anzeige = document.getElementById('prozent');
-        const statusText = document.getElementById('status-text');
-
-        // Simuliert den Ladevorgang
-        const interval = setInterval(() => {
-            // Zufällige Sprünge für ein realistisches Lade-Gefühl
-            prozent += Math.floor(Math.random() * 5) + 1; 
-            if(prozent > 100) prozent = 100;
-            
-            anzeige.innerText = prozent + '%';
-
-            // Coole Hacker/System-Texte, während es lädt
-            if(prozent > 30) statusText.innerText = "Lade Datenbank...";
-            if(prozent > 70) statusText.innerText = "Entschlüssele Kalender...";
-            
-            // Wenn 100% erreicht sind
-            if(prozent === 100) {
-                statusText.innerText = "ZUGRIFF GEWÄHRT";
-                statusText.style.color = "var(--neon-gold)";
-                clearInterval(interval);
-                
-                // Nach einer Sekunde zur Wochenübersicht (woche.html) springen
-                setTimeout(() => {
-                    window.location.href = 'woche.html';
-                }, 1000);
-            }
-        }, 50); // Geschwindigkeit des Ladevorgangs (50 Millisekunden)
-    </script>
+    <script src="login.js"></script>
 </body>
 </html>

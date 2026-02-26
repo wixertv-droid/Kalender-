@@ -28,6 +28,21 @@
     <div class="settings-container">
         
         <div class="settings-card">
+            <div class="setting-title">Zeit-Matrix (Arbeitszeit)</div>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Definiert die Breite der Timeline in der Wochenansicht.</p>
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label class="input-label">Tagesbeginn</label>
+                    <input type="time" id="arbeitsStart" class="cyber-input-full">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label class="input-label">Tagesende</label>
+                    <input type="time" id="arbeitsEnde" class="cyber-input-full">
+                </div>
+            </div>
+        </div>
+
+        <div class="settings-card">
             <div class="setting-title">Kategorie-Verschlüsselung</div>
             
             <div class="kat-setup-row">
@@ -90,6 +105,8 @@
         window.addEventListener('load', () => {
             const saved = localStorage.getItem('appEinstellungen');
             const d = {
+                arbeitsStart: '08:00',
+                arbeitsEnde: '20:00',
                 kat1_name: 'VIP', kat1_farbe: '#e5b05c',
                 kat2_name: 'Stamm', kat2_farbe: '#ff2a6d',
                 kat3_name: 'Neu', kat3_farbe: '#05d9e8',
@@ -97,6 +114,9 @@
             };
             
             const s = saved ? JSON.parse(saved) : d;
+
+            document.getElementById('arbeitsStart').value = s.arbeitsStart || d.arbeitsStart;
+            document.getElementById('arbeitsEnde').value = s.arbeitsEnde || d.arbeitsEnde;
 
             document.getElementById('kat1_name').value = s.kat1_name || d.kat1_name;
             document.getElementById('kat1_farbe').value = s.kat1_farbe || d.kat1_farbe;
@@ -121,6 +141,8 @@
             btn.innerText = "SAVING...";
             
             const newSettings = {
+                arbeitsStart: document.getElementById('arbeitsStart').value || '08:00',
+                arbeitsEnde: document.getElementById('arbeitsEnde').value || '20:00',
                 wochenstart: 'MO', // Fest auf Montag
                 kat1_name: document.getElementById('kat1_name').value,
                 kat1_farbe: document.getElementById('kat1_farbe').value,

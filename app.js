@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.9 - EDIT & OVERLAP FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.0 - VISUAL PRO UPGRADE)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -12,7 +12,6 @@ const DEFAULTS = {
     plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon'
 };
 
-// Globaler Speicher, um zu wissen, ob wir einen NEUEN Termin anlegen oder einen ALTEN bearbeiten
 let currentEditId = null; 
 
 /* ==========================================================================
@@ -189,22 +188,22 @@ function generiereWochenAnsicht() {
             document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
+        // VISUAL UPGRADE: Feines, transparentes Hintergrund-Raster für die Timeline
         container.innerHTML += `
             <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;" onclick="window.location.href='tag.html?d=${isoDatum}'">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
-                <div class="timeline-horizontal" ${timelineId}></div>
+                <div class="timeline-horizontal" ${timelineId} style="background-image: repeating-linear-gradient(to right, transparent, transparent 24.8%, rgba(255,255,255,0.06) 25%);"></div>
                 <div class="timeline-skala">${skalaHTML}</div>
             </div>
         `;
     }
 }
 
-// NEU: Nimmt optional eine editId entgegen, wenn wir bearbeiten wollen
 function openModal(editId = null) {
     const modal = document.getElementById('terminModal');
     if (!modal) return;
 
-    currentEditId = editId; // Wir merken uns, ob es "Neu" oder "Bearbeiten" ist
+    currentEditId = editId;
 
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
     
@@ -229,7 +228,6 @@ function openModal(editId = null) {
     }
 
     if (editId) {
-        // BEARBEITEN-MODUS: Felder ausfüllen
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         const t = termine.find(x => x.id === editId);
         if (t) {
@@ -243,7 +241,6 @@ function openModal(editId = null) {
             document.getElementById('terminNotizen').value = t.notizen || '';
         }
     } else {
-        // NEU-MODUS: Felder leeren
         document.getElementById('terminName').value = '';
         document.getElementById('terminKontakt').value = '';
         document.getElementById('terminNotizen').value = '';
@@ -265,7 +262,7 @@ function closeModal() {
     if (modal) modal.style.display = 'none';
     const vBox = document.getElementById('kundenVorschlaege');
     if (vBox) vBox.style.display = 'none';
-    currentEditId = null; // Zurücksetzen
+    currentEditId = null;
 }
 
 function toggleKontaktFeld() {
@@ -294,18 +291,13 @@ function saveAppointment() {
 
         let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         
-        // -------------------------------------------------------------
-        // ANTI-DOPPELBUCHUNGS-SYSTEM
-        // -------------------------------------------------------------
         const nStartMin = parseTimeStr(start, "00:00");
         const nEndeMin = parseTimeStr(ende, "23:59");
         
         const overlap = termine.find(t => {
-            // Wenn der Termin am selben Tag ist UND wir nicht gerade exakt diesen Termin bearbeiten:
             if (t.datum === datum && t.id !== currentEditId) {
                 const eStartMin = parseTimeStr(t.start, "00:00");
                 const eEndeMin = parseTimeStr(t.ende, "23:59");
-                // Logik: Überschneidung liegt vor, wenn NEUER_START < ALTER_ENDE UND NEUES_ENDE > ALTER_START
                 return (nStartMin < eEndeMin && nEndeMin > eStartMin);
             }
             return false;
@@ -313,9 +305,8 @@ function saveAppointment() {
 
         if (overlap) {
             alert(`⚠️ DOPPELBUCHUNG VERHINDERT!\n\nDu hast zur selben Zeit bereits den Termin "${overlap.name}" (${overlap.start} - ${overlap.ende} Uhr).\nBitte ändere die Zeit.`);
-            return; // Bricht das Speichern ab!
+            return; 
         }
-        // -------------------------------------------------------------
 
         let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
         let kundeGefunden = false;
@@ -341,7 +332,6 @@ function saveAppointment() {
         }
 
         if (currentEditId) {
-            // UPDATE EINES BESTEHENDEN TERMINS
             const index = termine.findIndex(t => t.id === currentEditId);
             if(index > -1) {
                 termine[index].name = name.trim();
@@ -353,9 +343,8 @@ function saveAppointment() {
                 termine[index].kontakt = kontakt;
                 termine[index].notizen = notizen;
             }
-            currentEditId = null; // Zurücksetzen
+            currentEditId = null; 
         } else {
-            // NEUER TERMIN
             const neuerTermin = {
                 id: Date.now(),
                 name: name.trim(),
@@ -371,10 +360,8 @@ function saveAppointment() {
         }
 
         localStorage.setItem('appTermine', JSON.stringify(termine));
-
         closeModal();
         
-        // UI Live Aktualisieren
         if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
         if(typeof renderWeek === 'function') renderWeek();
         
@@ -405,6 +392,11 @@ function updateLiveSystem() {
         const jetzt = new Date();
         const aktuelleMinuten = jetzt.getHours() * 60 + jetzt.getMinutes();
         
+        // VISUAL UPGRADE: Die exakte Uhrzeit formatieren
+        const hStr = String(jetzt.getHours()).padStart(2, '0');
+        const mStr = String(jetzt.getMinutes()).padStart(2, '0');
+        const uhrzeit = `${hStr}:${mStr}`;
+        
         let linie = document.getElementById('rote-linie');
         
         if(aktuelleMinuten >= startMin && aktuelleMinuten <= endeMin && gesamtArbeitsMin > 0) {
@@ -415,6 +407,8 @@ function updateLiveSystem() {
                 linie.className = 'jetzt-linie-horizontal';
                 containerHeute.appendChild(linie);
             }
+            // Schildchen mit der aktuellen Uhrzeit über der roten Linie
+            linie.innerHTML = `<div style="position: absolute; top: -24px; left: -16px; background: #0a0a0d; color: var(--neon-pink, #ff2a6d); font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--neon-pink, #ff2a6d); box-shadow: 0 0 6px rgba(255, 42, 109, 0.6); z-index: 10;">${uhrzeit}</div>`;
             linie.style.left = prozentPosition + '%';
             linie.style.display = 'block';
         } else if (linie) {
@@ -509,7 +503,14 @@ function renderWeek() {
                         segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
                         
                         const katName = settings[safeKat + "_name"] || "Termin";
-                        segment.innerHTML = `<span class="status-label">${katName}</span>`;
+                        
+                        // VISUAL UPGRADE: Die Start- und Endzeit wird elegant IM Termin-Balken angezeigt
+                        segment.innerHTML = `
+                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
+                                <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
+                                <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${t.start} - ${t.ende}</span>
+                            </div>
+                        `;
                         
                         timeline.appendChild(segment);
                     }

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.7 - CLOUD PIN SYNC)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.8 - AUTO SCROLL UPDATE)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -36,7 +36,6 @@ localStorage.setItem = async function(key, value) {
 
     if (isSyncingFromCloud) return;
 
-    // NEU: Die "appPin" wird jetzt mit überwacht und in die Cloud geschossen!
     if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
         if (db && setDoc && doc) {
             try {
@@ -44,7 +43,7 @@ localStorage.setItem = async function(key, value) {
                     termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
                     kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
                     einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
-                    pin: localStorage.getItem('appPin') || "0000" // PIN WIRD HOCHGELADEN
+                    pin: localStorage.getItem('appPin') || "0000" 
                 }, { merge: true });
                 console.log("☁️ Cloud Upload erfolgreich!");
             } catch(e) { console.error("Cloud Upload Fehler:", e); }
@@ -87,8 +86,6 @@ async function initCloud() {
                 if (data.termine) originalSetItem.call(localStorage, 'appTermine', JSON.stringify(data.termine));
                 if (data.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(data.kunden));
                 if (data.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(data.einstellungen));
-                
-                // NEU: Wenn eine neue PIN aus der Cloud kommt, speichern wir sie heimlich lokal!
                 if (data.pin) originalSetItem.call(localStorage, 'appPin', data.pin);
                 
                 ladeUndWendeEinstellungenAn();
@@ -578,6 +575,12 @@ function renderWeek() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // TÜRSTEHER
+    if (!sessionStorage.getItem('authKey')) {
+        window.location.href = 'index.html';
+        return; 
+    }
+
     ladeUndWendeEinstellungenAn();
     generiereWochenAnsicht(); 
     renderWeek();             
@@ -592,11 +595,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(err => console.log('SW Fehler:', err));
     }
 
+    // --- NEU: AUTO-SCROLL ZUM HEUTIGEN TAG ---
     setTimeout(() => {
         const loader = document.getElementById('app-loader');
         if (loader) {
             loader.style.opacity = '0';
             setTimeout(() => loader.remove(), 500);
         }
-    }, 400);
+
+        // Finde den heutigen Tag in der Liste
+        const heuteZeile = document.querySelector('.tag-zeile.heute');
+        if (heuteZeile) {
+            // Scrollt weich herunter, bis der Tag in der Mitte des Bildschirms ist
+            heuteZeile.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Cooler Scan-Effekt: Der Tag leuchtet kurz auf!
+            heuteZeile.style.transition = "background-color 0.8s ease-out";
+            heuteZeile.style.backgroundColor = "rgba(5, 217, 232, 0.15)";
+            
+            setTimeout(() => {
+                heuteZeile.style.backgroundColor = "transparent";
+            }, 1200);
+        }
+    }, 600); // Wartet 0.6 Sekunden, damit das Laden der Seite flüssig aussieht
 });

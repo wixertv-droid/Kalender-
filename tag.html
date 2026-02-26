@@ -13,9 +13,6 @@
     <script src="app.js" defer></script>
 
     <style>
-        /* =========================================
-           STABILE TIMELINE-MATHEMATIK
-           ========================================= */
         .vertical-timeline {
             position: relative;
             padding-left: 100px;
@@ -75,7 +72,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* Suchvorschläge Dropdown */
         #kundenVorschlaege {
             position: absolute;
             z-index: 1000;
@@ -183,7 +179,6 @@
             <div id="detailKundenBilder" style="display: flex; gap: 15px; margin-bottom: 25px; justify-content: center;"></div>
             
             <div style="background: rgba(255,255,255,0.03); padding: 30px; border-radius: 25px; border-left: 4px solid var(--neon-cyan); margin-bottom: 25px;">
-                
                 <div style="font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: bold;">Kunde / Bezeichnung</div>
                 <div id="detailName" style="font-size: 1.8rem; font-weight: 900; color: white; margin-bottom: 15px;">-</div>
                 
@@ -203,12 +198,14 @@
                 <div id="detailNotizen" style="font-size: 1.1rem; color: #ccc; line-height: 1.6; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-top: 5px;">-</div>
             </div>
             
-            <button onclick="closeDetailModal()" style="width:100%; padding: 20px; border-radius: 15px; background: rgba(255,255,255,0.1); color: white; font-weight: bold; cursor: pointer;">Schließen</button>
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-edit-termin" style="flex: 1; padding: 18px; border-radius: 15px; background: var(--neon-cyan); color: #000; font-weight: bold; cursor: pointer; border: none; font-size: 1.1rem;">Bearbeiten</button>
+                <button onclick="closeDetailModal()" style="flex: 1; padding: 18px; border-radius: 15px; background: rgba(255,255,255,0.1); color: white; font-weight: bold; cursor: pointer; border: none; font-size: 1.1rem;">Schließen</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- AUTO-FILL ---
         function sucheKundeFuerTermin() {
             const input = document.getElementById('terminName').value.toLowerCase();
             const vBox = document.getElementById('kundenVorschlaege');
@@ -235,7 +232,6 @@
             } else { vBox.style.display = 'none'; }
         }
 
-        // --- DETAIL POPUP ---
         function openDetailModal(id) {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             const t = termine.find(x => x.id === id);
@@ -253,11 +249,8 @@
             if (kunde && (kunde.preis || (kunde.status && kunde.status !== 'none'))) {
                 let preisHTML = kunde.preis ? `<span style="color:var(--neon-gold); font-weight:bold;">💰 ${kunde.preis}€</span>` : '';
                 let statusHTML = '';
-                if (kunde.status === 'AO') {
-                    statusHTML = `<span style="color:#ffcc00; font-weight:900; margin-left:${kunde.preis ? '15px' : '0'};">AO (Alles ohne mit Test)</span>`;
-                } else if (kunde.status === 'Save') {
-                    statusHTML = `<span style="color:#00ff00; font-weight:900; margin-left:${kunde.preis ? '15px' : '0'};">Save (Alles mit Kondom)</span>`;
-                }
+                if (kunde.status === 'AO') statusHTML = `<span style="color:#ffcc00; font-weight:900; margin-left:${kunde.preis ? '15px' : '0'};">AO (Alles ohne mit Test)</span>`;
+                else if (kunde.status === 'Save') statusHTML = `<span style="color:#00ff00; font-weight:900; margin-left:${kunde.preis ? '15px' : '0'};">Save (Alles mit Kondom)</span>`;
                 preisStatusHTML = preisHTML + statusHTML;
             } else {
                 preisStatusHTML = '<span style="color:#666;">Nicht hinterlegt</span>';
@@ -277,12 +270,17 @@
                 if(kunde.bild2) b.innerHTML += `<div style="width:110px; height:110px; border-radius:20px; border:2px solid var(--neon-pink); background-image:url(${kunde.bild2}); background-size:cover; background-position:center;"></div>`;
             }
 
+            // NEU: Klick auf "Bearbeiten" verknüpfen
+            document.getElementById('btn-edit-termin').onclick = function() {
+                closeDetailModal();
+                openModal(id); // Öffnet das Formular aus der app.js mit der ID!
+            };
+
             document.getElementById('detailModal').style.display = 'flex';
         }
 
         function closeDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
 
-        // --- TIMELINE RENDERING ---
         function renderTimeline(datum) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
@@ -315,20 +313,14 @@
             } catch(e) { console.log("Timeline Render Fehler"); }
         }
 
-        // --- DER FIX: LÖSCHEN OHNE NEULADEN ---
         function deleteTermin(id) {
             if(!confirm("Diesen Termin wirklich löschen?")) return;
-            
-            // 1. Lokale Liste holen, Termin filtern und abspeichern (triggert den Cloud-Upload!)
             let t = JSON.parse(localStorage.getItem('appTermine')) || [];
             localStorage.setItem('appTermine', JSON.stringify(t.filter(x => x.id !== id)));
             
-            // 2. Datum aus der URL holen und die Liste fließend neu zeichnen!
             const urlParams = new URLSearchParams(window.location.search);
             const d = urlParams.get('d') || new Date().toISOString().split('T')[0];
-            
             renderTimeline(d); 
-            // Kein location.reload() mehr! Die Cloud speichert jetzt ganz entspannt.
         }
 
         document.addEventListener('DOMContentLoaded', () => {

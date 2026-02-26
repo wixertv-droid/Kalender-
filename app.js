@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.6 - LIVE SYNC & RENDER FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.7 - TABLET TOUCH FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -29,7 +29,6 @@ let isSyncingFromCloud = false;
 
 const originalSetItem = localStorage.setItem;
 
-// Sicherer Interceptor (Schickt Daten an die Cloud, wenn sie lokal gespeichert werden)
 localStorage.setItem = async function(key, value) {
     originalSetItem.call(localStorage, key, value);
 
@@ -76,7 +75,6 @@ async function initCloud() {
             }, 3000);
         }
 
-        // Überwacht die Cloud in Echtzeit
         onSnapshot(doc(db, "agenda2050", "systemdaten"), (docSnap) => {
             if (docSnap.exists()) {
                 isSyncingFromCloud = true; 
@@ -101,9 +99,15 @@ async function initCloud() {
     }
 }
 
-/* ==========================================================================
-   >>> LOKALE FUNKTIONEN (UI & RENDER LOGIK) <<<
-   ========================================================================== */
+function parseTimeStr(timeStr, defaultStr) {
+    if (!timeStr || !timeStr.includes(':')) timeStr = defaultStr;
+    const parts = timeStr.split(':');
+    let h = parseInt(parts[0], 10);
+    let m = parseInt(parts[1], 10);
+    if (isNaN(h)) h = parseInt(defaultStr.split(':')[0], 10);
+    if (isNaN(m)) m = parseInt(defaultStr.split(':')[1], 10);
+    return h * 60 + m;
+}
 
 function ladeUndWendeEinstellungenAn() {
     try {
@@ -137,11 +141,8 @@ function generiereWochenAnsicht() {
     const aStart = settings.arbeitsStart || "08:00";
     const aEnde = settings.arbeitsEnde || "22:00";
     
-    // Kugelsichere Skalen-Berechnung
-    let startMin = 480; 
-    let endeMin = 1320; 
-    if(aStart.includes(':')) startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
-    if(aEnde.includes(':')) endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
+    const startMin = parseTimeStr(aStart, "08:00");
+    const endeMin = parseTimeStr(aEnde, "22:00");
     
     const viertel = (endeMin - startMin) / 4;
     const q1Min = Math.floor(startMin + viertel);
@@ -174,8 +175,10 @@ function generiereWochenAnsicht() {
             document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
+        // TOUCH FIX: style="cursor: pointer; touch-action: manipulation;" zwingt Tablets, den Klick sofort zu akzeptieren.
+        // window.location.href ist zuverlässiger als nur location.href
         container.innerHTML += `
-            <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" onclick="location.href='tag.html?d=${isoDatum}'">
+            <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;" onclick="window.location.href='tag.html?d=${isoDatum}'">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
                 <div class="timeline-horizontal" ${timelineId}></div>
                 <div class="timeline-skala">${skalaHTML}</div>
@@ -295,8 +298,6 @@ function saveAppointment() {
 
         closeModal();
         
-        // FIX: Kein Seiten-Reload mehr! Dadurch hat die Cloud Zeit, den Termin zu speichern.
-        // Wir zeichnen die UI einfach in Echtzeit neu:
         generiereWochenAnsicht();
         renderWeek();
         updateLiveSystem();
@@ -304,19 +305,13 @@ function saveAppointment() {
     } catch (e) { console.error("Fehler beim Speichern:", e); }
 }
 
-/**
- * 5. LIVE-SYSTEM (GLOBALER COUNTDOWN & ROTE LINIE)
- */
 function updateLiveSystem() {
     const containerHeute = document.getElementById('timeline-heute');
     if (containerHeute) {
         const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
-        const aStart = settings.arbeitsStart || "08:00";
-        const aEnde = settings.arbeitsEnde || "22:00";
         
-        let startMin = 480; let endeMin = 1320;
-        if(aStart.includes(':')) startMin = parseInt(aStart.split(':')[0]) * 60 + parseInt(aStart.split(':')[1]);
-        if(aEnde.includes(':')) endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
+        const startMin = parseTimeStr(settings.arbeitsStart, "08:00");
+        const endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
         const gesamtArbeitsMin = endeMin - startMin;
 
         const jetzt = new Date();
@@ -396,13 +391,11 @@ function renderWeek() {
     if(aEnde.includes(':')) endeMin = parseInt(aEnde.split(':')[0]) * 60 + parseInt(aEnde.split(':')[1]);
     const gesamtArbeitsMin = endeMin - startMin;
 
-    // Alte Blöcke löschen, bevor neue gemalt werden
     document.querySelectorAll('.termin-segment').forEach(el => el.remove());
 
     if(gesamtArbeitsMin <= 0) return;
 
     termine.forEach(t => {
-        // Ignoriere fehlerhafte Termine, damit die App nicht abstürzt
         if (!t || !t.datum || !t.start || !t.ende || !t.start.includes(':') || !t.ende.includes(':')) return;
 
         const tagZeile = document.querySelector(`.tag-zeile[data-datum="${t.datum}"]`);
@@ -422,7 +415,7 @@ function renderWeek() {
                         const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
 
                         const segment = document.createElement('div');
-                        const safeKat = t.kat || 'kat1'; // Fallback falls Kategorie fehlt
+                        const safeKat = t.kat || 'kat1';
                         segment.className = `termin-segment ${safeKat}`;
                         segment.style.left = linksPosition + '%';
                         segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
@@ -440,9 +433,6 @@ function renderWeek() {
     });
 }
 
-/**
- * 8. INITIALISIERUNG
- */
 document.addEventListener('DOMContentLoaded', () => {
     ladeUndWendeEinstellungenAn();
     generiereWochenAnsicht(); 

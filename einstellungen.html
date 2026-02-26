@@ -145,7 +145,25 @@
                 if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
             }, 400);
         });
+function changeSystemPin() {
+            const oldInput = document.getElementById('oldPin').value;
+            const newInput = document.getElementById('newPin').value;
+            const currentPin = localStorage.getItem('appPin') || "0000";
 
+            if (oldInput !== currentPin) {
+                alert("❌ Die aktuelle PIN ist falsch!");
+                return;
+            }
+            if (newInput.length !== 4) {
+                alert("⚠️ Die neue PIN muss genau 4 Ziffern lang sein!");
+                return;
+            }
+
+            localStorage.setItem('appPin', newInput);
+            alert("✅ System-PIN wurde erfolgreich aktualisiert!");
+            document.getElementById('oldPin').value = '';
+            document.getElementById('newPin').value = '';
+        }
         function saveSystemSettings() {
             const btn = document.getElementById('save-btn');
             btn.innerText = "SAVING...";

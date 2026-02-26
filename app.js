@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.2 - CLEAN VIEWPORT)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.4 - MIDNIGHT 00:00 FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -112,6 +112,7 @@ async function initCloud() {
     }
 }
 
+// HILFSFUNKTION FÜR KORREKTE ZEITEN (INKL. MITTERNACHT)
 function parseTimeStr(timeStr, defaultStr) {
     if (!timeStr || !timeStr.includes(':')) timeStr = defaultStr;
     const parts = timeStr.split(':');
@@ -120,6 +121,18 @@ function parseTimeStr(timeStr, defaultStr) {
     if (isNaN(h)) h = parseInt(defaultStr.split(':')[0], 10);
     if (isNaN(m)) m = parseInt(defaultStr.split(':')[1], 10);
     return h * 60 + m;
+}
+
+// ZENTRALE FUNKTION UM ARBEITSZEITEN ZU BERECHNEN
+function getArbeitsZeiten(settings) {
+    let startMin = parseTimeStr(settings.arbeitsStart, "08:00");
+    let endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
+    
+    // DER MAGISCHE FIX: Wenn Ende auf 00:00 steht, ist es Minute 1440 (Mitternacht!)
+    if (settings.arbeitsEnde === "00:00" || endeMin === 0) endeMin = 1440;
+    
+    if (endeMin <= startMin) endeMin = startMin + 60; // Failsafe
+    return { startMin, endeMin, gesamtArbeitsMin: endeMin - startMin };
 }
 
 function ladeUndWendeEinstellungenAn() {
@@ -151,20 +164,24 @@ function generiereWochenAnsicht() {
     const heuteISO = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
-    const aStart = settings.arbeitsStart || "08:00";
-    const aEnde = settings.arbeitsEnde || "22:00";
     
-    let startMin = parseTimeStr(aStart, "08:00");
-    let endeMin = parseTimeStr(aEnde, "22:00");
-    if (endeMin <= startMin) endeMin = startMin + 60; 
+    const zeiten = getArbeitsZeiten(settings);
+    const startMin = zeiten.startMin;
+    const endeMin = zeiten.endeMin;
     
-    const viertel = (endeMin - startMin) / 4;
+    const viertel = zeiten.gesamtArbeitsMin / 4;
     const q1Min = Math.floor(startMin + viertel);
     const midMin = Math.floor(startMin + viertel * 2);
     const q3Min = Math.floor(startMin + viertel * 3);
     
-    const timeStr = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
-    const skalaHTML = `<span>${aStart}</span><span>${timeStr(q1Min)}</span><span>${timeStr(midMin)}</span><span>${timeStr(q3Min)}</span><span>${aEnde}</span>`;
+    const timeStr = (m) => {
+        let h = Math.floor(m / 60);
+        let min = m % 60;
+        if (h === 24) return `00:${String(min).padStart(2, '0')}`;
+        return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+    };
+    
+    const skalaHTML = `<span>${settings.arbeitsStart}</span><span>${timeStr(q1Min)}</span><span>${timeStr(midMin)}</span><span>${timeStr(q3Min)}</span><span>${settings.arbeitsEnde}</span>`;
 
     container.innerHTML = ''; 
 
@@ -291,13 +308,15 @@ function saveAppointment() {
 
         let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         
-        const nStartMin = parseTimeStr(start, "00:00");
-        const nEndeMin = parseTimeStr(ende, "23:59");
+        let nStartMin = parseTimeStr(start, "00:00");
+        let nEndeMin = parseTimeStr(ende, "23:59");
+        if (ende === "00:00" || nEndeMin === 0) nEndeMin = 1440; // Mitternachts-Fix
         
         const overlap = termine.find(t => {
             if (t.datum === datum && t.id !== currentEditId) {
-                const eStartMin = parseTimeStr(t.start, "00:00");
-                const eEndeMin = parseTimeStr(t.ende, "23:59");
+                let eStartMin = parseTimeStr(t.start, "00:00");
+                let eEndeMin = parseTimeStr(t.ende, "23:59");
+                if (t.ende === "00:00" || eEndeMin === 0) eEndeMin = 1440; // Mitternachts-Fix
                 return (nStartMin < eEndeMin && nEndeMin > eStartMin);
             }
             return false;
@@ -385,11 +404,10 @@ function updateLiveSystem() {
     if (containerHeute) {
         const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
         
-        let startMin = parseTimeStr(settings.arbeitsStart, "08:00");
-        let endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
-        if (endeMin <= startMin) endeMin = startMin + 60; 
-        
-        const gesamtArbeitsMin = endeMin - startMin;
+        const zeiten = getArbeitsZeiten(settings);
+        const startMin = zeiten.startMin;
+        const endeMin = zeiten.endeMin;
+        const gesamtArbeitsMin = zeiten.gesamtArbeitsMin;
 
         const jetzt = new Date();
         const aktuelleMinuten = jetzt.getHours() * 60 + jetzt.getMinutes();
@@ -400,23 +418,34 @@ function updateLiveSystem() {
         
         let linie = document.getElementById('rote-linie');
         
-        // Die rote Linie wird NUR gezeichnet, wenn wir uns innerhalb der Arbeitszeit befinden
-        if(aktuelleMinuten >= startMin && aktuelleMinuten <= endeMin && gesamtArbeitsMin > 0) {
-            const prozentPosition = ((aktuelleMinuten - startMin) / gesamtArbeitsMin) * 100;
-            
-            if (!linie) {
-                linie = document.createElement('div');
-                linie.id = 'rote-linie';
-                linie.className = 'jetzt-linie-horizontal';
-                containerHeute.appendChild(linie);
-            }
-            
-            linie.innerHTML = `<div style="position: absolute; top: -24px; left: -16px; background: #0a0a0d; color: var(--neon-pink, #ff2a6d); font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--neon-pink, #ff2a6d); box-shadow: 0 0 6px rgba(255, 42, 109, 0.6); z-index: 10;">${uhrzeit}</div>`;
-            linie.style.left = prozentPosition + '%';
-            linie.style.display = 'block';
-        } else if (linie) {
-            // Nach Feierabend oder davor? Weg mit dem Strich!
-            linie.style.display = 'none';
+        let anzeigeMinuten = aktuelleMinuten;
+        let feierabendText = "";
+        
+        if (aktuelleMinuten < startMin) {
+            anzeigeMinuten = startMin;
+            feierabendText = " (Vorher)";
+        } else if (aktuelleMinuten > endeMin) {
+            anzeigeMinuten = endeMin;
+            feierabendText = " (Feierabend)";
+        }
+        
+        const prozentPosition = ((anzeigeMinuten - startMin) / gesamtArbeitsMin) * 100;
+        
+        if (!linie) {
+            linie = document.createElement('div');
+            linie.id = 'rote-linie';
+            linie.className = 'jetzt-linie-horizontal';
+            containerHeute.appendChild(linie);
+        }
+        
+        linie.innerHTML = `<div style="position: absolute; top: -24px; left: -16px; background: #0a0a0d; color: var(--neon-pink, #ff2a6d); font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 5px; border: 1px solid var(--neon-pink, #ff2a6d); box-shadow: 0 0 6px rgba(255, 42, 109, 0.6); z-index: 10; white-space: nowrap;">${uhrzeit}${feierabendText}</div>`;
+        linie.style.left = prozentPosition + '%';
+        linie.style.display = 'block';
+        
+        if (feierabendText !== "") {
+            linie.style.opacity = '0.4';
+        } else {
+            linie.style.opacity = '1';
         }
     }
 
@@ -469,11 +498,10 @@ function renderWeek() {
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
     const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
 
-    let startMin = parseTimeStr(settings.arbeitsStart, "08:00");
-    let endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
-    if (endeMin <= startMin) endeMin = startMin + 60; 
-    
-    const gesamtArbeitsMin = endeMin - startMin;
+    const zeiten = getArbeitsZeiten(settings);
+    const startMin = zeiten.startMin;
+    const endeMin = zeiten.endeMin;
+    const gesamtArbeitsMin = zeiten.gesamtArbeitsMin;
 
     document.querySelectorAll('.termin-segment').forEach(el => el.remove());
 
@@ -487,37 +515,58 @@ function renderWeek() {
             const timeline = tagZeile.querySelector('.timeline-horizontal');
             if (timeline) {
                 try {
-                    const tStartMin = parseTimeStr(t.start, "00:00");
-                    const tEndeMin = parseTimeStr(t.ende, "23:59");
+                    let tStartMin = parseTimeStr(t.start, "00:00");
+                    let tEndeMin = parseTimeStr(t.ende, "23:59");
+                    if (t.ende === "00:00" || tEndeMin === 0) tEndeMin = 1440; // Mitternachts-Fix für den Termin
 
-                    // Der Termin wird NUR gezeichnet, wenn er sich mit der Arbeitszeit überschneidet
-                    if (tEndeMin > startMin && tStartMin < endeMin) {
-                        let anzeigeStart = tStartMin < startMin ? startMin : tStartMin;
-                        let anzeigeEnde = tEndeMin > endeMin ? endeMin : tEndeMin;
-                        let anzeigeDauer = anzeigeEnde - anzeigeStart;
+                    let anzeigeStart = tStartMin;
+                    let anzeigeEnde = tEndeMin;
+                    let isOutsideLeft = false;
+                    let isOutsideRight = false;
 
-                        if (anzeigeDauer < (gesamtArbeitsMin * 0.03)) anzeigeDauer = gesamtArbeitsMin * 0.03;
-
-                        const linksPosition = ((anzeigeStart - startMin) / gesamtArbeitsMin) * 100;
-                        const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
-
-                        const segment = document.createElement('div');
-                        const safeKat = t.kat || 'kat1';
-                        segment.className = `termin-segment ${safeKat}`;
-                        segment.style.left = linksPosition + '%';
-                        segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
-                        
-                        const katName = settings[safeKat + "_name"] || "Termin";
-                        
-                        segment.innerHTML = `
-                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
-                                <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
-                                <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${t.start} - ${t.ende}</span>
-                            </div>
-                        `;
-                        
-                        timeline.appendChild(segment);
+                    if (tEndeMin <= startMin) {
+                        anzeigeStart = startMin;
+                        anzeigeEnde = startMin + (gesamtArbeitsMin * 0.05); 
+                        isOutsideLeft = true;
+                    } else if (tStartMin >= endeMin) {
+                        anzeigeStart = endeMin - (gesamtArbeitsMin * 0.05);
+                        anzeigeEnde = endeMin;
+                        isOutsideRight = true;
+                    } else {
+                        if (anzeigeStart < startMin) { anzeigeStart = startMin; isOutsideLeft = true; }
+                        if (anzeigeEnde > endeMin) { anzeigeEnde = endeMin; isOutsideRight = true; }
                     }
+
+                    let anzeigeDauer = anzeigeEnde - anzeigeStart;
+                    if (anzeigeDauer < (gesamtArbeitsMin * 0.03)) anzeigeDauer = gesamtArbeitsMin * 0.03;
+
+                    const linksPosition = ((anzeigeStart - startMin) / gesamtArbeitsMin) * 100;
+                    const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
+
+                    const segment = document.createElement('div');
+                    const safeKat = t.kat || 'kat1';
+                    segment.className = `termin-segment ${safeKat}`;
+                    segment.style.left = linksPosition + '%';
+                    segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
+                    
+                    if (isOutsideLeft || isOutsideRight) {
+                        segment.style.opacity = '0.5';
+                    }
+                    
+                    const katName = settings[safeKat + "_name"] || "Termin";
+                    
+                    let timeText = `${t.start} - ${t.ende}`;
+                    if(isOutsideLeft) timeText = `<< ${timeText}`;
+                    if(isOutsideRight) timeText = `${timeText} >>`;
+                    
+                    segment.innerHTML = `
+                        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
+                            <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
+                            <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
+                        </div>
+                    `;
+                    
+                    timeline.appendChild(segment);
                 } catch (e) {
                     console.error("Fehler beim Malen des Blocks:", e);
                 }

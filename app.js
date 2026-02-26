@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.5 - THE FLAG FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.6 - THE BOUNCER UPDATE)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -203,7 +203,6 @@ function generiereWochenAnsicht() {
             document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
-        // HIER IST DER FIX: overflow: visible statt hidden, damit das Fähnchen aus dem Balken gucken darf!
         container.innerHTML += `
             <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;" onclick="window.location.href='tag.html?d=${isoDatum}'">
                 <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
@@ -436,7 +435,6 @@ function updateLiveSystem() {
             containerHeute.appendChild(linie);
         }
         
-        // Das Fähnchen! Positioniert über dem Kasten (-26px top).
         linie.innerHTML = `<div style="position: absolute; top: -26px; left: -16px; background: var(--bg-deep, #0a0a0d); color: white; font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--neon-pink, #ff2a6d); box-shadow: 0 0 10px rgba(255, 42, 109, 0.6); z-index: 50; white-space: nowrap;">${uhrzeit}${feierabendText}</div>`;
         linie.style.left = prozentPosition + '%';
         linie.style.display = 'block';
@@ -575,6 +573,13 @@ function renderWeek() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- NEU: DER TÜRSTEHER ---
+    if (!sessionStorage.getItem('authKey')) {
+        window.location.href = 'index.html';
+        return; 
+    }
+    // --------------------------
+
     ladeUndWendeEinstellungenAn();
     generiereWochenAnsicht(); 
     renderWeek();             

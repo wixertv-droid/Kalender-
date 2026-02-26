@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.4 - CLOUD SYNC & UI FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V3.4 - CLOUD SYNC & UI FIX) 
    ========================================================================== */
 
 const DEFAULTS = {

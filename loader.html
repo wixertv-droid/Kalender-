@@ -8,15 +8,31 @@
         }
     </script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lade Daten...</title>
-    <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="login.css">
 </head>
 <body>
+
+    <div class="scanlines"></div>
+
     <div class="loader-container">
-        <div class="jarvis-ring">
-            <div class="loader-text" id="prozent">0%</div>
+        
+        <div class="ring-group">
+            <div class="hud-crosshair"></div>
+            <div class="ring-outer"></div>
+            <div class="ring-main"></div>
+            <div class="ring-inner"></div>
+            
+            <div class="deco-data top-left">SYS.CORE // SYNC</div>
+            <div class="deco-data bottom-right">ROUTING // DATA</div>
         </div>
+
+        <div class="gateway-content">
+            <div class="loader-text" id="prozent" style="display: block;">0%</div>
+        </div>
+
         <div class="loader-status" id="status-text">Analysiere Sektor...</div>
     </div>
 
@@ -29,27 +45,33 @@
         const ziel = localStorage.getItem('ladeZiel') || 'woche.html';
 
         const interval = setInterval(() => {
+            // Zufällige Sprünge für ein realistisches Lade-Gefühl
             prozent += Math.floor(Math.random() * 15) + 5; 
             if(prozent > 100) prozent = 100;
             
             anzeige.innerText = prozent + '%';
 
+            // Coole Hologramm-Texte je nach Ziel
             if(prozent > 50) {
                 if(ziel === 'einstellungen.html') statusText.innerText = "Lade Konfiguration...";
                 else if(ziel === 'tag.html') statusText.innerText = "Lade Tagesansicht...";
+                else if(ziel === 'kunden.html') statusText.innerText = "Lade Datenbank...";
                 else statusText.innerText = "Synchronisiere Woche...";
             }
             
+            // Wenn 100% erreicht sind
             if(prozent === 100) {
                 statusText.innerText = "BEREIT";
-                statusText.style.color = "var(--neon-gold)";
+                statusText.style.color = "var(--neon-green)";
+                statusText.style.textShadow = "0 0 15px var(--neon-green)";
                 clearInterval(interval);
                 
+                // Nach einem kurzen Moment weiterleiten
                 setTimeout(() => {
                     window.location.href = ziel;
-                }, 300);
+                }, 400); // 400ms lassen das "BEREIT" kurz aufblitzen
             }
-        }, 40);
+        }, 40); // Geschwindigkeit
     </script>
 </body>
 </html>

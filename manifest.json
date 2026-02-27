@@ -1,14 +1,15 @@
 {
-  "name": "Agenda 2050 CRM",
-  "short_name": "Agenda 2050",
-  "start_url": "./woche.html",
+  "name": "Kalender CRM",
+  "short_name": "Kalender",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0a0a0d",
   "theme_color": "#ff2a6d",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "./icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

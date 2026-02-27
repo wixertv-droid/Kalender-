@@ -44,7 +44,7 @@
 
         .badge-ao { color: #ffcc00; border-color: #ffcc00; }
         .badge-save { color: #00ff00; border-color: #00ff00; }
-        .badge-preis { color: var(--neon-gold); border-color: var(--neon-gold); }
+        .badge-preis { color: var(--neon-gold); }
     </style>
 </head>
 <body>
@@ -199,7 +199,7 @@
     <script>
         let editKundeId = null;
         let imgData = { bild1: '', bild2: '' };
-        let viewMode = localStorage.getItem('dbViewMode') || 'grid';
+        let viewMode = localStorage.getItem('dbViewMode') || 'list';
 
         function toggleViewMode() {
             viewMode = (viewMode === 'grid' ? 'list' : 'grid');

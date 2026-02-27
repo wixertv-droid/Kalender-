@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
     <script>
+        // HÄRTESTER TÜRSTEHER DER WELT
         if (!sessionStorage.getItem('authKey')) {
             window.location.replace('index.html');
         }
@@ -9,84 +10,248 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Agenda 2050 | Tagesansicht</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff2a6d">
+    <link rel="apple-touch-icon" href="icon.png">
+
     <link rel="stylesheet" href="style.css">
     <script src="app.js" defer></script>
+
+    <style>
+        .vertical-timeline {
+            position: relative;
+            padding-left: 100px;
+            margin-top: 40px;
+        }
+
+        .vertical-timeline::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 80px;
+            width: 4px; height: 100%;
+            background: rgba(5, 217, 232, 0.3);
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(5, 217, 232, 0.2);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 50px;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .timeline-time {
+            position: absolute;
+            left: -100px; 
+            width: 75px; 
+            text-align: right;
+            font-size: 1.1rem; 
+            font-weight: 900;
+            letter-spacing: 1px;
+            color: var(--neon-cyan);
+            text-shadow: 0 0 10px rgba(5, 217, 232, 0.4);
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -28.5px; 
+            width: 20px; 
+            height: 20px;
+            background: var(--bg-deep);
+            border: 4px solid var(--neon-cyan); 
+            border-radius: 50%;
+            z-index: 2;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        .termin-karte {
+            background: var(--glass-bg); 
+            padding: 25px;
+            border-radius: 16px; 
+            display: flex;
+            justify-content: space-between; 
+            align-items: center;
+            border: 1px solid rgba(5, 217, 232, 0.1);
+            border-left: 6px solid var(--neon-cyan); 
+            margin-left: 10px;
+            cursor: pointer;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .termin-karte:hover { transform: translateX(5px); box-shadow: 0 15px 40px rgba(5, 217, 232, 0.15); border-color: rgba(5, 217, 232, 0.3); }
+
+        #kundenVorschlaege {
+            position: absolute;
+            z-index: 1000;
+            width: 100%;
+            background: rgba(5, 15, 25, 0.95);
+            border: 1px solid var(--neon-cyan);
+            max-height: 250px;
+            overflow-y: auto;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.9);
+            backdrop-filter: blur(10px);
+        }
+
+        .vorschlag-item {
+            padding: 15px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(5, 217, 232, 0.1);
+            color: var(--neon-cyan);
+            transition: background 0.2s;
+        }
+        
+        .vorschlag-item:hover { background: rgba(5, 217, 232, 0.15); }
+    </style>
 </head>
 <body>
 
     <div class="loader-container" id="app-loader">
         <div class="cyber-spinner"></div>
-        <div class="loader-text">SYNCING DATA...</div>
+        <div class="loader-text">SYNCING DAY...</div>
     </div>
 
     <div class="dashboard">
         <div class="btn-cyber btn-settings" onclick="location.href='woche.html'">⬅️</div>
-        <div class="header-info">
-            <div class="titel-neon">Tagesprotokoll</div>
-            <div class="datum-anzeige" id="tagesDatum">Lade...</div>
+        
+        <div style="text-align: center;">
+            <div class="titel-neon">Details</div>
+            <div id="tag-datum-titel" class="datum-anzeige">LADE...</div>
         </div>
-        <div class="btn-cyber btn-add" onclick="openModal()">+</div>
+
+        <div style="display: flex; gap: 15px;">
+            <div class="btn-cyber" onclick="location.href='kunden.html'" style="color: var(--neon-cyan); border-color: var(--glass-border);">👥</div>
+            <div class="btn-cyber btn-add" onclick="openModal()">➕</div>
+        </div>
     </div>
 
     <div class="tag-detail-container">
-        <div id="timeline-container" class="vertical-timeline">
+        <div id="tages-liste" class="vertical-timeline" style="min-height: 80vh;">
             </div>
     </div>
 
     <div class="modal-overlay" id="terminModal">
-        <div class="modal-content">
-            <div class="form-title">Protokoll Eintrag</div>
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <div class="form-title">System-Eintrag</div>
             
-            <div class="form-group">
-                <label>Kunde / Alias</label>
-                <input type="text" id="terminName" class="cyber-input-full" placeholder="Identifikation...">
+            <div class="form-group" style="position: relative;">
+                <label class="input-label">Kunde / Bezeichnung</label>
+                <input type="text" id="terminName" class="cyber-input-full" placeholder="Name tippen..." onkeyup="sucheKundeFuerTermin()" autocomplete="off">
+                <div id="kundenVorschlaege" style="display: none;"></div>
             </div>
 
-            <div style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
-                    <label>Startzeit</label>
+            <div class="form-group">
+                <label class="input-label">Kategorie-Typ</label>
+                <select id="terminKategorie" class="cyber-select"></select>
+            </div>
+
+            <div class="form-group">
+                <label class="input-label">Datum</label>
+                <input type="date" id="terminDatum" class="cyber-input-full">
+            </div>
+
+            <div style="display:flex; gap:15px;">
+                <div class="form-group" style="flex:1;">
+                    <label class="input-label">Startzeit</label>
                     <input type="time" id="terminStart" class="cyber-input-full">
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label>Endzeit</label>
+                <div class="form-group" style="flex:1;">
+                    <label class="input-label">Endzeit</label>
                     <input type="time" id="terminEnde" class="cyber-input-full">
                 </div>
             </div>
 
-            <div style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
-                    <label>Kategorie</label>
-                    <select id="terminKategorie" class="cyber-select"></select>
-                </div>
-                <div class="form-group" style="flex: 1;">
-                    <label>Datum</label>
-                    <input type="date" id="terminDatum" class="cyber-input-full">
-                </div>
+            <div class="form-group">
+                <label class="input-label">Kontakt-Plattform</label>
+                <select id="terminPlattform" class="cyber-select" onchange="toggleKontaktFeld()"></select>
             </div>
 
-            <div style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
-                    <label>Plattform</label>
-                    <select id="terminPlattform" class="cyber-select" onchange="toggleKontaktFeld()"></select>
-                </div>
-                <div class="form-group" id="kontaktContainer" style="flex: 1; display: none;">
-                    <label>Kontakt</label>
-                    <input type="text" id="terminKontakt" class="cyber-input-full" placeholder="Nummer / Link">
-                </div>
+            <div class="form-group" id="kontaktContainer" style="display: none;">
+                <label class="input-label">Nummer / Username</label>
+                <input type="text" id="terminKontakt" class="cyber-input-full">
             </div>
 
             <div class="form-group">
-                <label>Zusatz-Infos</label>
-                <textarea id="terminNotizen" class="cyber-input-full" placeholder="Ablauf, Besonderheiten..."></textarea>
+                <label class="input-label">Notizen</label>
+                <textarea id="terminNotizen" class="cyber-input-full" rows="3"></textarea>
             </div>
 
-            <button class="btn-save" onclick="saveAppointment()">Eintrag Sichern</button>
-            <button onclick="closeModal()" style="width: 100%; background: none; border: none; color: #555; font-size: 1rem; padding: 15px; text-transform: uppercase; cursor: pointer; letter-spacing: 2px; margin-top: 10px;">Abbrechen</button>
+            <button class="btn-save" onclick="saveAppointment()">SPEICHERN</button>
+            <button onclick="closeModal()" style="width:100%; background:none; border:none; color:#666; margin-top:15px; cursor:pointer; text-transform:uppercase; font-size:1.1rem; letter-spacing:2px; font-weight:bold;">Abbrechen</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <div class="form-title" style="color: var(--neon-cyan);">Protokoll Details</div>
+            
+            <div id="detailKundenBilder" style="display: flex; gap: 15px; margin-bottom: 25px; justify-content: center;"></div>
+            
+            <div style="background: rgba(0,0,0,0.4); padding: 30px; border-radius: 20px; border-left: 4px solid var(--neon-cyan); margin-bottom: 25px;">
+                
+                <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Kunde / Bezeichnung</div>
+                <div id="detailName" style="font-size: 1.8rem; font-weight: 900; color: white; margin-bottom: 15px;">-</div>
+                
+                <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Zeit & Typ</div>
+                <div id="detailZeitKat" style="font-size: 1.2rem; color: var(--neon-gold); font-weight: bold; margin-bottom: 15px;">-</div>
+                
+                <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Kontakt</div>
+                <div id="detailKontaktFull" style="font-size: 1.1rem; color: white; margin-bottom: 15px;">-</div>
+
+                <div id="dbExtensionsContainer" style="display: none; flex-direction: column; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed rgba(5,217,232,0.2);">
+                    <div style="font-size: 0.85rem; color: var(--neon-violet); text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Datenbank Akte</div>
+                    <div class="kunden-stats-row" id="detailStatsRow" style="margin-bottom: 0;"></div>
+                    <div id="detailVorlieben" style="font-size: 1rem; color: #ccc; line-height: 1.6; background: rgba(188, 0, 221, 0.1); padding: 15px; border-radius: 12px; border-left: 2px solid var(--neon-violet);"></div>
+                </div>
+
+                <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-top: 20px;">Termin-Notizen</div>
+                <div id="detailNotizen" style="font-size: 1.1rem; color: #ccc; line-height: 1.6; background: rgba(5, 217, 232, 0.05); padding: 15px; border-radius: 12px; margin-top: 5px;">-</div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-edit-termin" style="flex: 1; padding: 18px; border-radius: 12px; background: rgba(5, 217, 232, 0.1); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); font-weight: bold; cursor: pointer; font-size: 1.1rem; transition: 0.3s;">Bearbeiten</button>
+                <button onclick="closeDetailModal()" style="flex: 1; padding: 18px; border-radius: 12px; background: rgba(255,255,255,0.05); color: white; font-weight: bold; cursor: pointer; border: 1px solid transparent; font-size: 1.1rem; transition: 0.3s;">Schließen</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // Sterne-Logik für den Laptop Fix
+        function sucheKundeFuerTermin() {
+            const input = document.getElementById('terminName').value.toLowerCase();
+            const vBox = document.getElementById('kundenVorschlaege');
+            const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            if (input.length < 1) { vBox.style.display = 'none'; return; }
+            
+            const treffer = kunden.filter(k => 
+                (k.name && k.name.toLowerCase().includes(input)) || 
+                (k.kontakt && k.kontakt.toLowerCase().includes(input))
+            );
+            
+            if (treffer.length > 0) {
+                vBox.innerHTML = '';
+                treffer.forEach(k => {
+                    const d = document.createElement('div');
+                    d.className = 'vorschlag-item';
+                    d.innerHTML = `<strong>${k.name}</strong><br><small style="color:#aaa;">${k.plattform !== 'none' ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</small>`;
+                    d.onclick = () => {
+                        document.getElementById('terminName').value = k.name;
+                        document.getElementById('terminPlattform').value = k.plattform || 'none';
+                        document.getElementById('terminKontakt').value = k.kontakt || '';
+                        
+                        if(typeof toggleKontaktFeld === 'function') toggleKontaktFeld();
+                        vBox.style.display = 'none';
+                    };
+                    vBox.appendChild(d);
+                });
+                vBox.style.display = 'block';
+            } else { vBox.style.display = 'none'; }
+        }
+
         function getStarString(count) {
             let num = parseInt(count) || 0;
             if (num === 0) return "<span style='color: #444;'>★★★★★</span>";
@@ -95,132 +260,167 @@
             return filled + empty;
         }
 
-        function renderTimeline(datumISO) {
-            const container = document.getElementById('timeline-container');
-            const dAnzeige = document.getElementById('tagesDatum');
+        function openDetailModal(id) {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+            const t = termine.find(x => x.id === id);
+            if(!t) return;
+            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+            const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             
-            // WICHTIG: Wir holen uns hier die Kundendatenbank, um sie mit den Terminen abzugleichen!
-            const kundenDB = JSON.parse(localStorage.getItem('appKunden')) || [];
-            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {
-                kat1_name: 'VIP', kat2_name: 'Stamm', kat3_name: 'Neu'
+            let kunde = null;
+            if (t.kontakt && t.kontakt.trim() !== '') {
+                kunde = kunden.find(k => k.kontakt === t.kontakt);
+            }
+            if (!kunde) {
+                kunde = kunden.find(k => k.name.toLowerCase() === t.name.toLowerCase());
+            }
+
+            document.getElementById('detailName').innerText = t.name;
+            document.getElementById('detailZeitKat').innerText = `${t.start} - ${t.ende} // ${settings[t.kat+"_name"] || 'Termin'}`;
+            document.getElementById('detailKontaktFull').innerText = (t.plattform && t.plattform !== 'none') ? `${t.plattform}: ${t.kontakt}` : 'Kein Kontakt hinterlegt';
+            document.getElementById('detailNotizen').innerHTML = (t.notizen || 'Keine Notizen vorhanden').replace(/\n/g, '<br>');
+
+            const dbContainer = document.getElementById('dbExtensionsContainer');
+            const statsRow = document.getElementById('detailStatsRow');
+            const vorliebenDiv = document.getElementById('detailVorlieben');
+
+            if (kunde) {
+                dbContainer.style.display = 'flex';
+                const vibeStars = getStarString(kunde.vibe);
+                const perfStars = getStarString(kunde.perf);
+                const groesse = kunde.groesse && kunde.groesse !== "Unbekannt" ? kunde.groesse : "?";
+
+                statsRow.innerHTML = `
+                    <div class="stat-badge">📐 ${groesse}</div>
+                    <div class="stat-badge">Vibe <span class="stars">${vibeStars}</span></div>
+                    <div class="stat-badge">Perf <span class="stars">${perfStars}</span></div>
+                `;
+
+                if (kunde.vorlieben && kunde.vorlieben.trim() !== '') {
+                    vorliebenDiv.style.display = 'block';
+                    vorliebenDiv.innerHTML = `<strong>Vorlieben / Tabus:</strong><br>${kunde.vorlieben.replace(/\n/g, '<br>')}`;
+                } else {
+                    vorliebenDiv.style.display = 'none';
+                }
+            } else {
+                dbContainer.style.display = 'none';
+            }
+
+            const b = document.getElementById('detailKundenBilder'); 
+            b.innerHTML = '';
+            if(kunde) {
+                if(kunde.bild1) b.innerHTML += `<div style="width:100px; height:100px; border-radius:50%; border:2px solid var(--neon-cyan); background-image:url(${kunde.bild1}); background-size:cover; background-position:center; box-shadow: 0 0 15px rgba(5,217,232,0.3);"></div>`;
+                if(kunde.bild2) b.innerHTML += `<div style="width:100px; height:100px; border-radius:50%; border:2px solid var(--neon-cyan); background-image:url(${kunde.bild2}); background-size:cover; background-position:center; box-shadow: 0 0 15px rgba(5,217,232,0.3);"></div>`;
+            }
+
+            document.getElementById('btn-edit-termin').onclick = function() {
+                closeDetailModal();
+                openModal(id); 
             };
 
-            if (!datumISO) return;
+            document.getElementById('detailModal').style.display = 'flex';
+        }
 
-            const tagesTermine = termine.filter(t => t.datum === datumISO).sort((a, b) => {
-                if(a.start < b.start) return -1;
-                if(a.start > b.start) return 1;
-                return 0;
-            });
+        function closeDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
 
-            const dObj = new Date(datumISO);
-            const wt = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
-            dAnzeige.innerText = `${wt[dObj.getDay()]}, ${String(dObj.getDate()).padStart(2, '0')}.${String(dObj.getMonth() + 1).padStart(2, '0')}.`;
-
-            if (tagesTermine.length === 0) {
-                container.innerHTML = `<div class="empty-state">Keine Einträge für diesen Sektor.</div>`;
-                return;
-            }
-
-            container.innerHTML = '';
-
-            tagesTermine.forEach(t => {
-                const katClass = t.kat || 'kat1';
-                const fColor = `var(--color-${katClass})`;
-
-                // DB-Abgleich: Versucht den Kunden über Kontakt oder Name zu finden
-                let dbKunde = null;
-                if (t.kontakt && t.kontakt.trim() !== '') {
-                    dbKunde = kundenDB.find(k => k.kontakt === t.kontakt);
+        // --- NEU: DYNAMISCHE TIMELINE BASIEREND AUF DEINEN ARBEITSZEITEN ---
+        function renderTimeline(datum) {
+            try {
+                const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+                // Lade Arbeitszeiten aus den Einstellungen (Standard: 08:00 - 22:00)
+                const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { arbeitsStart: '08:00', arbeitsEnde: '22:00' };
+                const liste = document.getElementById('tages-liste');
+                if(!liste) return;
+                liste.innerHTML = '';
+                
+                const tagesTermine = termine.filter(t => t.datum === datum).sort((a,b) => (a.start || "").localeCompare(b.start || ""));
+                
+                // Generiere die leeren "Stunden-Marker" dynamisch
+                let startH = parseInt(settings.arbeitsStart.split(':')[0]) || 8;
+                let endeH = parseInt(settings.arbeitsEnde.split(':')[0]) || 22;
+                if (endeH <= startH) endeH += 24; // Falls Mitternacht überschritten wird
+                
+                let dynamicHours = [];
+                for(let h = startH; h <= endeH; h += 2) { // Zieht alle 2 Stunden einen Strich
+                    let hourStr = String(h % 24).padStart(2, '0') + ':00';
+                    dynamicHours.push(hourStr);
                 }
-                if (!dbKunde) {
-                    dbKunde = kundenDB.find(k => k.name.toLowerCase() === t.name.toLowerCase());
-                }
-
-                // Generiere Datenbank-Erweiterungen (Sterne, Vorlieben), falls gefunden
-                let dbExtensionsHTML = '';
-                let badgeHTML = '';
-
-                if (dbKunde) {
-                    // Status Badge (z.B. VIP)
-                    if (dbKunde.status && dbKunde.status !== 'none') {
-                        const statusName = settings[dbKunde.status + '_name'] || 'Status';
-                        badgeHTML = `<span class="status-badge status-${dbKunde.status}" style="font-size: 0.65rem;">${statusName}</span>`;
+                
+                let combined = [];
+                dynamicHours.forEach(h => { 
+                    // Setze den Marker nur, wenn nicht exakt zur selben Zeit ein echter Termin startet
+                    if(!tagesTermine.find(t => t.start === h)) {
+                        combined.push({isMarker: true, time: h}); 
                     }
+                });
+                
+                // Echte Termine in die Liste werfen
+                tagesTermine.forEach(t => combined.push({isMarker: false, data: t, time: t.start}));
+                
+                // Alles nach Uhrzeit sortieren, damit sie perfekt von oben nach unten fließen
+                combined.sort((a,b) => a.time.localeCompare(b.time));
 
-                    const vibeStars = getStarString(dbKunde.vibe);
-                    const perfStars = getStarString(dbKunde.perf);
-                    const groesse = dbKunde.groesse && dbKunde.groesse !== "Unbekannt" ? dbKunde.groesse : "?";
-
-                    // Wenn Bilder da sind, machen wir ein klickbares Kamera-Icon, das zur DB führt
-                    let fotosHTML = '';
-                    if(dbKunde.bild1 || dbKunde.bild2) {
-                        fotosHTML = `<span style="font-size:1.1rem; margin-left: 10px; cursor:pointer;" title="In Datenbank ansehen" onclick="event.stopPropagation(); window.location.href='kunden.html'">📸</span>`;
-                    }
-
-                    // Vorlieben
-                    let vorliebenHTML = '';
-                    if (dbKunde.vorlieben && dbKunde.vorlieben.trim() !== '') {
-                        vorliebenHTML = `<div class="termin-info-notiz" style="border-left-color: var(--neon-violet); background: rgba(188, 0, 221, 0.05); margin-top: 5px;"><strong>Vorlieben:</strong> ${dbKunde.vorlieben}</div>`;
-                    }
-
-                    dbExtensionsHTML = `
-                        <div class="kunden-stats-row" style="margin-top: 10px;">
-                            <div class="stat-badge">📐 ${groesse}</div>
-                            <div class="stat-badge">Vibe <span class="stars">${vibeStars}</span></div>
-                            <div class="stat-badge">Perf <span class="stars">${perfStars}</span></div>
-                            ${fotosHTML}
-                        </div>
-                        ${vorliebenHTML}
-                    `;
-                }
-
-                const notizHTML = t.notizen ? `<div class="termin-info-notiz">${t.notizen}</div>` : '';
-                const kontaktHTML = (t.plattform && t.plattform !== 'none') ? `<div class="termin-info-kontakt">${t.plattform}: ${t.kontakt || '?'}</div>` : '';
-
-                container.innerHTML += `
-                    <div class="timeline-item">
-                        <div class="timeline-time">${t.start}</div>
-                        <div class="timeline-dot" style="border-color: ${fColor};"></div>
+                // HTML generieren
+                combined.forEach(item => {
+                    const el = document.createElement('div');
+                    el.className = 'timeline-item';
+                    
+                    if(item.isMarker) {
+                        // Der leere Stunden-Strich
+                        el.innerHTML = `
+                            <div class="timeline-time" style="opacity:0.4; color: var(--neon-cyan); text-shadow:none; font-weight: normal;">${item.time}</div>
+                            <div class="timeline-dot" style="width:14px; height:14px; left:-25.5px; border-color:rgba(5, 217, 232, 0.3); background: transparent; box-shadow:none;"></div>
+                            <div style="flex-grow: 1; margin-left:20px; border-bottom:1px dashed rgba(5, 217, 232, 0.15); height: 1px; margin-top: 5px;"></div>
+                        `;
+                    } else {
+                        // Der echte Termin-Kasten
+                        const t = item.data;
+                        const f = settings[t.kat+"_farbe"] || 'var(--neon-cyan)';
+                        const katN = settings[t.kat+"_name"] || 'Termin';
                         
-                        <div class="termin-karte" style="border-left-color: ${fColor}; cursor: pointer;" onclick="openModal(${t.id})">
-                            <div class="slot-inhalt">
-                                <div class="termin-info-name">${t.name} ${badgeHTML}</div>
-                                <div class="termin-info-zeit">
-                                    <span>${t.start} - ${t.ende}</span>
+                        el.innerHTML = `
+                            <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f};">${t.start}</div>
+                            <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f};"></div>
+                            
+                            <div class="termin-karte" style="border-left-color:${f}" onclick="openDetailModal(${t.id})">
+                                <div class="slot-inhalt" style="flex-grow: 1;">
+                                    <div style="font-size: 1.4rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px;">${t.name}</div>
+                                    <div style="font-size: 1rem; color: #aaa; margin-top: 5px;">
+                                        <span style="color:${f}; font-weight: bold;">${t.start} - ${t.ende}</span> // <span>${katN}</span>
+                                    </div>
                                 </div>
-                                ${kontaktHTML}
-                                ${dbExtensionsHTML}
-                                ${notizHTML}
+                                <button class="btn-delete" style="margin-left: 15px;" onclick="event.stopPropagation(); deleteTermin(${t.id})">✖</button>
                             </div>
-                            <button class="btn-delete" onclick="deleteTermin(event, ${t.id}, '${datumISO}')">✖</button>
-                        </div>
-                    </div>
-                `;
-            });
+                        `;
+                    }
+                    liste.appendChild(el);
+                });
+                
+                // Ein unsichtbarer Puffer am Ende, damit die vertikale Linie optisch schön ausläuft
+                const puffer = document.createElement('div');
+                puffer.style.height = "40px";
+                liste.appendChild(puffer);
+
+            } catch(e) { console.log("Timeline Render Fehler", e); }
         }
 
-        function deleteTermin(event, id, datumISO) {
-            event.stopPropagation();
-            if (confirm("Dieses Protokoll wirklich löschen?")) {
-                let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-                termine = termine.filter(t => t.id !== id);
-                localStorage.setItem('appTermine', JSON.stringify(termine));
-                renderTimeline(datumISO);
-            }
-        }
-
-        window.addEventListener('load', () => {
+        function deleteTermin(id) {
+            if(!confirm("Diesen Termin wirklich löschen?")) return;
+            let t = JSON.parse(localStorage.getItem('appTermine')) || [];
+            localStorage.setItem('appTermine', JSON.stringify(t.filter(x => x.id !== id)));
+            
             const urlParams = new URLSearchParams(window.location.search);
-            let datum = urlParams.get('d');
-            if(!datum) {
-                const heute = new Date();
-                datum = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                window.history.replaceState({}, '', `?d=${datum}`);
-            }
-            document.getElementById('terminDatum').value = datum;
-            renderTimeline(datum);
+            const d = urlParams.get('d') || new Date().toISOString().split('T')[0];
+            renderTimeline(d); 
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const d = urlParams.get('d') || new Date().toISOString().split('T')[0];
+            const teile = d.split('-');
+            if(document.getElementById('tag-datum-titel')) document.getElementById('tag-datum-titel').innerText = `${teile[2]}.${teile[1]}.${teile[0]}`;
+            if(document.getElementById('terminDatum')) document.getElementById('terminDatum').value = d;
+            renderTimeline(d);
 
             setTimeout(() => {
                 const loader = document.getElementById('app-loader');

@@ -9,9 +9,76 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lade Daten...</title>
+    <title>System Boot...</title>
     
     <link rel="stylesheet" href="login.css">
+
+    <style>
+        /* Zusätzliche Violett/Lila Akzente */
+        :root {
+            --neon-violet: #bc00dd;
+        }
+
+        /* Ein violetter, blitzender Ring, der sich asymmetrisch dreht */
+        .ring-violet {
+            position: absolute;
+            width: 95%;
+            height: 95%;
+            border: 2px solid var(--neon-violet);
+            border-top-color: transparent;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(188, 0, 221, 0.4), inset 0 0 15px rgba(188, 0, 221, 0.2);
+            animation: spin-forward-fast 3s linear infinite;
+        }
+
+        /* Ein ganz feiner innerer Cyan-Ring für technische Tiefe */
+        .ring-cyan-thin {
+            position: absolute;
+            width: 55%;
+            height: 55%;
+            border: 1px dashed var(--neon-cyan);
+            border-radius: 50%;
+            animation: spin-reverse-fast 8s linear infinite;
+            opacity: 0.7;
+        }
+
+        /* Pulsierender Energie-Kern hinter der Zahl */
+        .core-glow {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(5, 217, 232, 0.3) 0%, rgba(188, 0, 221, 0.1) 40%, transparent 70%);
+            animation: core-pulse 1.5s infinite alternate;
+            z-index: 0;
+        }
+
+        /* Schnellere Animationen für den Lade-Stress */
+        @keyframes spin-forward-fast { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.02); } 100% { transform: rotate(360deg) scale(1); } }
+        @keyframes spin-reverse-fast { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+        @keyframes core-pulse { 0% { transform: scale(0.8); opacity: 0.5; } 100% { transform: scale(1.2); opacity: 1; } }
+
+        /* Die Prozentzahl steht VOR dem Leuchten */
+        #prozent {
+            z-index: 10;
+            position: relative;
+            text-shadow: 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-violet);
+        }
+
+        /* Coole Hex-Daten-Elemente */
+        .data-stream {
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            color: var(--neon-cyan);
+            opacity: 0.8;
+            position: absolute;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px var(--neon-cyan);
+        }
+        .stream-1 { top: -20px; left: 50%; transform: translateX(-50%); color: var(--neon-violet); }
+        .stream-2 { bottom: -20px; left: 50%; transform: translateX(-50%); }
+    </style>
 </head>
 <body>
 
@@ -21,12 +88,20 @@
         
         <div class="ring-group">
             <div class="hud-crosshair"></div>
+            
             <div class="ring-outer"></div>
+            <div class="ring-violet"></div>
             <div class="ring-main"></div>
             <div class="ring-inner"></div>
+            <div class="ring-cyan-thin"></div>
             
-            <div class="deco-data top-left">SYS.CORE // SYNC</div>
-            <div class="deco-data bottom-right">ROUTING // DATA</div>
+            <div class="core-glow"></div>
+            
+            <div class="deco-data top-left" id="hex1">SYS.CORE // INIT</div>
+            <div class="deco-data bottom-right" id="hex2">AUTH // PENDING</div>
+            
+            <div class="data-stream stream-1" id="stream1">0x00000000</div>
+            <div class="data-stream stream-2" id="stream2">MEM_ALLOC: 0%</div>
         </div>
 
         <div class="gateway-content">
@@ -41,37 +116,57 @@
         const anzeige = document.getElementById('prozent');
         const statusText = document.getElementById('status-text');
         
-        // Ziel auslesen (Standard: woche.html)
+        // J.A.R.V.I.S. Datenstrom-Simulatoren
+        const hex1 = document.getElementById('hex1');
+        const hex2 = document.getElementById('hex2');
+        const stream1 = document.getElementById('stream1');
+        const stream2 = document.getElementById('stream2');
+
         const ziel = localStorage.getItem('ladeZiel') || 'woche.html';
 
+        // Lässt wilde Hex-Codes über den Bildschirm rattern
+        const dataHacker = setInterval(() => {
+            hex1.innerText = "SYS.CORE // " + Math.random().toString(16).substr(2, 6).toUpperCase();
+            hex2.innerText = "ROUTE // 0x" + Math.floor(Math.random() * 9999);
+            stream1.innerText = "0x" + Math.random().toString(16).substr(2, 8).toUpperCase();
+            stream2.innerText = "MEM_ALLOC: " + (prozent + Math.random() * 5).toFixed(1) + "%";
+        }, 80);
+
         const interval = setInterval(() => {
-            // Zufällige Sprünge für ein realistisches Lade-Gefühl
-            prozent += Math.floor(Math.random() * 15) + 5; 
+            prozent += Math.floor(Math.random() * 12) + 2; 
             if(prozent > 100) prozent = 100;
             
             anzeige.innerText = prozent + '%';
 
-            // Coole Hologramm-Texte je nach Ziel
+            if(prozent > 20) statusText.innerText = "Entschlüssele Protokolle...";
             if(prozent > 50) {
                 if(ziel === 'einstellungen.html') statusText.innerText = "Lade Konfiguration...";
                 else if(ziel === 'tag.html') statusText.innerText = "Lade Tagesansicht...";
                 else if(ziel === 'kunden.html') statusText.innerText = "Lade Datenbank...";
                 else statusText.innerText = "Synchronisiere Woche...";
             }
+            if(prozent > 85) statusText.innerText = "Bypassing Security...";
             
-            // Wenn 100% erreicht sind
             if(prozent === 100) {
-                statusText.innerText = "BEREIT";
+                clearInterval(interval);
+                clearInterval(dataHacker); // Stoppt das Zahlen-Rattern
+                
+                statusText.innerText = "SYSTEM ONLINE";
                 statusText.style.color = "var(--neon-green)";
                 statusText.style.textShadow = "0 0 15px var(--neon-green)";
-                clearInterval(interval);
                 
-                // Nach einem kurzen Moment weiterleiten
+                // Setzt alle Datenströme auf saubere Werte
+                hex1.innerText = "SYS.CORE // 100%";
+                hex2.innerText = "ROUTE // SECURE";
+                stream1.innerText = "ACCESS GRANTED";
+                stream1.style.color = "var(--neon-green)";
+                stream2.innerText = "MEM_ALLOC: 100.0%";
+                
                 setTimeout(() => {
                     window.location.href = ziel;
-                }, 400); // 400ms lassen das "BEREIT" kurz aufblitzen
+                }, 500); 
             }
-        }, 40); // Geschwindigkeit
+        }, 60); 
     </script>
 </body>
 </html>

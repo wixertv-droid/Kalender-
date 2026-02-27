@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <script>
+        // HÄRTESTER TÜRSTEHER DER WELT
+        if (!sessionStorage.getItem('authKey')) {
+            window.location.replace('index.html');
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jarvis | Finance Core</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff2a6d">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        .stats-container { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        
+        /* Jarvis-Style Cards */
+        .finance-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-left: 5px solid var(--neon-cyan);
+            padding: 20px;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .finance-card::after {
+            content: ""; position: absolute; top: 0; right: 0;
+            width: 50px; height: 50px;
+            background: linear-gradient(45deg, transparent 50%, rgba(5, 217, 232, 0.1) 50%);
+        }
+
+        .label { font-size: 0.75rem; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
+        .value { font-size: 2.5rem; font-weight: 900; color: white; margin-top: 5px; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
+        .sub-info { font-size: 0.85rem; color: #888; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; }
+        
+        .year-card { border-left-color: var(--neon-gold); background: rgba(229, 176, 92, 0.05); }
+        .month-card { border-left-color: var(--neon-violet); background: rgba(188, 0, 221, 0.05); }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        <div class="btn-cyber" onclick="location.href='woche.html'">⬅️</div>
+        <div class="header-info">
+            <div class="titel-neon">FINANCE_CORE</div>
+            <div class="datum-anzeige" id="current-year-display">ANALYSIS</div>
+        </div>
+        <div></div>
+    </div>
+
+    <div class="stats-container">
+        
+        <div class="finance-card">
+            <div class="label">Current Week // Umsatz</div>
+            <div id="val-week" class="value">0.00 €</div>
+            <div id="count-week" class="sub-info">Relevante Termine diese Woche: 0</div>
+        </div>
+
+        <div class="finance-card month-card">
+            <div class="label">Current Month // Umsatz</div>
+            <div id="val-month" class="value" style="color: var(--neon-violet); text-shadow: 0 0 15px rgba(188, 0, 221, 0.3);">0.00 €</div>
+            <div id="count-month" class="sub-info">Relevante Termine diesen Monat: 0</div>
+        </div>
+
+        <div class="finance-card year-card">
+            <div class="label">Total Year // Gesamtumsatz</div>
+            <div id="val-year" class="value" style="color: var(--neon-gold); text-shadow: 0 0 15px rgba(229, 176, 92, 0.3);">0.00 €</div>
+            <div id="count-year" class="sub-info">Relevante Termine im Jahr: 0</div>
+        </div>
+
+    </div>
+
+    <script>
+        function loadStats() {
+            const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+            const now = new Date();
+            
+            let revW = 0, countW = 0;
+            let revM = 0, countM = 0;
+            let revY = 0, countY = 0;
+
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            
+            // Kalenderwoche berechnen
+            const getWeek = (d) => {
+                const date = new Date(d.getTime());
+                date.setHours(0, 0, 0, 0);
+                date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+                const week1 = new Date(date.getFullYear(), 0, 4);
+                return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+            };
+            const currentWeek = getWeek(now);
+
+            termine.forEach(t => {
+                // Keine fehlerhaften Termine ohne Datum zählen
+                if (!t.datum) return;
+
+                const tDate = new Date(t.datum);
+                const tYear = tDate.getFullYear();
+                const tMonth = tDate.getMonth();
+                const tWeek = getWeek(tDate);
+                
+                // Preis-Logik:
+                // Wenn 'done' abgerechnet -> Echter Umsatz
+                // Wenn 'noshow' -> 0 Euro
+                // Wenn noch nicht abgerechnet -> Standardpreis der Kategorie aus den Einstellungen
+                let preis = 0;
+                if (t.status === 'done' && t.umsatz) {
+                    preis = parseFloat(t.umsatz);
+                } else if (t.status === 'noshow') {
+                    preis = 0;
+                } else {
+                    preis = parseFloat(settings[t.kat + "_preis"]) || 0;
+                }
+
+                // Nur Termine zählen, die keine No-Shows sind
+                let istGueltig = (t.status !== 'noshow');
+
+                // Jahr
+                if(tYear === currentYear) {
+                    revY += preis; 
+                    if(istGueltig) countY++;
+                    
+                    // Monat
+                    if(tMonth === currentMonth) {
+                        revM += preis; 
+                        if(istGueltig) countM++;
+                    }
+                    
+                    // Woche
+                    if(tWeek === currentWeek) {
+                        revW += preis; 
+                        if(istGueltig) countW++;
+                    }
+                }
+            });
+
+            // Formatierung für Euro (Immer mit zwei Nachkommastellen)
+            const formatGeld = (wert) => wert.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+
+            // UI Update
+            document.getElementById('val-week').innerText = formatGeld(revW);
+            document.getElementById('count-week').innerText = "Termine diese Woche: " + countW;
+            
+            document.getElementById('val-month').innerText = formatGeld(revM);
+            document.getElementById('count-month').innerText = "Termine diesen Monat: " + countM;
+            
+            document.getElementById('val-year').innerText = formatGeld(revY);
+            document.getElementById('count-year').innerText = "Termine Gesamt " + currentYear + ": " + countY;
+            
+            document.getElementById('current-year-display').innerText = "SYSTEM_ANALYSIS_" + currentYear;
+        }
+
+        window.onload = loadStats;
+    </script>
+</body>
+</html>

@@ -2,7 +2,6 @@
 <html lang="de">
 <head>
     <script>
-        // HÄRTESTER TÜRSTEHER DER WELT
         if (!sessionStorage.getItem('authKey')) {
             window.location.replace('index.html');
         }
@@ -252,6 +251,7 @@
             } else { vBox.style.display = 'none'; }
         }
 
+        // LAPTOP FIX: Sterne werden auf allen Geräten korrekt angezeigt
         function getStarString(count) {
             let num = parseInt(count) || 0;
             if (num === 0) return "<span style='color: #444;'>★★★★★</span>";
@@ -323,11 +323,10 @@
 
         function closeDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
 
-        // --- NEU: DYNAMISCHE TIMELINE BASIEREND AUF DEINEN ARBEITSZEITEN ---
         function renderTimeline(datum) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-                // Lade Arbeitszeiten aus den Einstellungen (Standard: 08:00 - 22:00)
+                const kundenDB = JSON.parse(localStorage.getItem('appKunden')) || []; // <-- NEU: DATENBANK LADEN
                 const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { arbeitsStart: '08:00', arbeitsEnde: '22:00' };
                 const liste = document.getElementById('tages-liste');
                 if(!liste) return;
@@ -335,59 +334,101 @@
                 
                 const tagesTermine = termine.filter(t => t.datum === datum).sort((a,b) => (a.start || "").localeCompare(b.start || ""));
                 
-                // Generiere die leeren "Stunden-Marker" dynamisch
                 let startH = parseInt(settings.arbeitsStart.split(':')[0]) || 8;
                 let endeH = parseInt(settings.arbeitsEnde.split(':')[0]) || 22;
-                if (endeH <= startH) endeH += 24; // Falls Mitternacht überschritten wird
+                if (endeH <= startH) endeH += 24; 
                 
                 let dynamicHours = [];
-                for(let h = startH; h <= endeH; h += 2) { // Zieht alle 2 Stunden einen Strich
+                for(let h = startH; h <= endeH; h += 2) { 
                     let hourStr = String(h % 24).padStart(2, '0') + ':00';
                     dynamicHours.push(hourStr);
                 }
                 
                 let combined = [];
                 dynamicHours.forEach(h => { 
-                    // Setze den Marker nur, wenn nicht exakt zur selben Zeit ein echter Termin startet
                     if(!tagesTermine.find(t => t.start === h)) {
                         combined.push({isMarker: true, time: h}); 
                     }
                 });
                 
-                // Echte Termine in die Liste werfen
                 tagesTermine.forEach(t => combined.push({isMarker: false, data: t, time: t.start}));
-                
-                // Alles nach Uhrzeit sortieren, damit sie perfekt von oben nach unten fließen
                 combined.sort((a,b) => a.time.localeCompare(b.time));
 
-                // HTML generieren
                 combined.forEach(item => {
                     const el = document.createElement('div');
                     el.className = 'timeline-item';
                     
                     if(item.isMarker) {
-                        // Der leere Stunden-Strich
                         el.innerHTML = `
                             <div class="timeline-time" style="opacity:0.4; color: var(--neon-cyan); text-shadow:none; font-weight: normal;">${item.time}</div>
                             <div class="timeline-dot" style="width:14px; height:14px; left:-25.5px; border-color:rgba(5, 217, 232, 0.3); background: transparent; box-shadow:none;"></div>
                             <div style="flex-grow: 1; margin-left:20px; border-bottom:1px dashed rgba(5, 217, 232, 0.15); height: 1px; margin-top: 5px;"></div>
                         `;
                     } else {
-                        // Der echte Termin-Kasten
                         const t = item.data;
                         const f = settings[t.kat+"_farbe"] || 'var(--neon-cyan)';
                         const katN = settings[t.kat+"_name"] || 'Termin';
-                        
+
+                        // --- NEU: ABGLEICH MIT DER DATENBANK FÜR DIE KARTE ---
+                        let dbKunde = null;
+                        if (t.kontakt && t.kontakt.trim() !== '') {
+                            dbKunde = kundenDB.find(k => k.kontakt === t.kontakt);
+                        }
+                        if (!dbKunde) {
+                            dbKunde = kundenDB.find(k => k.name.toLowerCase() === t.name.toLowerCase());
+                        }
+
+                        let dbExtensionsHTML = '';
+                        let badgeHTML = '';
+
+                        if (dbKunde) {
+                            if (dbKunde.status && dbKunde.status !== 'none') {
+                                const statusName = settings[dbKunde.status + '_name'] || 'Status';
+                                badgeHTML = `<span class="status-badge status-${dbKunde.status}" style="font-size: 0.65rem;">${statusName}</span>`;
+                            }
+
+                            const vibeStars = getStarString(dbKunde.vibe);
+                            const perfStars = getStarString(dbKunde.perf);
+                            const groesse = dbKunde.groesse && dbKunde.groesse !== "Unbekannt" ? dbKunde.groesse : "?";
+
+                            let fotosHTML = '';
+                            if(dbKunde.bild1 || dbKunde.bild2) {
+                                fotosHTML = `<span style="font-size:1.1rem; margin-left: 10px; cursor:pointer;" title="In Datenbank ansehen" onclick="event.stopPropagation(); window.location.href='kunden.html'">📸</span>`;
+                            }
+
+                            let vorliebenHTML = '';
+                            if (dbKunde.vorlieben && dbKunde.vorlieben.trim() !== '') {
+                                vorliebenHTML = `<div class="termin-info-notiz" style="border-left-color: var(--neon-violet); background: rgba(188, 0, 221, 0.05); margin-top: 10px; border-radius: 8px; padding: 10px;"><strong>Vorlieben:</strong> ${dbKunde.vorlieben}</div>`;
+                            }
+
+                            dbExtensionsHTML = `
+                                <div class="kunden-stats-row" style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <div class="stat-badge">📐 ${groesse}</div>
+                                    <div class="stat-badge">Vibe <span class="stars">${vibeStars}</span></div>
+                                    <div class="stat-badge">Perf <span class="stars">${perfStars}</span></div>
+                                    ${fotosHTML}
+                                </div>
+                                ${vorliebenHTML}
+                            `;
+                        }
+
+                        const notizHTML = t.notizen ? `<div class="termin-info-notiz" style="margin-top:10px; padding:10px; border-radius:8px;">${t.notizen}</div>` : '';
+                        const kontaktHTML = (t.plattform && t.plattform !== 'none') ? `<div class="termin-info-kontakt" style="margin-top:10px; background:rgba(188,0,221,0.1); border:1px solid rgba(188,0,221,0.3); color:var(--neon-violet); padding:5px 10px; border-radius:6px; display:inline-block; font-size:0.9rem;">${t.plattform}: ${t.kontakt || '?'}</div>` : '';
+                        // --------------------------------------------------------
+
                         el.innerHTML = `
                             <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f};">${t.start}</div>
                             <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f};"></div>
                             
                             <div class="termin-karte" style="border-left-color:${f}" onclick="openDetailModal(${t.id})">
                                 <div class="slot-inhalt" style="flex-grow: 1;">
-                                    <div style="font-size: 1.4rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px;">${t.name}</div>
+                                    <div style="font-size: 1.4rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px;">${t.name} ${badgeHTML}</div>
                                     <div style="font-size: 1rem; color: #aaa; margin-top: 5px;">
                                         <span style="color:${f}; font-weight: bold;">${t.start} - ${t.ende}</span> // <span>${katN}</span>
                                     </div>
+                                    ${kontaktHTML}
+                                    ${dbExtensionsHTML}
+                                    ${notizHTML}
                                 </div>
                                 <button class="btn-delete" style="margin-left: 15px;" onclick="event.stopPropagation(); deleteTermin(${t.id})">✖</button>
                             </div>
@@ -396,7 +437,6 @@
                     liste.appendChild(el);
                 });
                 
-                // Ein unsichtbarer Puffer am Ende, damit die vertikale Linie optisch schön ausläuft
                 const puffer = document.createElement('div');
                 puffer.style.height = "40px";
                 liste.appendChild(puffer);

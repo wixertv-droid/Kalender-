@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+                <!DOCTYPE html>
 <html lang="de">
 <head>
     <script>
@@ -12,40 +12,24 @@
     <link rel="stylesheet" href="style.css">
     <script src="app.js" defer></script>
     <style>
-        /* Lightbox für Vollbild-Ansicht */
         #lightbox {
-            display: none;
-            position: fixed;
-            z-index: 6000;
+            display: none; position: fixed; z-index: 6000;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95);
-            justify-content: center; align-items: center;
-            cursor: zoom-out;
-            backdrop-filter: blur(10px);
+            background: rgba(0,0,0,0.95); justify-content: center; align-items: center;
+            cursor: zoom-out; backdrop-filter: blur(10px);
         }
-        #lightbox img { 
-            max-width: 90%; 
-            max-height: 90%; 
-            border-radius: 15px; 
-            box-shadow: 0 0 50px rgba(5, 217, 232, 0.5);
-            border: 2px solid var(--neon-cyan);
-        }
+        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 15px; box-shadow: 0 0 50px rgba(5, 217, 232, 0.5); border: 2px solid var(--neon-cyan); }
         
-        /* Aktions-Buttons unter den Kreisen */
         .img-controls { display: flex; gap: 15px; margin-top: 10px; }
         .icon-btn {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(5, 217, 232, 0.3);
-            color: white;
-            width: 38px; height: 38px;
-            border-radius: 50%;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(5, 217, 232, 0.3);
+            color: white; width: 38px; height: 38px; border-radius: 50%;
             display: flex; justify-content: center; align-items: center;
             cursor: pointer; font-size: 1rem; transition: 0.3s;
         }
         .icon-btn:hover { background: var(--neon-cyan); color: black; box-shadow: 0 0 15px var(--neon-cyan); }
         .icon-btn.delete:hover { background: #ff2a6d; color: white; border-color: #ff2a6d; box-shadow: 0 0 15px #ff2a6d; }
 
-        /* Control Bar für Sortierung und Ansicht */
         .control-bar {
             display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;
             background: rgba(5, 217, 232, 0.05); padding: 15px; border-radius: 12px;
@@ -58,7 +42,6 @@
         }
         .view-toggle:hover { background: rgba(5, 217, 232, 0.1); }
 
-        /* NEU: Praeferenz & Preis Badges */
         .badge-ao { color: #ffcc00; border-color: #ffcc00; }
         .badge-save { color: #00ff00; border-color: #00ff00; }
         .badge-preis { color: var(--neon-gold); border-color: var(--neon-gold); }
@@ -100,8 +83,7 @@
             <button id="viewToggleBtn" class="view-toggle" onclick="toggleViewMode()">🖼️ Karten</button>
         </div>
 
-        <div class="kunden-liste" id="kundenListe">
-            </div>
+        <div class="kunden-liste" id="kundenListe"></div>
     </div>
 
     <div class="modal-overlay" id="kundeModal">
@@ -219,7 +201,6 @@
         let imgData = { bild1: '', bild2: '' };
         let viewMode = localStorage.getItem('dbViewMode') || 'grid';
 
-        // ANSICHTS-MODUS UMSCHALTEN
         function toggleViewMode() {
             viewMode = (viewMode === 'grid' ? 'list' : 'grid');
             localStorage.setItem('dbViewMode', viewMode);
@@ -239,7 +220,6 @@
             }
         }
 
-        // BILD-LOGIK (Vollbild oder Upload)
         function handleImageClick(num) {
             if (imgData['bild' + num]) {
                 document.getElementById('lightboxImg').src = imgData['bild' + num];
@@ -282,17 +262,21 @@
             }
         }
 
-        // STERNE DARSTELLUNG (LAPTOP FIX)
         function getStarString(count) {
             let num = parseInt(count) || 0;
+            if (num < 0) num = 0;
+            if (num > 5) num = 5;
             let filled = "<span style='color:var(--neon-gold); text-shadow: 0 0 5px var(--neon-gold);'>" + "★".repeat(num) + "</span>";
             let empty = "<span style='color:#333;'>" + "★".repeat(5-num) + "</span>";
             return filled + empty;
         }
 
-        // HAUPT-RENDERING DER LISTE
         function renderKunden() {
-            const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            let kunden = [];
+            try {
+                kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            } catch(e) { console.error("DB Error", e); }
+            
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
             const liste = document.getElementById('kundenListe');
             const search = document.getElementById('kundenSuche').value.toLowerCase();
@@ -300,11 +284,13 @@
             
             liste.innerHTML = '';
             
-            // 1. Filtern (Name & Kontakt)
-            let filtered = kunden.filter(k => 
-                (k.name && k.name.toLowerCase().includes(search)) || 
-                (k.kontakt && k.kontakt.toLowerCase().includes(search))
-            );
+            // 1. Filtern (KUGELSICHER: Ignoriert defekte/leere Einträge)
+            let filtered = kunden.filter(k => {
+                if (!k || !k.name) return false; // Schutzschild
+                const searchName = k.name.toLowerCase();
+                const searchKontakt = k.kontakt ? k.kontakt.toLowerCase() : '';
+                return searchName.includes(search) || searchKontakt.includes(search);
+            });
 
             // 2. Sortieren
             filtered.sort((a, b) => {
@@ -319,13 +305,12 @@
             });
 
             // 3. Karten zeichnen
-            filtered.forEach(k => {
+                filtered.forEach(k => {
                 const avatarImg = k.bild1 ? `background-image:url('${k.bild1}'); background-size:cover; background-position:center;` : "";
                 const avatarText = k.bild1 ? "" : (k.name ? k.name.substring(0,2).toUpperCase() : "??");
                 
                 let badgeHTML = (k.status && k.status !== 'none') ? `<span class="status-badge status-${k.status}">${settings[k.status + '_name'] || 'Status'}</span>` : '';
 
-                // NEU: Praeferenz und Preis Badges für die Listen/Karten-Anzeige
                 let praeferenzBadge = '';
                 if (k.praeferenz === 'AO') praeferenzBadge = `<div class="stat-badge badge-ao">AO</div>`;
                 else if (k.praeferenz === 'Save') praeferenzBadge = `<div class="stat-badge badge-save">Save</div>`;
@@ -338,7 +323,7 @@
                         <div class="kunden-avatar" style="${avatarImg} border-radius: 50%; border: 2px solid var(--neon-cyan);">${avatarText}</div>
                         <div class="kunden-info">
                             <div style="flex-grow: 1;">
-                                <div class="kunden-name">${k.name || 'Unbekannt'} ${badgeHTML}</div>
+                                <div class="kunden-name">${k.name} ${badgeHTML}</div>
                                 <div class="kunden-kontakt" style="font-size: 0.85rem; opacity: 0.7; margin-top: 2px;">${k.plattform !== 'none' && k.plattform ? k.plattform + ': ' : ''}${k.kontakt || ''}</div>
                             </div>
                             
@@ -357,7 +342,6 @@
             document.getElementById('kunden-counter').innerText = filtered.length + (filtered.length === 1 ? ' Profil' : ' Profile');
         }
 
-        // MODAL ÖFFNEN & DATEN LADEN
         function openKundeModal(id = null) {
             editKundeId = id;
             ladeModalEinstellungen();
@@ -369,11 +353,49 @@
                     document.getElementById('kundeStatus').value = k.status || 'none';
                     document.getElementById('kundePlattform').value = k.plattform || 'none';
                     document.getElementById('kundeKontakt').value = k.kontakt || '';
+                    document.getElementById('kundePreis').value = k.preis || '';
+                    document.getElementById('kundePraeferenz').value = k.praeferenz || 'none';
+                    document.getElementById('kundeGroesse').value = k.groesse || 'Unbekannt';
                     
-                    // NEU: Preis und Präferenz sichern
+                    document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+                    if(k.vibe > 0) document.getElementById('v'+k.vibe).checked = true;
+                    if(k.perf > 0) document.getElementById('p'+k.perf).checked = true;
+
+                    document.getElementById('kundeVorlieben').value = k.vorlieben || '';
+                    document.getElementById('kundeNotizen').value = k.notizen || '';
+                    imgData.bild1 = k.bild1 || ''; imgData.bild2 = k.bild2 || '';
+                }
+            } else {
+                document.getElementById('kundeModalTitle').innerText = "Neues Profil";
+                document.getElementById('kundeName').value = '';
+                document.getElementById('kundeStatus').value = 'none';
+                document.getElementById('kundePlattform').value = 'none';
+                document.getElementById('kundeKontakt').value = '';
+                document.getElementById('kundePreis').value = '';
+                document.getElementById('kundePraeferenz').value = 'none';
+                document.getElementById('kundeGroesse').value = 'Unbekannt';
+                document.getElementById('kundeVorlieben').value = '';
+                document.getElementById('kundeNotizen').value = '';
+                imgData.bild1 = ''; imgData.bild2 = '';
+                document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+            }
+            updateImageUI(1); updateImageUI(2);
+            document.getElementById('kundeModal').style.display = 'flex';
+        }
+
+        function saveKunde() {
+            const name = document.getElementById('kundeName').value;
+            if(!name) return alert("Name fehlt!");
+            
+            let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            const data = {
+                id: editKundeId || Date.now(),
+                name: name,
+                status: document.getElementById('kundeStatus').value,
+                plattform: document.getElementById('kundePlattform').value,
+                kontakt: document.getElementById('kundeKontakt').value,
                 preis: document.getElementById('kundePreis').value,
                 praeferenz: document.getElementById('kundePraeferenz').value,
-
                 groesse: document.getElementById('kundeGroesse').value,
                 vibe: document.querySelector('input[name="vibe"]:checked')?.value || 0,
                 perf: document.querySelector('input[name="perf"]:checked')?.value || 0,
@@ -392,7 +414,7 @@
         function deleteKunde(id) {
             if(confirm("Dieses Profil wirklich löschen?")) {
                 let k = JSON.parse(localStorage.getItem('appKunden')) || [];
-                localStorage.setItem('appKunden', JSON.stringify(k.filter(x => x.id !== id)));
+                localStorage.setItem('appKunden', JSON.stringify(k.filter(x => x && x.id !== id)));
                 renderKunden();
             }
         }
@@ -414,4 +436,3 @@
     </script>
 </body>
 </html>
-                  

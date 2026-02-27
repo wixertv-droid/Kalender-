@@ -38,46 +38,86 @@
         <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
             <div class="form-title" id="kundeModalTitle">Neues Profil</div>
             
-            <div class="form-group">
-                <label class="input-label">Name</label>
-                <input type="text" id="kundeName" class="cyber-input-full" placeholder="John Doe">
-            </div>
-
-            <div class="form-group" style="display: flex; justify-content: space-around; margin-top: 30px; margin-bottom: 30px;">
-                
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                    <label for="file1" class="image-preview" id="preview1" style="cursor: pointer; transition: 0.3s; width: 90px; height: 90px;" title="Klicken zum Ändern">1</label>
+            <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 30px;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                    <label for="file1" class="image-preview" id="preview1" style="cursor: pointer; transition: 0.3s; width: 85px; height: 85px; border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(5,217,232,0.2);" title="Klicken zum Ändern">1</label>
                     <input type="file" id="file1" accept="image/*" onchange="uploadImage(event, 1)" style="display: none;">
-                    <button class="btn-delete" style="padding: 8px 15px; font-size: 0.75rem; border-radius: 8px;" onclick="removeImageWithConfirm(1)">Löschen</button>
+                    <button class="btn-delete" style="padding: 4px 10px; font-size: 0.7rem; border-radius: 6px;" onclick="removeImageWithConfirm(1)">Löschen</button>
                 </div>
 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                    <label for="file2" class="image-preview" id="preview2" style="cursor: pointer; transition: 0.3s; width: 90px; height: 90px;" title="Klicken zum Ändern">2</label>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                    <label for="file2" class="image-preview" id="preview2" style="cursor: pointer; transition: 0.3s; width: 85px; height: 85px; border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(5,217,232,0.2);" title="Klicken zum Ändern">2</label>
                     <input type="file" id="file2" accept="image/*" onchange="uploadImage(event, 2)" style="display: none;">
-                    <button class="btn-delete" style="padding: 8px 15px; font-size: 0.75rem; border-radius: 8px;" onclick="removeImageWithConfirm(2)">Löschen</button>
+                    <button class="btn-delete" style="padding: 4px 10px; font-size: 0.7rem; border-radius: 6px;" onclick="removeImageWithConfirm(2)">Löschen</button>
                 </div>
-
             </div>
 
-            <div class="form-group">
-                <label class="input-label">Kunden-Status</label>
-                <select id="kundeStatus" class="cyber-select"></select>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 2; min-width: 200px;">
+                    <label class="input-label">Name</label>
+                    <input type="text" id="kundeName" class="cyber-input-full" placeholder="John Doe">
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 130px;">
+                    <label class="input-label">Status</label>
+                    <select id="kundeStatus" class="cyber-select"></select>
+                </div>
             </div>
 
-            <div style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1; min-width: 120px;">
                     <label class="input-label">Plattform</label>
                     <select id="kundePlattform" class="cyber-select"></select>
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label class="input-label">Kontakt</label>
+                <div class="form-group" style="flex: 2; min-width: 200px;">
+                    <label class="input-label">Kontakt / Nummer</label>
                     <input type="text" id="kundeKontakt" class="cyber-input-full" placeholder="@username / Nummer">
                 </div>
             </div>
 
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 10px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px dashed rgba(5,217,232,0.2);">
+                
+                <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                    <label class="input-label">Ausstattung</label>
+                    <select id="kundeGroesse" class="cyber-select" style="padding: 12px; font-size: 1rem;">
+                        <option value="Unbekannt">Unbekannt</option>
+                        <option value="Klein">Klein</option>
+                        <option value="Mittel">Mittel</option>
+                        <option value="Groß">Groß</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
+                    <label class="input-label">Vibe / Charakter</label>
+                    <div class="rating-container" id="ratingVibe">
+                        <input type="radio" id="v5" name="vibe" value="5"><label for="v5">★</label>
+                        <input type="radio" id="v4" name="vibe" value="4"><label for="v4">★</label>
+                        <input type="radio" id="v3" name="vibe" value="3"><label for="v3">★</label>
+                        <input type="radio" id="v2" name="vibe" value="2"><label for="v2">★</label>
+                        <input type="radio" id="v1" name="vibe" value="1"><label for="v1">★</label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
+                    <label class="input-label">Performance</label>
+                    <div class="rating-container" id="ratingPerf">
+                        <input type="radio" id="p5" name="perf" value="5"><label for="p5">★</label>
+                        <input type="radio" id="p4" name="perf" value="4"><label for="p4">★</label>
+                        <input type="radio" id="p3" name="perf" value="3"><label for="p3">★</label>
+                        <input type="radio" id="p2" name="perf" value="2"><label for="p2">★</label>
+                        <input type="radio" id="p1" name="perf" value="1"><label for="p1">★</label>
+                    </div>
+                </div>
+
+            </div>
+
             <div class="form-group">
-                <label class="input-label">Interne Notizen</label>
-                <textarea id="kundeNotizen" class="cyber-input-full" placeholder="Besonderheiten, Wünsche..."></textarea>
+                <label class="input-label">Vorlieben & Besonderheiten</label>
+                <textarea id="kundeVorlieben" class="cyber-input-full" placeholder="Was mag er besonders? Tabus? ..." style="min-height: 80px;"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="input-label">Allgemeine Notizen</label>
+                <textarea id="kundeNotizen" class="cyber-input-full" placeholder="Sonstige Infos..." style="min-height: 80px; border-left-color: #555;"></textarea>
             </div>
 
             <button class="btn-save" onclick="saveKunde()">PROFIL SPEICHERN</button>
@@ -114,7 +154,6 @@
             return settings;
         }
 
-        // BILD HOCHLADEN LOGIK (Durch Klick auf den Kreis)
         function uploadImage(event, num) {
             const file = event.target.files[0];
             if(!file) return;
@@ -129,20 +168,24 @@
                 imgData['bild' + num] = e.target.result;
                 const preview = document.getElementById('preview' + num);
                 preview.style.backgroundImage = `url(${e.target.result})`;
-                preview.innerText = ''; // Die Nummer (1 oder 2) verschwindet
+                preview.innerText = ''; 
             };
             reader.readAsDataURL(file);
         }
 
-        // BILD LÖSCHEN LOGIK (Mit Sicherheitsabfrage)
         function removeImageWithConfirm(num) {
             if (confirm("SYSTEM-WARNUNG: Möchtest du dieses Bild wirklich löschen?")) {
                 imgData['bild' + num] = '';
                 const preview = document.getElementById('preview' + num);
                 preview.style.backgroundImage = 'none';
-                preview.innerText = num; // Zeigt wieder die "1" oder "2" an
+                preview.innerText = num; 
                 document.getElementById('file' + num).value = ''; 
             }
+        }
+
+        function getStarString(count) {
+            if(!count || count === "0") return "Keine Bewertung";
+            return "★".repeat(parseInt(count)) + "☆".repeat(5 - parseInt(count));
         }
 
         function renderKunden() {
@@ -177,6 +220,16 @@
                     fotosHTML = `<span style="font-size:0.8rem; margin-left: 10px;" title="Bilder hinterlegt">📸</span>`;
                 }
 
+                const vibeStars = getStarString(k.vibe);
+                const perfStars = getStarString(k.perf);
+                const groesse = k.groesse && k.groesse !== "Unbekannt" ? k.groesse : "?";
+
+                // Vorlieben Vorschau
+                let vorliebenPreview = '';
+                if(k.vorlieben && k.vorlieben.trim() !== '') {
+                    vorliebenPreview = `<div class="kunden-notiz" style="border-left-color: var(--neon-violet); margin-bottom: 10px;"><strong>Vorlieben:</strong> ${k.vorlieben}</div>`;
+                }
+
                 liste.innerHTML += `
                     <div class="kunden-karte" style="cursor: pointer;" onclick="openKundeModal(${k.id})">
                         <button class="btn-delete-kunde" onclick="deleteKunde(event, ${k.id})">✖</button>
@@ -184,6 +237,14 @@
                         <div class="kunden-info">
                             <div class="kunden-name">${k.name} ${badgeHTML} ${fotosHTML}</div>
                             <div class="kunden-kontakt">${k.plattform !== 'none' && k.plattform ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</div>
+                            
+                            <div class="kunden-stats-row">
+                                <div class="stat-badge">📐 ${groesse}</div>
+                                <div class="stat-badge">Vibe <span class="stars">${vibeStars}</span></div>
+                                <div class="stat-badge">Perf <span class="stars">${perfStars}</span></div>
+                            </div>
+
+                            ${vorliebenPreview}
                             <div class="kunden-notiz">${k.notizen || 'Keine Notizen hinterlegt.'}</div>
                         </div>
                     </div>
@@ -191,6 +252,25 @@
             });
 
             counter.innerText = count === 1 ? '1 Profil' : count + ' Profile';
+        }
+
+        // Hilfsfunktion um die Sterne im Formular zu setzen
+        function setRadioValue(name, value) {
+            const radios = document.getElementsByName(name);
+            for(let i=0; i<radios.length; i++) {
+                if(radios[i].value === value) { radios[i].checked = true; return; }
+            }
+            // Reset falls kein Wert
+            for(let i=0; i<radios.length; i++) radios[i].checked = false;
+        }
+
+        // Hilfsfunktion um die Sterne aus dem Formular auszulesen
+        function getRadioValue(name) {
+            const radios = document.getElementsByName(name);
+            for(let i=0; i<radios.length; i++) {
+                if(radios[i].checked) return radios[i].value;
+            }
+            return "0";
         }
 
         function openKundeModal(id = null) {
@@ -206,6 +286,12 @@
                     document.getElementById('kundeStatus').value = k.status || 'none';
                     document.getElementById('kundePlattform').value = k.plattform || 'none';
                     document.getElementById('kundeKontakt').value = k.kontakt || '';
+                    
+                    document.getElementById('kundeGroesse').value = k.groesse || 'Unbekannt';
+                    setRadioValue('vibe', k.vibe || "0");
+                    setRadioValue('perf', k.perf || "0");
+                    
+                    document.getElementById('kundeVorlieben').value = k.vorlieben || '';
                     document.getElementById('kundeNotizen').value = k.notizen || '';
                     
                     imgData.bild1 = k.bild1 || '';
@@ -217,13 +303,18 @@
                 document.getElementById('kundeStatus').value = 'none';
                 document.getElementById('kundePlattform').value = 'none';
                 document.getElementById('kundeKontakt').value = '';
+                
+                document.getElementById('kundeGroesse').value = 'Unbekannt';
+                setRadioValue('vibe', "0");
+                setRadioValue('perf', "0");
+
+                document.getElementById('kundeVorlieben').value = '';
                 document.getElementById('kundeNotizen').value = '';
                 
                 imgData.bild1 = '';
                 imgData.bild2 = '';
             }
 
-            // Vorschaubilder aktualisieren (Füllt die Kreise)
             for(let i=1; i<=2; i++) {
                 const preview = document.getElementById('preview'+i);
                 if(imgData['bild'+i]) {
@@ -248,6 +339,12 @@
             const status = document.getElementById('kundeStatus').value; 
             const plattform = document.getElementById('kundePlattform').value;
             const kontakt = document.getElementById('kundeKontakt').value;
+            
+            const groesse = document.getElementById('kundeGroesse').value;
+            const vibe = getRadioValue('vibe');
+            const perf = getRadioValue('perf');
+            
+            const vorlieben = document.getElementById('kundeVorlieben').value;
             const notizen = document.getElementById('kundeNotizen').value;
 
             if (!name) { alert("Bitte einen Namen eingeben."); return; }
@@ -261,6 +358,10 @@
                     kunden[index].status = status;
                     kunden[index].plattform = plattform;
                     kunden[index].kontakt = kontakt;
+                    kunden[index].groesse = groesse;
+                    kunden[index].vibe = vibe;
+                    kunden[index].perf = perf;
+                    kunden[index].vorlieben = vorlieben;
                     kunden[index].notizen = notizen;
                     kunden[index].bild1 = imgData.bild1;
                     kunden[index].bild2 = imgData.bild2;
@@ -272,6 +373,10 @@
                     status: status,
                     plattform: plattform,
                     kontakt: kontakt,
+                    groesse: groesse,
+                    vibe: vibe,
+                    perf: perf,
+                    vorlieben: vorlieben,
                     notizen: notizen,
                     bild1: imgData.bild1,
                     bild2: imgData.bild2
@@ -285,7 +390,7 @@
 
         function deleteKunde(event, id) {
             event.stopPropagation(); 
-            if (confirm("Dieses Profil wirklich löschen?")) {
+            if (confirm("SYSTEM-WARNUNG: Dieses Profil wirklich löschen?")) {
                 let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
                 kunden = kunden.filter(k => k.id !== id);
                 localStorage.setItem('appKunden', JSON.stringify(kunden));

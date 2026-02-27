@@ -456,22 +456,44 @@ input:checked + .slider:before { transform: translateX(40px); background-color: 
 }
 .stat-badge span.stars { color: var(--neon-gold); text-shadow: 0 0 5px var(--neon-gold); letter-spacing: 2px;}
 
-/* Listenansicht-Modus */
+/* Listenansicht-Modus - Optimiert für mehr Infos */
 .kunden-liste.list-mode {
-    grid-template-columns: 1fr !important; /* Immer nur eine Spalte */
-    gap: 10px;
+    grid-template-columns: 1fr !important;
+    gap: 8px;
 }
 
 .kunden-liste.list-mode .kunden-karte {
-    padding: 10px 20px;
+    padding: 12px 20px;
+    display: flex;
     align-items: center;
 }
 
 .kunden-liste.list-mode .kunden-avatar {
-    width: 50px; height: 50px; font-size: 1.2rem;
+    width: 55px; height: 55px; font-size: 1.1rem; flex-shrink: 0;
 }
 
-.kunden-liste.list-mode .kunden-notiz, 
+.kunden-liste.list-mode .kunden-info {
+    display: flex;
+    flex-direction: row; /* Infos nebeneinander statt untereinander */
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-left: 15px;
+}
+
+/* In der Liste zeigen wir nur die Sterne und Größe kompakt an */
 .kunden-liste.list-mode .kunden-stats-row {
-    display: none; /* In der Liste verstecken wir Details für mehr Speed */
+    margin-top: 0;
+    margin-left: auto;
+    margin-right: 40px; /* Platz für das X */
+}
+
+.kunden-liste.list-mode .stat-badge {
+    padding: 2px 8px;
+    font-size: 0.75rem;
+}
+
+/* Die langen Notizen bleiben in der Liste weiterhin versteckt */
+.kunden-liste.list-mode .kunden-notiz {
+    display: none;
 }

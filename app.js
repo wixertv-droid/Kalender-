@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.8 - AUTO SCROLL UPDATE)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.9 - CLOUD STABILITY UPDATE)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -15,7 +15,7 @@ const DEFAULTS = {
 let currentEditId = null; 
 
 /* ==========================================================================
-   >>> FIREBASE CLOUD ANBINDUNG (MAGIC SYNC) <<<
+   >>> FIREBASE CLOUD ANBINDUNG (STABLE MAGIC SYNC) <<<
    ========================================================================== */
 const firebaseConfig = {
     apiKey: "AIzaSyAEUmqJJVTb-6HLJelRavBYX7HYbYgAOk4",
@@ -28,26 +28,31 @@ const firebaseConfig = {
 
 let db, setDoc, doc;
 let isSyncingFromCloud = false;
+let syncTimeout = null; // NEU: Puffer für Cloud-Uploads
 
 const originalSetItem = localStorage.setItem;
 
-localStorage.setItem = async function(key, value) {
+localStorage.setItem = function(key, value) {
     originalSetItem.call(localStorage, key, value);
 
     if (isSyncingFromCloud) return;
 
     if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
-        if (db && setDoc && doc) {
-            try {
-                await setDoc(doc(db, "agenda2050", "systemdaten"), {
-                    termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
-                    kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
-                    einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
-                    pin: localStorage.getItem('appPin') || "0000" 
-                }, { merge: true });
-                console.log("☁️ Cloud Upload erfolgreich!");
-            } catch(e) { console.error("Cloud Upload Fehler:", e); }
-        }
+        // NEU: Bündelt alle Speicherbefehle, um Datenverlust zu verhindern
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(async () => {
+            if (db && setDoc && doc) {
+                try {
+                    await setDoc(doc(db, "agenda2050", "systemdaten"), {
+                        termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
+                        kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
+                        einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
+                        pin: localStorage.getItem('appPin') || "0000" 
+                    }, { merge: true });
+                    console.log("☁️ Cloud Upload (gebündelt) erfolgreich!");
+                } catch(e) { console.error("Cloud Upload Fehler:", e); }
+            }
+        }, 150); // 150 Millisekunden warten, bis der Funkspruch rausgeht
     }
 };
 

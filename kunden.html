@@ -107,7 +107,6 @@
                         <input type="radio" id="p1" name="perf" value="1"><label for="p1">★</label>
                     </div>
                 </div>
-
             </div>
 
             <div class="form-group">
@@ -157,12 +156,7 @@
         function uploadImage(event, num) {
             const file = event.target.files[0];
             if(!file) return;
-            
-            if(file.size > 2.5 * 1024 * 1024) {
-                alert("SYSTEM-WARNUNG: Bild ist zu groß! Bitte wähle ein Bild unter 2.5 MB.");
-                return;
-            }
-
+            if(file.size > 2.5 * 1024 * 1024) { alert("SYSTEM-WARNUNG: Bild ist zu groß! Bitte wähle ein Bild unter 2.5 MB."); return; }
             const reader = new FileReader();
             reader.onload = (e) => {
                 imgData['bild' + num] = e.target.result;
@@ -183,9 +177,17 @@
             }
         }
 
+        // --- DER LAPTOP FIX FÜR DIE STERNE ---
         function getStarString(count) {
-            if(!count || count === "0") return "Keine Bewertung";
-            return "★".repeat(parseInt(count)) + "☆".repeat(5 - parseInt(count));
+            let num = parseInt(count) || 0;
+            if (num === 0) return "<span style='color: #444;'>★★★★★</span>";
+            
+            // Goldene Sterne (Ausgefüllt)
+            let filled = "<span style='color: var(--neon-gold); text-shadow: 0 0 8px var(--neon-gold);'>" + "★".repeat(num) + "</span>";
+            // Dunkelgraue Sterne (Ausgefüllt, aber aus)
+            let empty = "<span style='color: #333; text-shadow: none;'>" + "★".repeat(5 - num) + "</span>";
+            
+            return filled + empty;
         }
 
         function renderKunden() {
@@ -224,7 +226,6 @@
                 const perfStars = getStarString(k.perf);
                 const groesse = k.groesse && k.groesse !== "Unbekannt" ? k.groesse : "?";
 
-                // Vorlieben Vorschau
                 let vorliebenPreview = '';
                 if(k.vorlieben && k.vorlieben.trim() !== '') {
                     vorliebenPreview = `<div class="kunden-notiz" style="border-left-color: var(--neon-violet); margin-bottom: 10px;"><strong>Vorlieben:</strong> ${k.vorlieben}</div>`;
@@ -254,17 +255,14 @@
             counter.innerText = count === 1 ? '1 Profil' : count + ' Profile';
         }
 
-        // Hilfsfunktion um die Sterne im Formular zu setzen
         function setRadioValue(name, value) {
             const radios = document.getElementsByName(name);
             for(let i=0; i<radios.length; i++) {
                 if(radios[i].value === value) { radios[i].checked = true; return; }
             }
-            // Reset falls kein Wert
             for(let i=0; i<radios.length; i++) radios[i].checked = false;
         }
 
-        // Hilfsfunktion um die Sterne aus dem Formular auszulesen
         function getRadioValue(name) {
             const radios = document.getElementsByName(name);
             for(let i=0; i<radios.length; i++) {

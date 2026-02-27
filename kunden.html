@@ -38,17 +38,17 @@
         <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
             <div class="form-title" id="kundeModalTitle">Neues Profil</div>
             
-            <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 30px;">
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                    <label for="file1" class="image-preview" id="preview1" style="cursor: pointer; transition: 0.3s; width: 85px; height: 85px; border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(5,217,232,0.2);" title="Klicken zum Ändern">1</label>
+            <div style="display: flex; justify-content: center; gap: 40px; margin-bottom: 30px;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    <label for="file1" id="preview1" style="cursor: pointer; transition: 0.3s; width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--neon-cyan); box-shadow: 0 0 15px rgba(5,217,232,0.3); background-size: cover; background-position: center; display: flex; justify-content: center; align-items: center; color: var(--neon-cyan); font-size: 1.5rem; font-weight: bold; background-color: rgba(5,217,232,0.05);" title="Klicken zum Ändern">1</label>
                     <input type="file" id="file1" accept="image/*" onchange="uploadImage(event, 1)" style="display: none;">
-                    <button class="btn-delete" style="padding: 4px 10px; font-size: 0.7rem; border-radius: 6px;" onclick="removeImageWithConfirm(1)">Löschen</button>
+                    <button class="btn-delete" style="padding: 6px 12px; font-size: 0.7rem; border-radius: 8px;" onclick="removeImageWithConfirm(1)">Löschen</button>
                 </div>
 
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                    <label for="file2" class="image-preview" id="preview2" style="cursor: pointer; transition: 0.3s; width: 85px; height: 85px; border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(5,217,232,0.2);" title="Klicken zum Ändern">2</label>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    <label for="file2" id="preview2" style="cursor: pointer; transition: 0.3s; width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--neon-cyan); box-shadow: 0 0 15px rgba(5,217,232,0.3); background-size: cover; background-position: center; display: flex; justify-content: center; align-items: center; color: var(--neon-cyan); font-size: 1.5rem; font-weight: bold; background-color: rgba(5,217,232,0.05);" title="Klicken zum Ändern">2</label>
                     <input type="file" id="file2" accept="image/*" onchange="uploadImage(event, 2)" style="display: none;">
-                    <button class="btn-delete" style="padding: 4px 10px; font-size: 0.7rem; border-radius: 6px;" onclick="removeImageWithConfirm(2)">Löschen</button>
+                    <button class="btn-delete" style="padding: 6px 12px; font-size: 0.7rem; border-radius: 8px;" onclick="removeImageWithConfirm(2)">Löschen</button>
                 </div>
             </div>
 
@@ -107,6 +107,7 @@
                         <input type="radio" id="p1" name="perf" value="1"><label for="p1">★</label>
                     </div>
                 </div>
+
             </div>
 
             <div class="form-group">
@@ -156,7 +157,12 @@
         function uploadImage(event, num) {
             const file = event.target.files[0];
             if(!file) return;
-            if(file.size > 2.5 * 1024 * 1024) { alert("SYSTEM-WARNUNG: Bild ist zu groß! Bitte wähle ein Bild unter 2.5 MB."); return; }
+            
+            if(file.size > 2.5 * 1024 * 1024) {
+                alert("SYSTEM-WARNUNG: Bild ist zu groß! Bitte wähle ein Bild unter 2.5 MB.");
+                return;
+            }
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 imgData['bild' + num] = e.target.result;
@@ -177,16 +183,11 @@
             }
         }
 
-        // --- DER LAPTOP FIX FÜR DIE STERNE ---
         function getStarString(count) {
             let num = parseInt(count) || 0;
             if (num === 0) return "<span style='color: #444;'>★★★★★</span>";
-            
-            // Goldene Sterne (Ausgefüllt)
             let filled = "<span style='color: var(--neon-gold); text-shadow: 0 0 8px var(--neon-gold);'>" + "★".repeat(num) + "</span>";
-            // Dunkelgraue Sterne (Ausgefüllt, aber aus)
             let empty = "<span style='color: #333; text-shadow: none;'>" + "★".repeat(5 - num) + "</span>";
-            
             return filled + empty;
         }
 
@@ -209,17 +210,21 @@
 
             gefiltert.forEach(k => {
                 count++;
+                
+                // NEU: Avatar Logik - Zeigt das Bild an, wenn eins existiert, sonst die Buchstaben
                 const init = k.name ? k.name.substring(0, 2).toUpperCase() : '??';
+                let avatarStyle = "border-radius: 50%;"; // Erzwingt runden Kreis
+                let avatarText = init;
+
+                if (k.bild1) {
+                    avatarStyle += ` background-image: url('${k.bild1}'); background-size: cover; background-position: center; border: 2px solid var(--neon-cyan);`;
+                    avatarText = ""; // Text ausblenden, wenn Bild da ist
+                }
                 
                 let badgeHTML = '';
                 if (k.status && k.status !== 'none') {
                     const statusName = settings[k.status + '_name'] || 'Status';
                     badgeHTML = `<span class="status-badge status-${k.status}">${statusName}</span>`;
-                }
-
-                let fotosHTML = '';
-                if(k.bild1 || k.bild2) {
-                    fotosHTML = `<span style="font-size:0.8rem; margin-left: 10px;" title="Bilder hinterlegt">📸</span>`;
                 }
 
                 const vibeStars = getStarString(k.vibe);
@@ -234,9 +239,11 @@
                 liste.innerHTML += `
                     <div class="kunden-karte" style="cursor: pointer;" onclick="openKundeModal(${k.id})">
                         <button class="btn-delete-kunde" onclick="deleteKunde(event, ${k.id})">✖</button>
-                        <div class="kunden-avatar">${init}</div>
+                        
+                        <div class="kunden-avatar" style="${avatarStyle}">${avatarText}</div>
+                        
                         <div class="kunden-info">
-                            <div class="kunden-name">${k.name} ${badgeHTML} ${fotosHTML}</div>
+                            <div class="kunden-name">${k.name} ${badgeHTML}</div>
                             <div class="kunden-kontakt">${k.plattform !== 'none' && k.plattform ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</div>
                             
                             <div class="kunden-stats-row">
@@ -255,6 +262,7 @@
             counter.innerText = count === 1 ? '1 Profil' : count + ' Profile';
         }
 
+        // Hilfsfunktion um die Sterne im Formular zu setzen
         function setRadioValue(name, value) {
             const radios = document.getElementsByName(name);
             for(let i=0; i<radios.length; i++) {
@@ -263,6 +271,7 @@
             for(let i=0; i<radios.length; i++) radios[i].checked = false;
         }
 
+        // Hilfsfunktion um die Sterne aus dem Formular auszulesen
         function getRadioValue(name) {
             const radios = document.getElementsByName(name);
             for(let i=0; i<radios.length; i++) {

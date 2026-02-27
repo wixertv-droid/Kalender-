@@ -148,6 +148,7 @@
             font-size: 0.8rem; 
             box-shadow: 0 0 10px rgba(229, 176, 92, 0.3); 
             animation: pulse-gold 2s infinite; 
+            white-space: nowrap;
         }
         @keyframes pulse-gold { 
             0%, 100% { box-shadow: 0 0 5px rgba(229, 176, 92, 0.3); } 
@@ -161,6 +162,7 @@
             padding: 4px 10px; 
             border-radius: 6px; 
             background: rgba(57, 255, 20, 0.1); 
+            white-space: nowrap;
         }
         .status-noshow { 
             color: var(--neon-red); 
@@ -170,6 +172,7 @@
             padding: 4px 10px; 
             border-radius: 6px; 
             background: rgba(255, 0, 60, 0.1); 
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -312,13 +315,11 @@
     <script>
         let currentAbrechnungId = null;
 
-        // Lightbox öffnen
         function openLightbox(src) { 
             document.getElementById('lightboxImg').src = src; 
             document.getElementById('lightbox').style.display = 'flex'; 
         }
 
-        // Live-Suche beim Eintippen im Formular
         function sucheKundeFuerTermin() {
             const input = document.getElementById('terminName').value.toLowerCase();
             const vBox = document.getElementById('kundenVorschlaege');
@@ -340,7 +341,6 @@
                     const d = document.createElement('div');
                     d.className = 'vorschlag-item';
                     
-                    // Zeigt fette Warnung im Dropdown an
                     let warningHTML = (k.noshows && k.noshows > 0) ? `<span style="color: var(--neon-red); font-weight: bold; float: right; font-size: 0.8rem;">⚠️ ${k.noshows}x NO-SHOW</span>` : '';
 
                     d.innerHTML = `<strong>${k.name}</strong> ${warningHTML}<br><small style="color:#aaa;">${k.plattform !== 'none' ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</small>`;
@@ -355,7 +355,6 @@
                         }
                         vBox.style.display = 'none';
                         
-                        // Direkte Warnung als Pop-Up
                         if(k.noshows && k.noshows > 0) {
                             alert(`ACHTUNG: Dieser Kunde ist in der Vergangenheit bereits ${k.noshows}x nicht erschienen!`);
                         }
@@ -368,14 +367,12 @@
             }
         }
 
-        // Sterne-Logik für korrekte Darstellung am Laptop
         function getStarString(count) {
             let num = parseInt(count) || 0;
             if (num === 0) return "<span style='color: #444;'>★★★★★</span>";
             return "<span style='color: var(--neon-gold); text-shadow: 0 0 8px var(--neon-gold);'>" + "★".repeat(num) + "</span><span style='color: #333; text-shadow: none;'>" + "★".repeat(5 - num) + "</span>";
         }
 
-        // Detail Modal Logik
         function openDetailModal(id) {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             const t = termine.find(x => x.id === id);
@@ -384,7 +381,6 @@
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             
-            // Abgleich mit Kundendatenbank
             let kunde = kunden.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
 
             document.getElementById('detailName').innerText = t.name;
@@ -396,7 +392,6 @@
             const statsRow = document.getElementById('detailStatsRow');
             const vorliebenDiv = document.getElementById('detailVorlieben');
 
-            // Wenn Kunde in DB gefunden, zeige Extradaten an
             if (kunde) {
                 dbContainer.style.display = 'flex';
                 const groesse = kunde.groesse && kunde.groesse !== "Unbekannt" ? kunde.groesse : "?";
@@ -419,7 +414,6 @@
                 dbContainer.style.display = 'none'; 
             }
 
-            // Bilder anzeigen
             const b = document.getElementById('detailKundenBilder'); 
             b.innerHTML = '';
             if (kunde) {
@@ -442,16 +436,14 @@
             document.getElementById('detailModal').style.display = 'none'; 
         }
 
-        // Checkout & Abrechnungs Fenster öffnen
         function openAbrechnung(event, id, name) {
-            event.stopPropagation(); // Verhindert, dass die Karte im Hintergrund aufklickt
+            event.stopPropagation();
             currentAbrechnungId = id;
             document.getElementById('abrechnungName').innerText = name;
             document.getElementById('umsatzInput').value = '';
             document.getElementById('abrechnungModal').style.display = 'flex';
         }
 
-        // Abrechnung abspeichern
         function submitAbrechnung(status) {
             let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
@@ -472,7 +464,6 @@
             } else if (status === 'noshow') {
                 termine[tIndex].status = 'noshow';
                 
-                // Strike in die Kundendatenbank schreiben
                 const kIndex = kunden.findIndex(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
                 if (kIndex > -1) {
                     kunden[kIndex].noshows = (kunden[kIndex].noshows || 0) + 1;
@@ -488,7 +479,6 @@
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
         }
 
-        // Timeline bauen und berechnen
         function renderTimeline(datum) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
@@ -501,7 +491,6 @@
                 
                 const tagesTermine = termine.filter(t => t.datum === datum).sort((a,b) => (a.start || "").localeCompare(b.start || ""));
                 
-                // Uhrzeit prüfen für Checkout
                 const now = new Date();
                 const currentDate = now.toISOString().split('T')[0];
                 const currentTime = now.toTimeString().substring(0,5); 
@@ -525,7 +514,6 @@
                 tagesTermine.forEach(t => combined.push({isMarker: false, data: t, time: t.start}));
                 combined.sort((a,b) => a.time.localeCompare(b.time));
 
-                // HTML für Timeline generieren
                 combined.forEach(item => {
                     const el = document.createElement('div');
                     el.className = 'timeline-item';
@@ -540,18 +528,21 @@
                         const t = item.data;
                         const f = settings[t.kat+"_farbe"] || 'var(--neon-cyan)';
                         
-                        // Ist der Termin schon vorbei?
                         const isPast = (datum < currentDate) || (datum === currentDate && t.ende <= currentTime);
 
-                        let actionHTML = `<button class="btn-delete" style="margin-left: 15px;" onclick="event.stopPropagation(); deleteTermin(${t.id})">✖</button>`;
+                        // NEU: Trennung von Status und Löschen
+                        let statusHTML = '';
                         
                         if (t.status === 'done') {
-                            actionHTML = `<div class="status-done">💰 ${t.umsatz} €</div>`;
+                            statusHTML = `<div class="status-done">💰 ${t.umsatz} €</div>`;
                         } else if (t.status === 'noshow') {
-                            actionHTML = `<div class="status-noshow">❌ NO SHOW</div>`;
+                            statusHTML = `<div class="status-noshow">❌ NO SHOW</div>`;
                         } else if (isPast && !t.status) {
-                            actionHTML = `<button class="btn-abrechnen" style="margin-left: 15px;" onclick="openAbrechnung(event, ${t.id}, '${t.name.replace(/'/g, "\\'")}')">💸 Abrechnen</button>`;
+                            statusHTML = `<button class="btn-abrechnen" onclick="openAbrechnung(event, ${t.id}, '${t.name.replace(/'/g, "\\'")}')">💸 Abrechnen</button>`;
                         }
+
+                        // Der Löschbutton ist jetzt IMMER da
+                        let deleteHTML = `<button onclick="event.stopPropagation(); deleteTermin(${t.id})" style="background: rgba(255, 0, 60, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; transition: 0.2s;">✖ Löschen</button>`;
 
                         let dbKunde = kundenDB.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
                         let dbExtensionsHTML = '';
@@ -579,14 +570,16 @@
                                     </div>
                                     ${dbExtensionsHTML}
                                 </div>
-                                <div style="display: flex; align-items: center;">${actionHTML}</div>
+                                <div style="display: flex; flex-direction: column; gap: 8px; align-items: stretch; justify-content: center; margin-left: 15px; min-width: 110px;">
+                                    ${statusHTML}
+                                    ${deleteHTML}
+                                </div>
                             </div>
                         `;
                     }
                     liste.appendChild(el);
                 });
                 
-                // Platzhalter am Ende
                 const puffer = document.createElement('div');
                 puffer.style.height = "40px";
                 liste.appendChild(puffer);
@@ -604,7 +597,6 @@
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]); 
         }
 
-        // Init
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const d = urlParams.get('d') || new Date().toISOString().split('T')[0];

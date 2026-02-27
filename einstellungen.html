@@ -28,7 +28,7 @@
             <div class="countdown-pulsing">System-Konfiguration</div>
         </div>
         
-        <div style="width: 65px; height: 65px;"></div>
+        <div style="width: 60px; height: 60px;"></div>
     </div>
 
     <div class="settings-container">
@@ -46,12 +46,12 @@
                     <input type="password" id="newPin" class="cyber-input-full" placeholder="4 Ziffern" inputmode="numeric">
                 </div>
             </div>
-            <button onclick="changeSystemPin()" class="btn-save" style="margin-top: 10px;">PIN Aktualisieren</button>
+            <button onclick="changeSystemPin()" class="btn-save" style="margin-top: 10px; padding: 15px; font-size: 1rem;">PIN Aktualisieren</button>
         </div>
 
         <div class="settings-card">
             <div class="setting-title">Zeit-Matrix (Arbeitszeit)</div>
-            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Definiert die Breite der Timeline in der Wochenansicht.</p>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Definiert die Breite der Timeline in der Wochen- und Tagesansicht.</p>
             <div style="display: flex; gap: 15px;">
                 <div class="form-group" style="flex: 1;">
                     <label class="input-label">Tagesbeginn</label>
@@ -70,7 +70,7 @@
             <div class="kat-setup-row">
                 <input type="color" id="kat1_farbe" class="cyber-color">
                 <div style="flex-grow:1;">
-                    <label class="input-label">Kategorie 1</label>
+                    <label class="input-label">Kategorie 1 (z.B. VIP)</label>
                     <input type="text" id="kat1_name" class="cyber-input-full">
                 </div>
             </div>
@@ -78,7 +78,7 @@
             <div class="kat-setup-row">
                 <input type="color" id="kat2_farbe" class="cyber-color">
                 <div style="flex-grow:1;">
-                    <label class="input-label">Kategorie 2</label>
+                    <label class="input-label">Kategorie 2 (z.B. Stamm)</label>
                     <input type="text" id="kat2_name" class="cyber-input-full">
                 </div>
             </div>
@@ -86,7 +86,7 @@
             <div class="kat-setup-row">
                 <input type="color" id="kat3_farbe" class="cyber-color">
                 <div style="flex-grow:1;">
-                    <label class="input-label">Kategorie 3</label>
+                    <label class="input-label">Kategorie 3 (z.B. Neu)</label>
                     <input type="text" id="kat3_name" class="cyber-input-full">
                 </div>
             </div>
@@ -112,12 +112,24 @@
             </div>
         </div>
 
+        <div class="settings-card">
+            <div class="setting-title" style="color: var(--neon-gold); border-bottom-color: rgba(229, 176, 92, 0.3);">Daten-Management (Offline-Sync)</div>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Sichere deine gesamte Datenbank lokal als Datei oder spiele ein bestehendes Backup ein.</p>
+            
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <button class="btn-save" onclick="exportDatabase()" style="flex: 1; padding: 15px; font-size: 1rem;">💾 Backup laden</button>
+                <button class="btn-save" onclick="document.getElementById('importFile').click()" style="flex: 1; background: rgba(229, 176, 92, 0.1); border-color: var(--neon-gold); color: var(--neon-gold); padding: 15px; font-size: 1rem;">📂 Daten einspielen</button>
+            </div>
+            <input type="file" id="importFile" accept=".json" style="display:none" onchange="importDatabase(event)">
+        </div>
+
         <button class="btn-save" id="save-btn" onclick="saveSystemSettings()">KONFIGURATION SPEICHERN</button>
         
         <button onclick="location.href='woche.html'" style="width: 100%; background: none; border: none; color: #555; font-size: 1rem; padding: 20px; text-transform: uppercase; cursor: pointer; letter-spacing: 2px;">Abbrechen</button>
 
         <div class="danger-zone">
             <div class="danger-title">Danger Zone</div>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Löscht unwiderruflich alle Termine. (Kundendaten bleiben erhalten).</p>
             <button class="btn-danger" onclick="resetAllData()">Alle Termine löschen</button>
         </div>
     </div>
@@ -184,7 +196,6 @@
             const newSettings = {
                 arbeitsStart: document.getElementById('arbeitsStart').value || '08:00',
                 arbeitsEnde: document.getElementById('arbeitsEnde').value || '22:00',
-                wochenstart: 'MO',
                 kat1_name: document.getElementById('kat1_name').value,
                 kat1_farbe: document.getElementById('kat1_farbe').value,
                 kat2_name: document.getElementById('kat2_name').value,
@@ -200,27 +211,76 @@
             localStorage.setItem('appEinstellungen', JSON.stringify(newSettings));
             
             btn.style.background = "var(--neon-green)";
+            btn.style.color = "#000";
             btn.innerText = "SYSTEM UPDATED!";
             
             setTimeout(() => { location.href = 'woche.html'; }, 800);
         }
 
         function resetAllData() {
-            if(confirm("SYSTEMWARNUNG: Alle Termine werden unwiderruflich auch in der CLOUD gelöscht!")) {
+            if(confirm("SYSTEMWARNUNG: Alle TERMINE werden unwiderruflich gelöscht! (Kunden bleiben erhalten)")) {
                 const btn = document.querySelector('.btn-danger');
                 if(btn) {
                     btn.innerText = "LÖSCHEN LÄUFT...";
                     btn.style.opacity = "0.7";
                 }
                 
-                // Sauberes Array speichern -> Cloud Sync wird getriggert
                 localStorage.setItem('appTermine', JSON.stringify([]));
                 
-                // 1,5 Sekunden warten (Upload-Zeit) und dann automatisch zurück in die Woche
                 setTimeout(() => {
                     window.location.href = 'woche.html';
                 }, 1500);
             }
+        }
+
+        // --- NEU: DATENBANK EXPORTIEREN (BACKUP) ---
+        function exportDatabase() {
+            const backupData = {
+                termine: JSON.parse(localStorage.getItem('appTermine')) || [],
+                kunden: JSON.parse(localStorage.getItem('appKunden')) || [],
+                einstellungen: JSON.parse(localStorage.getItem('appEinstellungen')) || {},
+                exportDate: new Date().toISOString()
+            };
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
+            const downloadAnchorNode = document.createElement('a');
+            
+            // Formatierter Dateiname mit Datum (z.B. agenda2050_backup_27-02-2026.json)
+            const dateStr = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
+            
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", `agenda2050_backup_${dateStr}.json`);
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        // --- NEU: DATENBANK IMPORTIEREN (RESTORE) ---
+        function importDatabase(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    if (confirm("SYSTEM-WARNUNG: Möchtest du deine aktuellen Daten wirklich mit diesem Backup überschreiben?")) {
+                        
+                        if (importedData.termine) localStorage.setItem('appTermine', JSON.stringify(importedData.termine));
+                        if (importedData.kunden) localStorage.setItem('appKunden', JSON.stringify(importedData.kunden));
+                        if (importedData.einstellungen) localStorage.setItem('appEinstellungen', JSON.stringify(importedData.einstellungen));
+                        
+                        alert("✅ SYNC ERFOLGREICH: Alle Daten wurden wiederhergestellt!");
+                        location.reload(); // Seite neu laden, damit die importierten Einstellungen sofort sichtbar werden
+                    }
+                } catch (err) {
+                    alert("❌ FEHLER: Ungültige oder beschädigte Backup-Datei!");
+                }
+                // Input Feld zurücksetzen, damit man die gleiche Datei noch mal auswählen kann
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
         }
     </script>
 </body>

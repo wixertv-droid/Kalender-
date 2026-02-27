@@ -2,97 +2,189 @@
 <html lang="de">
 <head>
     <script>
-        // HÄRTESTER TÜRSTEHER DER WELT
         if (!sessionStorage.getItem('authKey')) {
             window.location.replace('index.html');
         }
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jarvis | Finance Core</title>
-    
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ff2a6d">
-    <link rel="apple-touch-icon" href="icon.png">
-
+    <title>Agenda 2050 | Finance Core</title>
     <link rel="stylesheet" href="style.css">
-    
     <style>
-        .stats-container { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+        .stats-container { padding: 20px; display: flex; flex-direction: column; gap: 20px; padding-bottom: 50px; }
         
         /* Jarvis-Style Cards */
         .finance-card {
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-left: 5px solid var(--neon-cyan);
-            padding: 20px;
-            border-radius: 15px;
-            position: relative;
-            overflow: hidden;
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            padding: 20px; border-radius: 15px; position: relative; overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         
         .finance-card::after {
-            content: ""; position: absolute; top: 0; right: 0;
-            width: 50px; height: 50px;
-            background: linear-gradient(45deg, transparent 50%, rgba(5, 217, 232, 0.1) 50%);
+            content: ""; position: absolute; top: 0; right: 0; width: 60px; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03));
+            transform: skewX(-45deg) translateX(50px);
         }
 
-        .label { font-size: 0.75rem; color: var(--neon-cyan); text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
-        .value { font-size: 2.5rem; font-weight: 900; color: white; margin-top: 5px; text-shadow: 0 0 15px rgba(255,255,255,0.2); }
-        .sub-info { font-size: 0.85rem; color: #888; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; }
+        .border-cyan { border-left: 4px solid var(--neon-cyan); }
+        .border-violet { border-left: 4px solid var(--neon-violet); }
+        .border-gold { border-left: 4px solid var(--neon-gold); }
+        .border-green { border-left: 4px solid var(--neon-green); }
+
+        .label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
+        .label-highlight { color: var(--neon-cyan); }
+        .value { font-size: 2.2rem; font-weight: 900; color: white; margin-top: 5px; text-shadow: 0 0 15px rgba(255,255,255,0.2); font-family: monospace; }
+        .sub-info { font-size: 0.85rem; color: #888; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; display: flex; justify-content: space-between; }
         
-        .year-card { border-left-color: var(--neon-gold); background: rgba(229, 176, 92, 0.05); }
-        .month-card { border-left-color: var(--neon-violet); background: rgba(188, 0, 221, 0.05); }
+        /* Grid Layouts */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        /* Progress Bars (Data Stream) */
+        .progress-container { margin-top: 15px; }
+        .progress-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 0.85rem; color: #ccc; }
+        .progress-name { width: 60px; text-transform: uppercase; font-weight: bold; }
+        .progress-track { flex-grow: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin: 0 10px; }
+        .progress-fill { height: 100%; border-radius: 4px; width: 0%; transition: width 1.5s cubic-bezier(0.1, 0.8, 0.2, 1); }
+        .progress-value { width: 50px; text-align: right; font-family: monospace; color: white; }
+
+        /* Terminal Window */
+        .terminal {
+            background: rgba(5, 15, 25, 0.9); border: 1px solid var(--neon-cyan);
+            border-radius: 10px; padding: 15px; font-family: monospace; font-size: 0.8rem;
+            color: var(--neon-cyan); box-shadow: inset 0 0 20px rgba(5, 217, 232, 0.1);
+            height: 120px; overflow: hidden; position: relative;
+        }
+        .terminal::before {
+            content: "SYSTEM_LOG // ANALYSIS"; position: absolute; top: 0; left: 0; width: 100%;
+            background: var(--neon-cyan); color: black; padding: 2px 10px; font-weight: bold; font-size: 0.7rem;
+        }
+        .terminal-content { margin-top: 15px; display: flex; flex-direction: column; gap: 5px; }
+        .log-line { opacity: 0; animation: fadeInLog 0.2s forwards; }
+        @keyframes fadeInLog { to { opacity: 1; } }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
     </style>
 </head>
 <body>
+
+    <div class="loader-container" id="app-loader">
+        <div class="cyber-spinner"></div>
+        <div class="loader-text">BOOTING FINANCE_CORE...</div>
+    </div>
 
     <div class="dashboard">
         <div class="btn-cyber" onclick="location.href='woche.html'">⬅️</div>
         <div class="header-info">
             <div class="titel-neon">FINANCE_CORE</div>
-            <div class="datum-anzeige" id="current-year-display">ANALYSIS</div>
+            <div class="datum-anzeige" id="sys-status" style="color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan);">SYSTEM ONLINE</div>
         </div>
         <div></div>
     </div>
 
     <div class="stats-container">
         
+        <div class="grid-2">
+            <div class="finance-card border-cyan">
+                <div class="label label-highlight">Current Week</div>
+                <div id="val-week" class="value">0 €</div>
+                <div class="sub-info"><span id="count-week">0 Termine</span><span style="color:var(--neon-cyan);">LIVE</span></div>
+            </div>
+            <div class="finance-card border-violet">
+                <div class="label" style="color: var(--neon-violet);">Current Month</div>
+                <div id="val-month" class="value">0 €</div>
+                <div class="sub-info"><span id="count-month">0 Termine</span></div>
+            </div>
+        </div>
+
+        <div class="finance-card border-gold" style="background: rgba(229, 176, 92, 0.05);">
+            <div class="label" style="color: var(--neon-gold);">Total Revenue <span id="current-year"></span></div>
+            <div id="val-year" class="value" style="font-size: 3rem; text-shadow: 0 0 20px rgba(229,176,92,0.4);">0 €</div>
+            <div class="sub-info"><span id="count-year">0 Abgeschlossen</span></div>
+        </div>
+
+        <div class="finance-card border-green">
+            <div class="label" style="color: var(--neon-green);">System Projection // Future Forecast</div>
+            <div id="val-forecast" class="value">0 €</div>
+            <div class="sub-info"><span id="count-forecast">0 Anstehende Buchungen</span><span>Erwartet</span></div>
+        </div>
+
         <div class="finance-card">
-            <div class="label">Current Week // Umsatz</div>
-            <div id="val-week" class="value">0.00 €</div>
-            <div id="count-week" class="sub-info">Relevante Termine diese Woche: 0</div>
+            <div class="label">Revenue Data Stream // Categories</div>
+            <div class="progress-container" id="category-stream">
+                </div>
         </div>
 
-        <div class="finance-card month-card">
-            <div class="label">Current Month // Umsatz</div>
-            <div id="val-month" class="value" style="color: var(--neon-violet); text-shadow: 0 0 15px rgba(188, 0, 221, 0.3);">0.00 €</div>
-            <div id="count-month" class="sub-info">Relevante Termine diesen Monat: 0</div>
+        <div class="grid-2">
+            <div class="finance-card" style="border-left: 4px solid #fff; text-align: center;">
+                <div class="label">Success Rate</div>
+                <div id="val-success" class="value" style="font-size: 1.8rem;">0%</div>
+            </div>
+            <div class="finance-card" style="border-left: 4px solid var(--neon-red); text-align: center;">
+                <div class="label" style="color: var(--neon-red);">No-Show Rate</div>
+                <div id="val-noshow" class="value" style="font-size: 1.8rem; color: var(--neon-red);">0%</div>
+            </div>
         </div>
 
-        <div class="finance-card year-card">
-            <div class="label">Total Year // Gesamtumsatz</div>
-            <div id="val-year" class="value" style="color: var(--neon-gold); text-shadow: 0 0 15px rgba(229, 176, 92, 0.3);">0.00 €</div>
-            <div id="count-year" class="sub-info">Relevante Termine im Jahr: 0</div>
+        <div class="terminal">
+            <div class="terminal-content" id="terminal-logs"></div>
         </div>
 
     </div>
 
     <script>
+        // J.A.R.V.I.S. Terminal Simulator
+        const logs = [
+            "Initializing deep scan of local storage...",
+            "Decrypting 'appTermine' sector...",
+            "Cross-referencing revenue entries...",
+            "Calculating future projection algorithms...",
+            "Compiling category breakdown...",
+            "System metrics stable. Analysis complete."
+        ];
+        
+        function runTerminal() {
+            const term = document.getElementById('terminal-logs');
+            let delay = 0;
+            logs.forEach((log, index) => {
+                setTimeout(() => {
+                    const p = document.createElement('div');
+                    p.className = 'log-line';
+                    p.innerText = `> ${log}`;
+                    term.appendChild(p);
+                    if (index === logs.length - 1) {
+                        setTimeout(() => {
+                            term.innerHTML += `<div class="log-line" style="color: #fff; margin-top: 10px;">> AWAITING COMMAND <span class="blink">_</span></div>`;
+                        }, 800);
+                    }
+                }, delay);
+                delay += 400 + Math.random() * 400; // Fake Denkpause
+            });
+        }
+
         function loadStats() {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { kat1_name: 'VIP', kat2_name: 'Stamm', kat3_name: 'Neu' };
             const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
             
             let revW = 0, countW = 0;
             let revM = 0, countM = 0;
             let revY = 0, countY = 0;
+            let revFuture = 0, countFuture = 0;
+
+            let noShows = 0;
+            let completed = 0;
+
+            let catData = {
+                kat1: { name: settings.kat1_name, color: 'var(--neon-gold)', amount: 0 },
+                kat2: { name: settings.kat2_name, color: 'var(--neon-pink)', amount: 0 },
+                kat3: { name: settings.kat3_name, color: 'var(--neon-cyan)', amount: 0 }
+            };
 
             const currentYear = now.getFullYear();
             const currentMonth = now.getMonth();
             
-            // Kalenderwoche berechnen
             const getWeek = (d) => {
                 const date = new Date(d.getTime());
                 date.setHours(0, 0, 0, 0);
@@ -103,66 +195,132 @@
             const currentWeek = getWeek(now);
 
             termine.forEach(t => {
-                // Keine fehlerhaften Termine ohne Datum zählen
-                if (!t.datum) return;
-
+                if(!t.datum) return;
                 const tDate = new Date(t.datum);
                 const tYear = tDate.getFullYear();
                 const tMonth = tDate.getMonth();
                 const tWeek = getWeek(tDate);
                 
-                // Preis-Logik:
-                // Wenn 'done' abgerechnet -> Echter Umsatz
-                // Wenn 'noshow' -> 0 Euro
-                // Wenn noch nicht abgerechnet -> Standardpreis der Kategorie aus den Einstellungen
-                let preis = 0;
+                // Preis-Ermittlung (Intelligent)
+                let price = 0;
                 if (t.status === 'done' && t.umsatz) {
-                    preis = parseFloat(t.umsatz);
-                } else if (t.status === 'noshow') {
-                    preis = 0;
-                } else {
-                    preis = parseFloat(settings[t.kat + "_preis"]) || 0;
+                    price = parseFloat(t.umsatz);
+                } else if (t.preis) {
+                    price = parseFloat(t.preis);
+                } else if (settings[t.kat + "_preis"]) {
+                    price = parseFloat(settings[t.kat + "_preis"]);
                 }
 
-                // Nur Termine zählen, die keine No-Shows sind
-                let istGueltig = (t.status !== 'noshow');
+                // Status Tracker
+                if (t.status === 'noshow') noShows++;
+                if (t.status === 'done') completed++;
 
-                // Jahr
-                if(tYear === currentYear) {
-                    revY += preis; 
-                    if(istGueltig) countY++;
+                // ZUKUNFT (Forecast) - Alles nach heute
+                if (t.datum > todayStr && t.status !== 'noshow') {
+                    revFuture += price;
+                    countFuture++;
+                }
+
+                // VERGANGENHEIT (Nur abgeschlossene für echte Revenue)
+                if (t.status === 'done' && tYear === currentYear) {
+                    revY += price; 
+                    countY++;
                     
-                    // Monat
+                    if (catData[t.kat]) catData[t.kat].amount += price;
+
                     if(tMonth === currentMonth) {
-                        revM += preis; 
-                        if(istGueltig) countM++;
+                        revM += price; countM++;
                     }
-                    
-                    // Woche
                     if(tWeek === currentWeek) {
-                        revW += preis; 
-                        if(istGueltig) countW++;
+                        revW += price; countW++;
                     }
                 }
             });
 
-            // Formatierung für Euro (Immer mit zwei Nachkommastellen)
-            const formatGeld = (wert) => wert.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+            // UI UPDATES
+            document.getElementById('current-year').innerText = currentYear;
 
-            // UI Update
-            document.getElementById('val-week').innerText = formatGeld(revW);
-            document.getElementById('count-week').innerText = "Termine diese Woche: " + countW;
-            
-            document.getElementById('val-month').innerText = formatGeld(revM);
-            document.getElementById('count-month').innerText = "Termine diesen Monat: " + countM;
-            
-            document.getElementById('val-year').innerText = formatGeld(revY);
-            document.getElementById('count-year').innerText = "Termine Gesamt " + currentYear + ": " + countY;
-            
-            document.getElementById('current-year-display').innerText = "SYSTEM_ANALYSIS_" + currentYear;
+            // Zähler Animation
+            animateValue('val-week', revW);
+            animateValue('val-month', revM);
+            animateValue('val-year', revY);
+            animateValue('val-forecast', revFuture);
+
+            document.getElementById('count-week').innerText = countW + " Termine";
+            document.getElementById('count-month').innerText = countM + " Termine";
+            document.getElementById('count-year').innerText = countY + " Termine";
+            document.getElementById('count-forecast').innerText = countFuture + " Buchungen";
+
+            // Performance Rates
+            const totalPast = completed + noShows;
+            let successRate = 0, noshowRate = 0;
+            if (totalPast > 0) {
+                successRate = Math.round((completed / totalPast) * 100);
+                noshowRate = Math.round((noShows / totalPast) * 100);
+            }
+            document.getElementById('val-success').innerText = successRate + "%";
+            document.getElementById('val-noshow').innerText = noshowRate + "%";
+
+            // Category Stream Rendern
+            const streamBox = document.getElementById('category-stream');
+            streamBox.innerHTML = '';
+            let maxCatAmount = Math.max(catData.kat1.amount, catData.kat2.amount, catData.kat3.amount);
+            if (maxCatAmount === 0) maxCatAmount = 1; // Divide by zero Schutz
+
+            Object.keys(catData).forEach(k => {
+                const c = catData[k];
+                const percentage = Math.round((c.amount / maxCatAmount) * 100);
+                
+                streamBox.innerHTML += `
+                    <div class="progress-row">
+                        <div class="progress-name" style="color: ${c.color}">${c.name}</div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="background: ${c.color}; box-shadow: 0 0 10px ${c.color};" data-width="${percentage}%"></div>
+                        </div>
+                        <div class="progress-value">${c.amount}€</div>
+                    </div>
+                `;
+            });
+
+            // Balken Animation starten
+            setTimeout(() => {
+                document.querySelectorAll('.progress-fill').forEach(bar => {
+                    bar.style.width = bar.getAttribute('data-width');
+                });
+            }, 500);
         }
 
-        window.onload = loadStats;
+        // Zähler hochzählen lassen (Matrix Style)
+        function animateValue(id, endValue) {
+            const obj = document.getElementById(id);
+            let start = 0;
+            const duration = 1000;
+            const increment = endValue / (duration / 16); // 60fps
+            
+            function update() {
+                start += increment;
+                if (start >= endValue) {
+                    obj.innerText = endValue.toFixed(2).replace('.00', '') + " €";
+                } else {
+                    obj.innerText = start.toFixed(2).replace('.00', '') + " €";
+                    requestAnimationFrame(update);
+                }
+            }
+            if(endValue > 0) update();
+            else obj.innerText = "0 €";
+        }
+
+        window.onload = () => {
+            loadStats();
+            setTimeout(() => {
+                const loader = document.getElementById('app-loader');
+                loader.style.opacity = '0';
+                setTimeout(() => {
+                    loader.remove();
+                    runTerminal(); // Startet den Terminal-Effekt, wenn Lader weg ist
+                }, 500);
+            }, 800);
+        };
     </script>
 </body>
 </html>

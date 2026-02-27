@@ -43,6 +43,22 @@
                 <input type="text" id="kundeName" class="cyber-input-full" placeholder="John Doe">
             </div>
 
+            <div class="form-group" style="display: flex; justify-content: space-around; margin-top: 30px; margin-bottom: 30px;">
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                    <label for="file1" class="image-preview" id="preview1" style="cursor: pointer; transition: 0.3s; width: 90px; height: 90px;" title="Klicken zum Ändern">1</label>
+                    <input type="file" id="file1" accept="image/*" onchange="uploadImage(event, 1)" style="display: none;">
+                    <button class="btn-delete" style="padding: 8px 15px; font-size: 0.75rem; border-radius: 8px;" onclick="removeImageWithConfirm(1)">Löschen</button>
+                </div>
+
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                    <label for="file2" class="image-preview" id="preview2" style="cursor: pointer; transition: 0.3s; width: 90px; height: 90px;" title="Klicken zum Ändern">2</label>
+                    <input type="file" id="file2" accept="image/*" onchange="uploadImage(event, 2)" style="display: none;">
+                    <button class="btn-delete" style="padding: 8px 15px; font-size: 0.75rem; border-radius: 8px;" onclick="removeImageWithConfirm(2)">Löschen</button>
+                </div>
+
+            </div>
+
             <div class="form-group">
                 <label class="input-label">Kunden-Status</label>
                 <select id="kundeStatus" class="cyber-select"></select>
@@ -56,31 +72,6 @@
                 <div class="form-group" style="flex: 1;">
                     <label class="input-label">Kontakt</label>
                     <input type="text" id="kundeKontakt" class="cyber-input-full" placeholder="@username / Nummer">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="input-label">Referenz-Bilder (Max 2MB)</label>
-                <div style="display: flex; gap: 15px;">
-                    
-                    <div class="image-upload-wrapper" style="flex: 1; flex-direction: column; padding: 15px;">
-                        <div class="image-preview" id="preview1" style="color: rgba(5,217,232,0.3);">1</div>
-                        <label class="upload-btn-label" style="text-align: center; width: 100%; font-size: 0.8rem; padding: 10px;">
-                            <input type="file" id="file1" accept="image/*" onchange="uploadImage(event, 1)">
-                            Hochladen
-                        </label>
-                        <button class="btn-delete" style="width: 100%; padding: 10px; font-size: 0.8rem;" onclick="removeImage(1)">Bild Löschen</button>
-                    </div>
-
-                    <div class="image-upload-wrapper" style="flex: 1; flex-direction: column; padding: 15px;">
-                        <div class="image-preview" id="preview2" style="color: rgba(5,217,232,0.3);">2</div>
-                        <label class="upload-btn-label" style="text-align: center; width: 100%; font-size: 0.8rem; padding: 10px;">
-                            <input type="file" id="file2" accept="image/*" onchange="uploadImage(event, 2)">
-                            Hochladen
-                        </label>
-                        <button class="btn-delete" style="width: 100%; padding: 10px; font-size: 0.8rem;" onclick="removeImage(2)">Bild Löschen</button>
-                    </div>
-
                 </div>
             </div>
 
@@ -104,7 +95,6 @@
                 plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon'
             };
 
-            // Status Dropdown füllen (Gleiche Kategorien wie in Einstellungen)
             const statDrop = document.getElementById('kundeStatus');
             statDrop.innerHTML = `
                 <option value="none">Kein Status</option>
@@ -113,7 +103,6 @@
                 <option value="kat3">${settings.kat3_name}</option>
             `;
 
-            // Plattform Dropdown füllen
             const platDrop = document.getElementById('kundePlattform');
             platDrop.innerHTML = `
                 <option value="none">Keine</option>
@@ -125,12 +114,11 @@
             return settings;
         }
 
-        // BILD HOCHLADEN LOGIK
+        // BILD HOCHLADEN LOGIK (Durch Klick auf den Kreis)
         function uploadImage(event, num) {
             const file = event.target.files[0];
             if(!file) return;
             
-            // Verhindert, dass zu große Bilder den Speicher crashen
             if(file.size > 2.5 * 1024 * 1024) {
                 alert("SYSTEM-WARNUNG: Bild ist zu groß! Bitte wähle ein Bild unter 2.5 MB.");
                 return;
@@ -141,18 +129,20 @@
                 imgData['bild' + num] = e.target.result;
                 const preview = document.getElementById('preview' + num);
                 preview.style.backgroundImage = `url(${e.target.result})`;
-                preview.innerText = '';
+                preview.innerText = ''; // Die Nummer (1 oder 2) verschwindet
             };
             reader.readAsDataURL(file);
         }
 
-        // BILD LÖSCHEN LOGIK
-        function removeImage(num) {
-            imgData['bild' + num] = '';
-            const preview = document.getElementById('preview' + num);
-            preview.style.backgroundImage = 'none';
-            preview.innerText = num; // Zeigt wieder die "1" oder "2" an
-            document.getElementById('file' + num).value = ''; // Setzt den Upload zurück
+        // BILD LÖSCHEN LOGIK (Mit Sicherheitsabfrage)
+        function removeImageWithConfirm(num) {
+            if (confirm("SYSTEM-WARNUNG: Möchtest du dieses Bild wirklich löschen?")) {
+                imgData['bild' + num] = '';
+                const preview = document.getElementById('preview' + num);
+                preview.style.backgroundImage = 'none';
+                preview.innerText = num; // Zeigt wieder die "1" oder "2" an
+                document.getElementById('file' + num).value = ''; 
+            }
         }
 
         function renderKunden() {
@@ -182,7 +172,6 @@
                     badgeHTML = `<span class="status-badge status-${k.status}">${statusName}</span>`;
                 }
 
-                // Zeigt kleine Foto-Icons, wenn Bilder hinterlegt sind
                 let fotosHTML = '';
                 if(k.bild1 || k.bild2) {
                     fotosHTML = `<span style="font-size:0.8rem; margin-left: 10px;" title="Bilder hinterlegt">📸</span>`;
@@ -234,7 +223,7 @@
                 imgData.bild2 = '';
             }
 
-            // Vorschaubilder aktualisieren
+            // Vorschaubilder aktualisieren (Füllt die Kreise)
             for(let i=1; i<=2; i++) {
                 const preview = document.getElementById('preview'+i);
                 if(imgData['bild'+i]) {

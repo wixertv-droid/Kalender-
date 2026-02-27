@@ -28,7 +28,7 @@ const firebaseConfig = {
 
 let db, setDoc, doc;
 let isSyncingFromCloud = false;
-let syncTimeout = null; // NEU: Puffer für Cloud-Uploads
+let syncTimeout = null; 
 
 const originalSetItem = localStorage.setItem;
 
@@ -38,7 +38,6 @@ localStorage.setItem = function(key, value) {
     if (isSyncingFromCloud) return;
 
     if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
-        // NEU: Bündelt alle Speicherbefehle, um Datenverlust zu verhindern
         clearTimeout(syncTimeout);
         syncTimeout = setTimeout(async () => {
             if (db && setDoc && doc) {
@@ -52,7 +51,7 @@ localStorage.setItem = function(key, value) {
                     console.log("☁️ Cloud Upload (gebündelt) erfolgreich!");
                 } catch(e) { console.error("Cloud Upload Fehler:", e); }
             }
-        }, 150); // 150 Millisekunden warten, bis der Funkspruch rausgeht
+        }, 150); 
     }
 };
 
@@ -260,6 +259,10 @@ function openModal(editId = null) {
             document.getElementById('terminPlattform').value = t.plattform || 'none';
             document.getElementById('terminKontakt').value = t.kontakt || '';
             document.getElementById('terminNotizen').value = t.notizen || '';
+            
+            // NEU: Werte laden, falls Element existiert
+            if(document.getElementById('terminPreis')) document.getElementById('terminPreis').value = t.preis || '';
+            if(document.getElementById('terminPraeferenz')) document.getElementById('terminPraeferenz').value = t.praeferenz || 'none';
         }
     } else {
         document.getElementById('terminName').value = '';
@@ -267,6 +270,10 @@ function openModal(editId = null) {
         document.getElementById('terminNotizen').value = '';
         document.getElementById('terminStart').value = '';
         document.getElementById('terminEnde').value = '';
+        
+        // NEU: Werte zurücksetzen
+        if(document.getElementById('terminPreis')) document.getElementById('terminPreis').value = '';
+        if(document.getElementById('terminPraeferenz')) document.getElementById('terminPraeferenz').value = 'none';
     }
 
     const kontaktContainer = document.getElementById('kontaktContainer');
@@ -304,6 +311,12 @@ function saveAppointment() {
         const plattform = document.getElementById('terminPlattform').value;
         const kontakt = document.getElementById('terminKontakt').value;
         const notizen = document.getElementById('terminNotizen').value;
+        
+        // NEU: Werte aus dem Formular ziehen (mit Fallback, falls das Feld fehlt)
+        const preisInput = document.getElementById('terminPreis');
+        const praefInput = document.getElementById('terminPraeferenz');
+        const preis = preisInput ? preisInput.value : '';
+        const praeferenz = praefInput ? praefInput.value : 'none';
 
         if (!name || !datum || !start || !ende) {
             alert("Bitte alle Pflichtfelder ausfüllen.");
@@ -346,12 +359,29 @@ function saveAppointment() {
                 name: name.trim(),
                 plattform: plattform !== 'none' ? plattform : '',
                 kontakt: kontakt.trim(),
-                link: '', preis: '', status: 'none',
+                preis: preis,           // NEU: Direkt in neues Profil übernehmen
+                praeferenz: praeferenz, // NEU: Direkt in neues Profil übernehmen
+                link: '', status: 'none',
                 notizen: 'Automatisch durch Termin erstellt.',
                 bild1: '', bild2: ''
             };
             kunden.push(neuerKunde);
             localStorage.setItem('appKunden', JSON.stringify(kunden));
+        } else {
+            // NEU: AUTO-SYNC! Wenn der Kunde existiert, aber noch keinen Preis/Präferenz hat, übernimm es aus dem Termin.
+            let kIndex = kunden.findIndex(k => k.id === kundeGefunden.id);
+            let updated = false;
+            if (preis && (!kunden[kIndex].preis || kunden[kIndex].preis === '')) {
+                kunden[kIndex].preis = preis;
+                updated = true;
+            }
+            if (praeferenz !== 'none' && (!kunden[kIndex].praeferenz || kunden[kIndex].praeferenz === 'none')) {
+                kunden[kIndex].praeferenz = praeferenz;
+                updated = true;
+            }
+            if (updated) {
+                localStorage.setItem('appKunden', JSON.stringify(kunden));
+            }
         }
 
         if (currentEditId) {
@@ -365,6 +395,8 @@ function saveAppointment() {
                 termine[index].plattform = plattform;
                 termine[index].kontakt = kontakt;
                 termine[index].notizen = notizen;
+                termine[index].preis = preis;           // NEU
+                termine[index].praeferenz = praeferenz; // NEU
             }
             currentEditId = null; 
         } else {
@@ -377,7 +409,9 @@ function saveAppointment() {
                 kat: kat,
                 plattform: plattform,
                 kontakt: kontakt,
-                notizen: notizen
+                notizen: notizen,
+                preis: preis,           // NEU
+                praeferenz: praeferenz  // NEU
             };
             termine.push(neuerTermin);
         }
@@ -580,7 +614,6 @@ function renderWeek() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // TÜRSTEHER
     if (!sessionStorage.getItem('authKey')) {
         window.location.href = 'index.html';
         return; 
@@ -600,7 +633,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(err => console.log('SW Fehler:', err));
     }
 
-    // --- NEU: AUTO-SCROLL ZUM HEUTIGEN TAG ---
     setTimeout(() => {
         const loader = document.getElementById('app-loader');
         if (loader) {
@@ -608,19 +640,14 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => loader.remove(), 500);
         }
 
-        // Finde den heutigen Tag in der Liste
         const heuteZeile = document.querySelector('.tag-zeile.heute');
         if (heuteZeile) {
-            // Scrollt weich herunter, bis der Tag in der Mitte des Bildschirms ist
             heuteZeile.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            
-            // Cooler Scan-Effekt: Der Tag leuchtet kurz auf!
             heuteZeile.style.transition = "background-color 0.8s ease-out";
             heuteZeile.style.backgroundColor = "rgba(5, 217, 232, 0.15)";
-            
             setTimeout(() => {
                 heuteZeile.style.backgroundColor = "transparent";
             }, 1200);
         }
-    }, 600); // Wartet 0.6 Sekunden, damit das Laden der Seite flüssig aussieht
+    }, 600); 
 });

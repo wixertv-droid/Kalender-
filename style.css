@@ -413,3 +413,45 @@ input:checked + .slider:before { transform: translateX(40px); background-color: 
 .status-kat1 { color: var(--color-kat1); border-color: var(--color-kat1); background: rgba(229, 176, 92, 0.1); box-shadow: 0 0 10px rgba(229, 176, 92, 0.2); }
 .status-kat2 { color: var(--color-kat2); border-color: var(--color-kat2); background: rgba(255, 42, 109, 0.1); box-shadow: 0 0 10px rgba(255, 42, 109, 0.2); }
 .status-kat3 { color: var(--color-kat3); border-color: var(--color-kat3); background: rgba(5, 217, 232, 0.1); box-shadow: 0 0 10px rgba(5, 217, 232, 0.2); }
+
+/* =========================================
+   13. BEWERTUNGSSYSTEM (STERNE) & DETAILS
+   ========================================= */
+.rating-container {
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    gap: 5px;
+}
+.rating-container input { display: none; }
+.rating-container label {
+    font-size: 1.8rem;
+    color: #444; /* Ausgegraute Sterne */
+    cursor: pointer;
+    transition: 0.2s;
+}
+.rating-container input:checked ~ label,
+.rating-container label:hover,
+.rating-container label:hover ~ label {
+    color: var(--neon-gold);
+    text-shadow: 0 0 15px var(--neon-gold);
+}
+
+.kunden-stats-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+.stat-badge {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(5, 217, 232, 0.2);
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.stat-badge span.stars { color: var(--neon-gold); text-shadow: 0 0 5px var(--neon-gold); letter-spacing: 2px;}

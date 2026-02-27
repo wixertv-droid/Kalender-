@@ -57,6 +57,11 @@
             font-family: inherit; cursor: pointer; transition: 0.3s;
         }
         .view-toggle:hover { background: rgba(5, 217, 232, 0.1); }
+
+        /* NEU: Praeferenz & Preis Badges */
+        .badge-ao { color: #ffcc00; border-color: #ffcc00; }
+        .badge-save { color: #00ff00; border-color: #00ff00; }
+        .badge-preis { color: var(--neon-gold); border-color: var(--neon-gold); }
     </style>
 </head>
 <body>
@@ -142,6 +147,21 @@
                 <div class="form-group" style="flex: 2; min-width: 200px;">
                     <label class="input-label">Kontakt / Nummer</label>
                     <input type="text" id="kundeKontakt" class="cyber-input-full" placeholder="@username / Nummer">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; background: rgba(5, 217, 232, 0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(5,217,232,0.3); margin-bottom: 15px;">
+                <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                    <label class="input-label" style="color: var(--neon-gold);">Preis (€)</label>
+                    <input type="number" id="kundePreis" class="cyber-input-full" placeholder="z.B. 150">
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                    <label class="input-label" style="color: var(--neon-violet);">Präferenz</label>
+                    <select id="kundePraeferenz" class="cyber-select">
+                        <option value="none">Keine Angabe</option>
+                        <option value="AO">AO (Alles ohne)</option>
+                        <option value="Save">Save (Mit Schutz)</option>
+                    </select>
                 </div>
             </div>
 
@@ -305,6 +325,13 @@
                 
                 let badgeHTML = (k.status && k.status !== 'none') ? `<span class="status-badge status-${k.status}">${settings[k.status + '_name'] || 'Status'}</span>` : '';
 
+                // NEU: Praeferenz und Preis Badges für die Listen/Karten-Anzeige
+                let praeferenzBadge = '';
+                if (k.praeferenz === 'AO') praeferenzBadge = `<div class="stat-badge badge-ao">AO</div>`;
+                else if (k.praeferenz === 'Save') praeferenzBadge = `<div class="stat-badge badge-save">Save</div>`;
+
+                let preisBadge = k.preis ? `<div class="stat-badge badge-preis">💰 ${k.preis}€</div>` : '';
+
                 liste.innerHTML += `
                     <div class="kunden-karte" onclick="openKundeModal(${k.id})">
                         <button class="btn-delete-kunde" onclick="event.stopPropagation(); deleteKunde(${k.id})">✖</button>
@@ -316,6 +343,8 @@
                             </div>
                             
                             <div class="kunden-stats-row">
+                                ${preisBadge}
+                                ${praeferenzBadge}
                                 <div class="stat-badge">📐 ${k.groesse || '?'}</div>
                                 <div class="stat-badge">V: ${getStarString(k.vibe)}</div>
                                 <div class="stat-badge">P: ${getStarString(k.perf)}</div>
@@ -340,44 +369,11 @@
                     document.getElementById('kundeStatus').value = k.status || 'none';
                     document.getElementById('kundePlattform').value = k.plattform || 'none';
                     document.getElementById('kundeKontakt').value = k.kontakt || '';
-                    document.getElementById('kundeGroesse').value = k.groesse || 'Unbekannt';
                     
-                    document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
-                    if(k.vibe > 0) document.getElementById('v'+k.vibe).checked = true;
-                    if(k.perf > 0) document.getElementById('p'+k.perf).checked = true;
+                    // NEU: Preis und Präferenz sichern
+                preis: document.getElementById('kundePreis').value,
+                praeferenz: document.getElementById('kundePraeferenz').value,
 
-                    document.getElementById('kundeVorlieben').value = k.vorlieben || '';
-                    document.getElementById('kundeNotizen').value = k.notizen || '';
-                    imgData.bild1 = k.bild1 || ''; imgData.bild2 = k.bild2 || '';
-                }
-            } else {
-                document.getElementById('kundeModalTitle').innerText = "Neues Profil";
-                document.getElementById('kundeName').value = '';
-                document.getElementById('kundeStatus').value = 'none';
-                document.getElementById('kundePlattform').value = 'none';
-                document.getElementById('kundeKontakt').value = '';
-                document.getElementById('kundeGroesse').value = 'Unbekannt';
-                document.getElementById('kundeVorlieben').value = '';
-                document.getElementById('kundeNotizen').value = '';
-                imgData.bild1 = ''; imgData.bild2 = '';
-                document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
-            }
-            updateImageUI(1); updateImageUI(2);
-            document.getElementById('kundeModal').style.display = 'flex';
-        }
-
-        // SPEICHERN
-        function saveKunde() {
-            const name = document.getElementById('kundeName').value;
-            if(!name) return alert("Name fehlt!");
-            
-            let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-            const data = {
-                id: editKundeId || Date.now(),
-                name: name,
-                status: document.getElementById('kundeStatus').value,
-                plattform: document.getElementById('kundePlattform').value,
-                kontakt: document.getElementById('kundeKontakt').value,
                 groesse: document.getElementById('kundeGroesse').value,
                 vibe: document.querySelector('input[name="vibe"]:checked')?.value || 0,
                 perf: document.querySelector('input[name="perf"]:checked')?.value || 0,
@@ -418,3 +414,4 @@
     </script>
 </body>
 </html>
+                  

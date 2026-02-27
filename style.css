@@ -392,3 +392,24 @@ input:checked + .slider:before { transform: translateX(40px); background-color: 
 .kalender-tag.heute-markierung { background: rgba(229, 176, 92, 0.1); border: 1px solid var(--neon-gold); color: var(--neon-gold); font-weight: bold; box-shadow: 0 0 10px rgba(229, 176, 92, 0.3); }
 .kalender-tag.leer { background: transparent; cursor: default; }
 .kalender-tag.leer:hover { box-shadow: none; border-color: transparent; background: transparent; }
+
+/* =========================================
+   12. IPHONE FIX & KUNDEN STATUS BADGES
+   ========================================= */
+@media (max-width: 480px) {
+    .dashboard { padding-left: 15px; padding-right: 15px; }
+    .btn-cyber { width: 45px; height: 45px; font-size: 1.3rem; border-radius: 10px; }
+    .titel-neon { font-size: 1.1rem; letter-spacing: 2px; }
+    .countdown-pulsing { font-size: 0.65rem; padding: 4px 10px; margin-top: 4px; }
+    .header-info { margin: 0 10px; }
+}
+
+/* Leuchtende Badges für die Kundenkarte */
+.status-badge {
+    font-size: 0.7rem; padding: 4px 10px; border-radius: 6px; font-weight: 900; 
+    text-transform: uppercase; margin-left: 10px; vertical-align: middle; border: 1px solid;
+    letter-spacing: 1px; box-shadow: inset 0 0 10px rgba(255,255,255,0.1);
+}
+.status-kat1 { color: var(--color-kat1); border-color: var(--color-kat1); background: rgba(229, 176, 92, 0.1); box-shadow: 0 0 10px rgba(229, 176, 92, 0.2); }
+.status-kat2 { color: var(--color-kat2); border-color: var(--color-kat2); background: rgba(255, 42, 109, 0.1); box-shadow: 0 0 10px rgba(255, 42, 109, 0.2); }
+.status-kat3 { color: var(--color-kat3); border-color: var(--color-kat3); background: rgba(5, 217, 232, 0.1); box-shadow: 0 0 10px rgba(5, 217, 232, 0.2); }

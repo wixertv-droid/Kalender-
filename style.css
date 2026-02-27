@@ -455,3 +455,23 @@ input:checked + .slider:before { transform: translateX(40px); background-color: 
     gap: 8px;
 }
 .stat-badge span.stars { color: var(--neon-gold); text-shadow: 0 0 5px var(--neon-gold); letter-spacing: 2px;}
+
+/* Listenansicht-Modus */
+.kunden-liste.list-mode {
+    grid-template-columns: 1fr !important; /* Immer nur eine Spalte */
+    gap: 10px;
+}
+
+.kunden-liste.list-mode .kunden-karte {
+    padding: 10px 20px;
+    align-items: center;
+}
+
+.kunden-liste.list-mode .kunden-avatar {
+    width: 50px; height: 50px; font-size: 1.2rem;
+}
+
+.kunden-liste.list-mode .kunden-notiz, 
+.kunden-liste.list-mode .kunden-stats-row {
+    display: none; /* In der Liste verstecken wir Details für mehr Speed */
+}

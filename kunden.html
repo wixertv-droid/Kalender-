@@ -35,7 +35,7 @@
     </div>
 
     <div class="modal-overlay" id="kundeModal">
-        <div class="modal-content">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
             <div class="form-title" id="kundeModalTitle">Neues Profil</div>
             
             <div class="form-group">
@@ -45,8 +45,7 @@
 
             <div class="form-group">
                 <label class="input-label">Kunden-Status</label>
-                <select id="kundeStatus" class="cyber-select">
-                    </select>
+                <select id="kundeStatus" class="cyber-select"></select>
             </div>
 
             <div style="display: flex; gap: 15px;">
@@ -57,6 +56,31 @@
                 <div class="form-group" style="flex: 1;">
                     <label class="input-label">Kontakt</label>
                     <input type="text" id="kundeKontakt" class="cyber-input-full" placeholder="@username / Nummer">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="input-label">Referenz-Bilder (Max 2MB)</label>
+                <div style="display: flex; gap: 15px;">
+                    
+                    <div class="image-upload-wrapper" style="flex: 1; flex-direction: column; padding: 15px;">
+                        <div class="image-preview" id="preview1" style="color: rgba(5,217,232,0.3);">1</div>
+                        <label class="upload-btn-label" style="text-align: center; width: 100%; font-size: 0.8rem; padding: 10px;">
+                            <input type="file" id="file1" accept="image/*" onchange="uploadImage(event, 1)">
+                            Hochladen
+                        </label>
+                        <button class="btn-delete" style="width: 100%; padding: 10px; font-size: 0.8rem;" onclick="removeImage(1)">Bild Löschen</button>
+                    </div>
+
+                    <div class="image-upload-wrapper" style="flex: 1; flex-direction: column; padding: 15px;">
+                        <div class="image-preview" id="preview2" style="color: rgba(5,217,232,0.3);">2</div>
+                        <label class="upload-btn-label" style="text-align: center; width: 100%; font-size: 0.8rem; padding: 10px;">
+                            <input type="file" id="file2" accept="image/*" onchange="uploadImage(event, 2)">
+                            Hochladen
+                        </label>
+                        <button class="btn-delete" style="width: 100%; padding: 10px; font-size: 0.8rem;" onclick="removeImage(2)">Bild Löschen</button>
+                    </div>
+
                 </div>
             </div>
 
@@ -72,6 +96,7 @@
 
     <script>
         let editKundeId = null;
+        let imgData = { bild1: '', bild2: '' };
 
         function ladeModalEinstellungen() {
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {
@@ -79,7 +104,7 @@
                 plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon'
             };
 
-            // Status Dropdown füllen
+            // Status Dropdown füllen (Gleiche Kategorien wie in Einstellungen)
             const statDrop = document.getElementById('kundeStatus');
             statDrop.innerHTML = `
                 <option value="none">Kein Status</option>
@@ -98,6 +123,36 @@
                 <option value="${settings.plat4}">${settings.plat4}</option>
             `;
             return settings;
+        }
+
+        // BILD HOCHLADEN LOGIK
+        function uploadImage(event, num) {
+            const file = event.target.files[0];
+            if(!file) return;
+            
+            // Verhindert, dass zu große Bilder den Speicher crashen
+            if(file.size > 2.5 * 1024 * 1024) {
+                alert("SYSTEM-WARNUNG: Bild ist zu groß! Bitte wähle ein Bild unter 2.5 MB.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imgData['bild' + num] = e.target.result;
+                const preview = document.getElementById('preview' + num);
+                preview.style.backgroundImage = `url(${e.target.result})`;
+                preview.innerText = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // BILD LÖSCHEN LOGIK
+        function removeImage(num) {
+            imgData['bild' + num] = '';
+            const preview = document.getElementById('preview' + num);
+            preview.style.backgroundImage = 'none';
+            preview.innerText = num; // Zeigt wieder die "1" oder "2" an
+            document.getElementById('file' + num).value = ''; // Setzt den Upload zurück
         }
 
         function renderKunden() {
@@ -121,11 +176,16 @@
                 count++;
                 const init = k.name ? k.name.substring(0, 2).toUpperCase() : '??';
                 
-                // Status Badge generieren
                 let badgeHTML = '';
                 if (k.status && k.status !== 'none') {
                     const statusName = settings[k.status + '_name'] || 'Status';
                     badgeHTML = `<span class="status-badge status-${k.status}">${statusName}</span>`;
+                }
+
+                // Zeigt kleine Foto-Icons, wenn Bilder hinterlegt sind
+                let fotosHTML = '';
+                if(k.bild1 || k.bild2) {
+                    fotosHTML = `<span style="font-size:0.8rem; margin-left: 10px;" title="Bilder hinterlegt">📸</span>`;
                 }
 
                 liste.innerHTML += `
@@ -133,7 +193,7 @@
                         <button class="btn-delete-kunde" onclick="deleteKunde(event, ${k.id})">✖</button>
                         <div class="kunden-avatar">${init}</div>
                         <div class="kunden-info">
-                            <div class="kunden-name">${k.name} ${badgeHTML}</div>
+                            <div class="kunden-name">${k.name} ${badgeHTML} ${fotosHTML}</div>
                             <div class="kunden-kontakt">${k.plattform !== 'none' && k.plattform ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</div>
                             <div class="kunden-notiz">${k.notizen || 'Keine Notizen hinterlegt.'}</div>
                         </div>
@@ -154,10 +214,13 @@
                 if (k) {
                     document.getElementById('kundeModalTitle').innerText = "Profil bearbeiten";
                     document.getElementById('kundeName').value = k.name || '';
-                    document.getElementById('kundeStatus').value = k.status || 'none'; // Lade Status
+                    document.getElementById('kundeStatus').value = k.status || 'none';
                     document.getElementById('kundePlattform').value = k.plattform || 'none';
                     document.getElementById('kundeKontakt').value = k.kontakt || '';
                     document.getElementById('kundeNotizen').value = k.notizen || '';
+                    
+                    imgData.bild1 = k.bild1 || '';
+                    imgData.bild2 = k.bild2 || '';
                 }
             } else {
                 document.getElementById('kundeModalTitle').innerText = "Neues Profil";
@@ -166,6 +229,21 @@
                 document.getElementById('kundePlattform').value = 'none';
                 document.getElementById('kundeKontakt').value = '';
                 document.getElementById('kundeNotizen').value = '';
+                
+                imgData.bild1 = '';
+                imgData.bild2 = '';
+            }
+
+            // Vorschaubilder aktualisieren
+            for(let i=1; i<=2; i++) {
+                const preview = document.getElementById('preview'+i);
+                if(imgData['bild'+i]) {
+                    preview.style.backgroundImage = `url(${imgData['bild'+i]})`;
+                    preview.innerText = '';
+                } else {
+                    preview.style.backgroundImage = 'none';
+                    preview.innerText = i;
+                }
             }
 
             document.getElementById('kundeModal').style.display = 'flex';
@@ -178,7 +256,7 @@
 
         function saveKunde() {
             const name = document.getElementById('kundeName').value;
-            const status = document.getElementById('kundeStatus').value; // Speichere Status
+            const status = document.getElementById('kundeStatus').value; 
             const plattform = document.getElementById('kundePlattform').value;
             const kontakt = document.getElementById('kundeKontakt').value;
             const notizen = document.getElementById('kundeNotizen').value;
@@ -195,6 +273,8 @@
                     kunden[index].plattform = plattform;
                     kunden[index].kontakt = kontakt;
                     kunden[index].notizen = notizen;
+                    kunden[index].bild1 = imgData.bild1;
+                    kunden[index].bild2 = imgData.bild2;
                 }
             } else {
                 kunden.push({
@@ -203,7 +283,9 @@
                     status: status,
                     plattform: plattform,
                     kontakt: kontakt,
-                    notizen: notizen
+                    notizen: notizen,
+                    bild1: imgData.bild1,
+                    bild2: imgData.bild2
                 });
             }
 
@@ -213,7 +295,7 @@
         }
 
         function deleteKunde(event, id) {
-            event.stopPropagation(); // Verhindert, dass das Modal beim Löschen aufgeht
+            event.stopPropagation(); 
             if (confirm("Dieses Profil wirklich löschen?")) {
                 let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
                 kunden = kunden.filter(k => k.id !== id);

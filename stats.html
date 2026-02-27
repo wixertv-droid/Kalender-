@@ -39,6 +39,18 @@
         /* Grid Layouts */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
+        /* NEU: Boot-Animation (Stufenweises Laden) */
+        .anim-element { opacity: 0; transform: translateY(30px); }
+        .system-loaded .anim-element { animation: bootUp 0.6s cubic-bezier(0.1, 0.8, 0.2, 1) forwards; }
+        @keyframes bootUp { to { opacity: 1; transform: translateY(0); } }
+        
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+        .delay-5 { animation-delay: 0.5s; }
+        .delay-6 { animation-delay: 0.6s; }
+
         /* Progress Bars (Data Stream) */
         .progress-container { margin-top: 15px; }
         .progress-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 0.85rem; color: #ccc; }
@@ -46,6 +58,13 @@
         .progress-track { flex-grow: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin: 0 10px; }
         .progress-fill { height: 100%; border-radius: 4px; width: 0%; transition: width 1.5s cubic-bezier(0.1, 0.8, 0.2, 1); }
         .progress-value { width: 50px; text-align: right; font-family: monospace; color: white; }
+
+        /* NEU: Monthly Breakdown Chart */
+        .month-chart { display: flex; justify-content: space-between; align-items: flex-end; height: 120px; margin-top: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; gap: 4px; }
+        .month-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; position: relative; }
+        .month-bar { width: 100%; max-width: 15px; background: var(--neon-violet); border-radius: 3px 3px 0 0; transition: height 1.5s cubic-bezier(0.1, 0.8, 0.2, 1); height: 0; box-shadow: 0 0 10px rgba(188, 0, 221, 0.4); }
+        .month-label { font-size: 0.6rem; color: #888; margin-top: 8px; text-transform: uppercase; font-weight: bold; }
+        .month-val { font-size: 0.55rem; color: white; margin-bottom: 4px; font-family: monospace; opacity: 0; transition: opacity 1s; position: absolute; top: -20px; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
 
         /* Terminal Window */
         .terminal {
@@ -82,40 +101,46 @@
         <div></div>
     </div>
 
-    <div class="stats-container">
+    <div class="stats-container" id="main-container">
         
         <div class="grid-2">
-            <div class="finance-card border-cyan">
+            <div class="finance-card border-cyan anim-element delay-1">
                 <div class="label label-highlight">Current Week</div>
                 <div id="val-week" class="value">0 €</div>
                 <div class="sub-info"><span id="count-week">0 Termine</span><span style="color:var(--neon-cyan);">LIVE</span></div>
             </div>
-            <div class="finance-card border-violet">
+            <div class="finance-card border-violet anim-element delay-1">
                 <div class="label" style="color: var(--neon-violet);">Current Month</div>
                 <div id="val-month" class="value">0 €</div>
                 <div class="sub-info"><span id="count-month">0 Termine</span></div>
             </div>
         </div>
 
-        <div class="finance-card border-gold" style="background: rgba(229, 176, 92, 0.05);">
+        <div class="finance-card border-gold anim-element delay-2" style="background: rgba(229, 176, 92, 0.05);">
             <div class="label" style="color: var(--neon-gold);">Total Revenue <span id="current-year"></span></div>
             <div id="val-year" class="value" style="font-size: 3rem; text-shadow: 0 0 20px rgba(229,176,92,0.4);">0 €</div>
             <div class="sub-info"><span id="count-year">0 Abgeschlossen</span></div>
         </div>
 
-        <div class="finance-card border-green">
+        <div class="finance-card border-violet anim-element delay-3">
+            <div class="label" style="color: var(--neon-violet);">Monthly Breakdown // Analyse</div>
+            <div class="month-chart" id="month-chart">
+                </div>
+        </div>
+
+        <div class="finance-card border-green anim-element delay-4">
             <div class="label" style="color: var(--neon-green);">System Projection // Future Forecast</div>
             <div id="val-forecast" class="value">0 €</div>
             <div class="sub-info"><span id="count-forecast">0 Anstehende Buchungen</span><span>Erwartet</span></div>
         </div>
 
-        <div class="finance-card">
+        <div class="finance-card anim-element delay-5 border-cyan">
             <div class="label">Revenue Data Stream // Categories</div>
             <div class="progress-container" id="category-stream">
                 </div>
         </div>
 
-        <div class="grid-2">
+        <div class="grid-2 anim-element delay-6">
             <div class="finance-card" style="border-left: 4px solid #fff; text-align: center;">
                 <div class="label">Success Rate</div>
                 <div id="val-success" class="value" style="font-size: 1.8rem;">0%</div>
@@ -126,7 +151,7 @@
             </div>
         </div>
 
-        <div class="terminal">
+        <div class="terminal anim-element delay-6">
             <div class="terminal-content" id="terminal-logs"></div>
         </div>
 
@@ -138,9 +163,9 @@
             "Initializing deep scan of local storage...",
             "Decrypting 'appTermine' sector...",
             "Cross-referencing revenue entries...",
-            "Calculating future projection algorithms...",
-            "Compiling category breakdown...",
-            "System metrics stable. Analysis complete."
+            "Calculating monthly breakdown algorithms...",
+            "Compiling category data streams...",
+            "System metrics stable. Visualizing..."
         ];
         
         function runTerminal() {
@@ -158,7 +183,7 @@
                         }, 800);
                     }
                 }, delay);
-                delay += 400 + Math.random() * 400; // Fake Denkpause
+                delay += 400 + Math.random() * 300; 
             });
         }
 
@@ -175,6 +200,9 @@
 
             let noShows = 0;
             let completed = 0;
+
+            // NEU: Array für den Monatsverlauf (12 Monate)
+            let monthlyRev = new Array(12).fill(0);
 
             let catData = {
                 kat1: { name: settings.kat1_name, color: 'var(--neon-gold)', amount: 0 },
@@ -198,10 +226,9 @@
                 if(!t.datum) return;
                 const tDate = new Date(t.datum);
                 const tYear = tDate.getFullYear();
-                const tMonth = tDate.getMonth();
+                const tMonth = tDate.getMonth(); // 0 = Jan, 11 = Dez
                 const tWeek = getWeek(tDate);
                 
-                // Preis-Ermittlung (Intelligent)
                 let price = 0;
                 if (t.status === 'done' && t.umsatz) {
                     price = parseFloat(t.umsatz);
@@ -211,36 +238,34 @@
                     price = parseFloat(settings[t.kat + "_preis"]);
                 }
 
-                // Status Tracker
                 if (t.status === 'noshow') noShows++;
                 if (t.status === 'done') completed++;
 
-                // ZUKUNFT (Forecast) - Alles nach heute
+                // ZUKUNFT
                 if (t.datum > todayStr && t.status !== 'noshow') {
                     revFuture += price;
                     countFuture++;
                 }
 
-                // VERGANGENHEIT (Nur abgeschlossene für echte Revenue)
+                // VERGANGENHEIT (Aktuelles Jahr)
                 if (t.status === 'done' && tYear === currentYear) {
                     revY += price; 
                     countY++;
                     
                     if (catData[t.kat]) catData[t.kat].amount += price;
+                    
+                    // In den Monats-Array eintragen
+                    monthlyRev[tMonth] += price;
 
-                    if(tMonth === currentMonth) {
-                        revM += price; countM++;
-                    }
-                    if(tWeek === currentWeek) {
-                        revW += price; countW++;
-                    }
+                    if(tMonth === currentMonth) { revM += price; countM++; }
+                    if(tWeek === currentWeek) { revW += price; countW++; }
                 }
             });
 
-            // UI UPDATES
+            // UI UPDATES ZIEL-WERTE
             document.getElementById('current-year').innerText = currentYear;
 
-            // Zähler Animation
+            // Zähler Animation starten
             animateValue('val-week', revW);
             animateValue('val-month', revM);
             animateValue('val-year', revY);
@@ -261,11 +286,30 @@
             document.getElementById('val-success').innerText = successRate + "%";
             document.getElementById('val-noshow').innerText = noshowRate + "%";
 
-            // Category Stream Rendern
+            // 1. NEU: Monthly Breakdown rendern
+            const monthChartBox = document.getElementById('month-chart');
+            monthChartBox.innerHTML = '';
+            const maxMonthAmount = Math.max(...monthlyRev, 1); // Höchster Monatswert (mindestens 1)
+            const monthNames = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+            
+            monthlyRev.forEach((val, idx) => {
+                const percentage = Math.round((val / maxMonthAmount) * 100);
+                let valDisplay = val > 0 ? val + "€" : ""; // Wert nur anzeigen, wenn > 0
+                let isCurrent = (idx === currentMonth) ? 'color: var(--neon-cyan);' : '';
+
+                monthChartBox.innerHTML += `
+                    <div class="month-col">
+                        <div class="month-val">${valDisplay}</div>
+                        <div class="month-bar" data-height="${percentage}%"></div>
+                        <div class="month-label" style="${isCurrent}">${monthNames[idx]}</div>
+                    </div>
+                `;
+            });
+
+            // 2. Category Stream rendern
             const streamBox = document.getElementById('category-stream');
             streamBox.innerHTML = '';
-            let maxCatAmount = Math.max(catData.kat1.amount, catData.kat2.amount, catData.kat3.amount);
-            if (maxCatAmount === 0) maxCatAmount = 1; // Divide by zero Schutz
+            let maxCatAmount = Math.max(catData.kat1.amount, catData.kat2.amount, catData.kat3.amount, 1);
 
             Object.keys(catData).forEach(k => {
                 const c = catData[k];
@@ -282,20 +326,26 @@
                 `;
             });
 
-            // Balken Animation starten
+            // Nach kurzer Verzögerung die Balken-Animationen für Kategorien und Monate starten
             setTimeout(() => {
                 document.querySelectorAll('.progress-fill').forEach(bar => {
                     bar.style.width = bar.getAttribute('data-width');
                 });
-            }, 500);
+                document.querySelectorAll('.month-bar').forEach(bar => {
+                    bar.style.height = bar.getAttribute('data-height');
+                });
+                document.querySelectorAll('.month-val').forEach(val => {
+                    val.style.opacity = '1';
+                });
+            }, 800); // Wartet auf die Lade-Animation
         }
 
-        // Zähler hochzählen lassen (Matrix Style)
+        // Zähler hochzählen lassen
         function animateValue(id, endValue) {
             const obj = document.getElementById(id);
             let start = 0;
-            const duration = 1000;
-            const increment = endValue / (duration / 16); // 60fps
+            const duration = 1200;
+            const increment = endValue / (duration / 16); 
             
             function update() {
                 start += increment;
@@ -312,14 +362,22 @@
 
         window.onload = () => {
             loadStats();
+            
+            // SYSTEM BOOT SCRIPT
             setTimeout(() => {
                 const loader = document.getElementById('app-loader');
-                loader.style.opacity = '0';
+                loader.style.opacity = '0'; // Blendet den Text "BOOTING..." aus
+                
                 setTimeout(() => {
-                    loader.remove();
-                    runTerminal(); // Startet den Terminal-Effekt, wenn Lader weg ist
-                }, 500);
-            }, 800);
+                    loader.remove(); // Entfernt den schwarzen Screen
+                    
+                    // STARTET DIE KASKADE (Karten laden nacheinander)
+                    document.getElementById('main-container').classList.add('system-loaded');
+                    
+                    // STARTET DEN TERMINAL TEXT
+                    runTerminal(); 
+                }, 400); // Kurze Pause nach dem Ausblenden
+            }, 800); // Initiale Boot-Dauer
         };
     </script>
 </body>

@@ -17,7 +17,7 @@
         .finance-card {
             background: var(--glass-bg); border: 1px solid var(--glass-border);
             padding: 20px; border-radius: 15px; position: relative; overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); min-height: 100px;
         }
         
         .finance-card::after {
@@ -36,30 +36,49 @@
         .value { font-size: 2.2rem; font-weight: 900; color: white; margin-top: 5px; text-shadow: 0 0 15px rgba(255,255,255,0.2); font-family: monospace; }
         .sub-info { font-size: 0.85rem; color: #888; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; display: flex; justify-content: space-between; }
         
-        /* Grid Layouts */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
-        /* NEU: Boot-Animation (Stufenweises Laden) */
-        .anim-element { opacity: 0; transform: translateY(30px); }
-        .system-loaded .anim-element { animation: bootUp 0.6s cubic-bezier(0.1, 0.8, 0.2, 1) forwards; }
-        @keyframes bootUp { to { opacity: 1; transform: translateY(0); } }
+        /* =========================================
+           NEU: INDIVIDUELLE CYBER-LADEBALKEN
+           ========================================= */
+        .stat-loader { display: flex; flex-direction: column; justify-content: center; min-height: 80px; padding: 10px 0; }
+        .loader-text { font-size: 0.65rem; color: var(--neon-cyan); font-family: monospace; letter-spacing: 2px; margin-bottom: 8px; }
+        .loader-track { width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; position: relative; }
         
-        .delay-1 { animation-delay: 0.1s; }
-        .delay-2 { animation-delay: 0.2s; }
-        .delay-3 { animation-delay: 0.3s; }
-        .delay-4 { animation-delay: 0.4s; }
-        .delay-5 { animation-delay: 0.5s; }
-        .delay-6 { animation-delay: 0.6s; }
+        /* Der gestreifte, animierte Bar-Style */
+        .loader-fill { 
+            height: 100%; width: 0%; border-radius: 4px;
+            background-image: repeating-linear-gradient(
+                -45deg,
+                rgba(255,255,255,0.3) 0,
+                rgba(255,255,255,0.3) 10px,
+                transparent 10px,
+                transparent 20px
+            );
+            background-color: var(--bar-color);
+            background-size: 28px 28px;
+            box-shadow: 0 0 10px var(--bar-color);
+            animation: fillBar var(--load-time) cubic-bezier(0.1, 0.8, 0.2, 1) forwards, moveStripes 0.8s linear infinite;
+        }
 
-        /* Progress Bars (Data Stream) */
+        @keyframes fillBar { 0% { width: 0%; } 100% { width: 100%; } }
+        @keyframes moveStripes { 0% { background-position: 0 0; } 100% { background-position: 28px 0; } }
+
+        .stat-content { display: none; opacity: 0; }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* ========================================= */
+
+        /* Progress Bars (Data Stream - Result) */
         .progress-container { margin-top: 15px; }
         .progress-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 0.85rem; color: #ccc; }
         .progress-name { width: 60px; text-transform: uppercase; font-weight: bold; }
         .progress-track { flex-grow: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin: 0 10px; }
-        .progress-fill { height: 100%; border-radius: 4px; width: 0%; transition: width 1.5s cubic-bezier(0.1, 0.8, 0.2, 1); }
+        .progress-fill-data { height: 100%; border-radius: 4px; width: 0%; transition: width 1.5s cubic-bezier(0.1, 0.8, 0.2, 1); }
         .progress-value { width: 50px; text-align: right; font-family: monospace; color: white; }
 
-        /* NEU: Monthly Breakdown Chart */
+        /* Monthly Breakdown Chart */
         .month-chart { display: flex; justify-content: space-between; align-items: flex-end; height: 120px; margin-top: 25px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; gap: 4px; }
         .month-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; position: relative; }
         .month-bar { width: 100%; max-width: 15px; background: var(--neon-violet); border-radius: 3px 3px 0 0; transition: height 1.5s cubic-bezier(0.1, 0.8, 0.2, 1); height: 0; box-shadow: 0 0 10px rgba(188, 0, 221, 0.4); }
@@ -71,7 +90,7 @@
             background: rgba(5, 15, 25, 0.9); border: 1px solid var(--neon-cyan);
             border-radius: 10px; padding: 15px; font-family: monospace; font-size: 0.8rem;
             color: var(--neon-cyan); box-shadow: inset 0 0 20px rgba(5, 217, 232, 0.1);
-            height: 120px; overflow: hidden; position: relative;
+            height: 120px; overflow: hidden; position: relative; margin-top: 10px;
         }
         .terminal::before {
             content: "SYSTEM_LOG // ANALYSIS"; position: absolute; top: 0; left: 0; width: 100%;
@@ -89,7 +108,7 @@
 
     <div class="loader-container" id="app-loader">
         <div class="cyber-spinner"></div>
-        <div class="loader-text">BOOTING FINANCE_CORE...</div>
+        <div class="loader-text">ACCESSING FINANCE_CORE...</div>
     </div>
 
     <div class="dashboard">
@@ -104,60 +123,111 @@
     <div class="stats-container" id="main-container">
         
         <div class="grid-2">
-            <div class="finance-card border-cyan anim-element delay-1">
+            <div class="finance-card border-cyan">
                 <div class="label label-highlight">Current Week</div>
-                <div id="val-week" class="value">0 €</div>
-                <div class="sub-info"><span id="count-week">0 Termine</span><span style="color:var(--neon-cyan);">LIVE</span></div>
+                <div class="stat-loader" id="loader-week">
+                    <div class="loader-text blink">DECRYPTING_SECTOR...</div>
+                    <div class="loader-track"><div class="loader-fill" style="--bar-color: var(--neon-cyan); --load-time: 0.8s;"></div></div>
+                </div>
+                <div class="stat-content" id="content-week">
+                    <div id="val-week" class="value">0 €</div>
+                    <div class="sub-info"><span id="count-week">0 Termine</span><span style="color:var(--neon-cyan);">LIVE</span></div>
+                </div>
             </div>
-            <div class="finance-card border-violet anim-element delay-1">
+            
+            <div class="finance-card border-violet">
                 <div class="label" style="color: var(--neon-violet);">Current Month</div>
-                <div id="val-month" class="value">0 €</div>
-                <div class="sub-info"><span id="count-month">0 Termine</span></div>
+                <div class="stat-loader" id="loader-month">
+                    <div class="loader-text blink" style="color: var(--neon-violet);">ANALYZING_30_DAYS...</div>
+                    <div class="loader-track"><div class="loader-fill" style="--bar-color: var(--neon-violet); --load-time: 1.2s;"></div></div>
+                </div>
+                <div class="stat-content" id="content-month">
+                    <div id="val-month" class="value">0 €</div>
+                    <div class="sub-info"><span id="count-month">0 Termine</span></div>
+                </div>
             </div>
         </div>
 
-        <div class="finance-card border-gold anim-element delay-2" style="background: rgba(229, 176, 92, 0.05);">
+        <div class="finance-card border-gold" style="background: rgba(229, 176, 92, 0.05);">
             <div class="label" style="color: var(--neon-gold);">Total Revenue <span id="current-year"></span></div>
-            <div id="val-year" class="value" style="font-size: 3rem; text-shadow: 0 0 20px rgba(229,176,92,0.4);">0 €</div>
-            <div class="sub-info"><span id="count-year">0 Abgeschlossen</span></div>
+            <div class="stat-loader" id="loader-year">
+                <div class="loader-text blink" style="color: var(--neon-gold);">AGGREGATING_ANNUAL_DATA...</div>
+                <div class="loader-track"><div class="loader-fill" style="--bar-color: var(--neon-gold); --load-time: 1.8s;"></div></div>
+            </div>
+            <div class="stat-content" id="content-year">
+                <div id="val-year" class="value" style="font-size: 3rem; text-shadow: 0 0 20px rgba(229,176,92,0.4);">0 €</div>
+                <div class="sub-info"><span id="count-year">0 Abgeschlossen</span></div>
+            </div>
         </div>
 
-        <div class="finance-card border-violet anim-element delay-3">
+        <div class="finance-card border-violet">
             <div class="label" style="color: var(--neon-violet);">Monthly Breakdown // Analyse</div>
-            <div class="month-chart" id="month-chart">
-                </div>
+            <div class="stat-loader" id="loader-chart">
+                <div class="loader-text blink" style="color: var(--neon-violet);">RENDERING_VISUAL_MATRIX...</div>
+                <div class="loader-track"><div class="loader-fill" style="--bar-color: var(--neon-violet); --load-time: 2.2s;"></div></div>
+            </div>
+            <div class="stat-content" id="content-chart">
+                <div class="month-chart" id="month-chart"></div>
+            </div>
         </div>
 
-        <div class="finance-card border-green anim-element delay-4">
+        <div class="finance-card border-green">
             <div class="label" style="color: var(--neon-green);">System Projection // Future Forecast</div>
-            <div id="val-forecast" class="value">0 €</div>
-            <div class="sub-info"><span id="count-forecast">0 Anstehende Buchungen</span><span>Erwartet</span></div>
+            <div class="stat-loader" id="loader-forecast">
+                <div class="loader-text blink" style="color: var(--neon-green);">CALCULATING_PROJECTIONS...</div>
+                <div class="loader-track"><div class="loader-fill" style="--bar-color: var(--neon-green); --load-time: 1.5s;"></div></div>
+            </div>
+            <div class="stat-content" id="content-forecast">
+                <div id="val-forecast" class="value">0 €</div>
+                <div class="sub-info"><span id="count-forecast">0 Anstehende Buchungen</span><span>Erwartet</span></div>
+            </div>
         </div>
 
-        <div class="finance-card anim-element delay-5 border-cyan">
+        <div class="finance-card border-cyan">
             <div class="label">Revenue Data Stream // Categories</div>
-            <div class="progress-container" id="category-stream">
-                </div>
+            <div class="stat-loader" id="loader-stream">
+                <div class="loader-text blink">SPLITTING_DATA_CHANNELS...</div>
+                <div class="loader-track"><div class="loader-fill" style="--bar-color: var(--neon-cyan); --load-time: 2.5s;"></div></div>
+            </div>
+            <div class="stat-content" id="content-stream">
+                <div class="progress-container" id="category-stream"></div>
+            </div>
         </div>
 
-        <div class="grid-2 anim-element delay-6">
+        <div class="grid-2">
             <div class="finance-card" style="border-left: 4px solid #fff; text-align: center;">
                 <div class="label">Success Rate</div>
-                <div id="val-success" class="value" style="font-size: 1.8rem;">0%</div>
+                <div class="stat-loader" id="loader-matrix1">
+                    <div class="loader-text blink" style="color: #fff;">EVALUATING...</div>
+                    <div class="loader-track"><div class="loader-fill" style="--bar-color: #fff; --load-time: 2.8s;"></div></div>
+                </div>
+                <div class="stat-content" id="content-matrix1">
+                    <div id="val-success" class="value" style="font-size: 1.8rem;">0%</div>
+                </div>
             </div>
+            
             <div class="finance-card" style="border-left: 4px solid var(--neon-red); text-align: center;">
                 <div class="label" style="color: var(--neon-red);">No-Show Rate</div>
-                <div id="val-noshow" class="value" style="font-size: 1.8rem; color: var(--neon-red);">0%</div>
+                <div class="stat-loader" id="loader-matrix2">
+                    <div class="loader-text blink" style="color: var(--neon-red);">SCANNING_STRIKES...</div>
+                    <div class="loader-track"><div class="loader-fill" style="--bar-color: var(--neon-red); --load-time: 2.8s;"></div></div>
+                </div>
+                <div class="stat-content" id="content-matrix2">
+                    <div id="val-noshow" class="value" style="font-size: 1.8rem; color: var(--neon-red);">0%</div>
+                </div>
             </div>
         </div>
 
-        <div class="terminal anim-element delay-6">
+        <div class="terminal">
             <div class="terminal-content" id="terminal-logs"></div>
         </div>
 
     </div>
 
     <script>
+        // GLOBAL DATA OBJECT
+        let calculatedValues = {};
+
         // J.A.R.V.I.S. Terminal Simulator
         const logs = [
             "Initializing deep scan of local storage...",
@@ -187,7 +257,8 @@
             });
         }
 
-        function loadStats() {
+        // 1. PHASE: Alles berechnen (aber noch nicht anzeigen)
+        function calculateStats() {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { kat1_name: 'VIP', kat2_name: 'Stamm', kat3_name: 'Neu' };
             const now = new Date();
@@ -197,11 +268,7 @@
             let revM = 0, countM = 0;
             let revY = 0, countY = 0;
             let revFuture = 0, countFuture = 0;
-
-            let noShows = 0;
-            let completed = 0;
-
-            // NEU: Array für den Monatsverlauf (12 Monate)
+            let noShows = 0, completed = 0;
             let monthlyRev = new Array(12).fill(0);
 
             let catData = {
@@ -226,121 +293,68 @@
                 if(!t.datum) return;
                 const tDate = new Date(t.datum);
                 const tYear = tDate.getFullYear();
-                const tMonth = tDate.getMonth(); // 0 = Jan, 11 = Dez
+                const tMonth = tDate.getMonth(); 
                 const tWeek = getWeek(tDate);
                 
                 let price = 0;
-                if (t.status === 'done' && t.umsatz) {
-                    price = parseFloat(t.umsatz);
-                } else if (t.preis) {
-                    price = parseFloat(t.preis);
-                } else if (settings[t.kat + "_preis"]) {
-                    price = parseFloat(settings[t.kat + "_preis"]);
-                }
+                if (t.status === 'done' && t.umsatz) price = parseFloat(t.umsatz);
+                else if (t.preis) price = parseFloat(t.preis);
+                else if (settings[t.kat + "_preis"]) price = parseFloat(settings[t.kat + "_preis"]);
 
                 if (t.status === 'noshow') noShows++;
                 if (t.status === 'done') completed++;
 
-                // ZUKUNFT
                 if (t.datum > todayStr && t.status !== 'noshow') {
-                    revFuture += price;
-                    countFuture++;
+                    revFuture += price; countFuture++;
                 }
 
-                // VERGANGENHEIT (Aktuelles Jahr)
                 if (t.status === 'done' && tYear === currentYear) {
-                    revY += price; 
-                    countY++;
-                    
+                    revY += price; countY++;
                     if (catData[t.kat]) catData[t.kat].amount += price;
-                    
-                    // In den Monats-Array eintragen
                     monthlyRev[tMonth] += price;
-
                     if(tMonth === currentMonth) { revM += price; countM++; }
                     if(tWeek === currentWeek) { revW += price; countW++; }
                 }
             });
 
-            // UI UPDATES ZIEL-WERTE
-            document.getElementById('current-year').innerText = currentYear;
-
-            // Zähler Animation starten
-            animateValue('val-week', revW);
-            animateValue('val-month', revM);
-            animateValue('val-year', revY);
-            animateValue('val-forecast', revFuture);
-
-            document.getElementById('count-week').innerText = countW + " Termine";
-            document.getElementById('count-month').innerText = countM + " Termine";
-            document.getElementById('count-year').innerText = countY + " Termine";
-            document.getElementById('count-forecast').innerText = countFuture + " Buchungen";
-
-            // Performance Rates
             const totalPast = completed + noShows;
             let successRate = 0, noshowRate = 0;
             if (totalPast > 0) {
                 successRate = Math.round((completed / totalPast) * 100);
                 noshowRate = Math.round((noShows / totalPast) * 100);
             }
-            document.getElementById('val-success').innerText = successRate + "%";
-            document.getElementById('val-noshow').innerText = noshowRate + "%";
 
-            // 1. NEU: Monthly Breakdown rendern
-            const monthChartBox = document.getElementById('month-chart');
-            monthChartBox.innerHTML = '';
-            const maxMonthAmount = Math.max(...monthlyRev, 1); // Höchster Monatswert (mindestens 1)
-            const monthNames = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-            
-            monthlyRev.forEach((val, idx) => {
-                const percentage = Math.round((val / maxMonthAmount) * 100);
-                let valDisplay = val > 0 ? val + "€" : ""; // Wert nur anzeigen, wenn > 0
-                let isCurrent = (idx === currentMonth) ? 'color: var(--neon-cyan);' : '';
+            // Speichert alles ins globale Objekt
+            calculatedValues = {
+                revW, revM, revY, revFuture,
+                countW, countM, countY, countFuture,
+                successRate, noshowRate,
+                catData, monthlyRev, currentYear
+            };
 
-                monthChartBox.innerHTML += `
-                    <div class="month-col">
-                        <div class="month-val">${valDisplay}</div>
-                        <div class="month-bar" data-height="${percentage}%"></div>
-                        <div class="month-label" style="${isCurrent}">${monthNames[idx]}</div>
-                    </div>
-                `;
-            });
-
-            // 2. Category Stream rendern
-            const streamBox = document.getElementById('category-stream');
-            streamBox.innerHTML = '';
-            let maxCatAmount = Math.max(catData.kat1.amount, catData.kat2.amount, catData.kat3.amount, 1);
-
-            Object.keys(catData).forEach(k => {
-                const c = catData[k];
-                const percentage = Math.round((c.amount / maxCatAmount) * 100);
-                
-                streamBox.innerHTML += `
-                    <div class="progress-row">
-                        <div class="progress-name" style="color: ${c.color}">${c.name}</div>
-                        <div class="progress-track">
-                            <div class="progress-fill" style="background: ${c.color}; box-shadow: 0 0 10px ${c.color};" data-width="${percentage}%"></div>
-                        </div>
-                        <div class="progress-value">${c.amount}€</div>
-                    </div>
-                `;
-            });
-
-            // Nach kurzer Verzögerung die Balken-Animationen für Kategorien und Monate starten
-            setTimeout(() => {
-                document.querySelectorAll('.progress-fill').forEach(bar => {
-                    bar.style.width = bar.getAttribute('data-width');
-                });
-                document.querySelectorAll('.month-bar').forEach(bar => {
-                    bar.style.height = bar.getAttribute('data-height');
-                });
-                document.querySelectorAll('.month-val').forEach(val => {
-                    val.style.opacity = '1';
-                });
-            }, 800); // Wartet auf die Lade-Animation
+            // Setzt feste Texte (die schon beim Laden da sein können)
+            document.getElementById('current-year').innerText = currentYear;
+            document.getElementById('count-week').innerText = countW + " Termine";
+            document.getElementById('count-month').innerText = countM + " Termine";
+            document.getElementById('count-year').innerText = countY + " Termine";
+            document.getElementById('count-forecast').innerText = countFuture + " Buchungen";
         }
 
-        // Zähler hochzählen lassen
+        // 2. PHASE: Eine Karte laden, umschalten & Zahl animieren
+        function revealCard(id, delay, callback) {
+            setTimeout(() => {
+                const loader = document.getElementById('loader-' + id);
+                const content = document.getElementById('content-' + id);
+                if(loader && content) {
+                    loader.style.display = 'none';
+                    content.style.display = 'block';
+                    content.classList.add('fade-in');
+                    if(typeof callback === 'function') callback();
+                }
+            }, delay);
+        }
+
+        // Zähler hochzählen lassen (Matrix Style)
         function animateValue(id, endValue) {
             const obj = document.getElementById(id);
             let start = 0;
@@ -360,24 +374,86 @@
             else obj.innerText = "0 €";
         }
 
-        window.onload = () => {
-            loadStats();
+        function renderMonthChart() {
+            const monthChartBox = document.getElementById('month-chart');
+            monthChartBox.innerHTML = '';
+            const monthlyRev = calculatedValues.monthlyRev;
+            const maxMonthAmount = Math.max(...monthlyRev, 1); 
+            const monthNames = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+            const currentMonth = new Date().getMonth();
             
-            // SYSTEM BOOT SCRIPT
+            monthlyRev.forEach((val, idx) => {
+                const percentage = Math.round((val / maxMonthAmount) * 100);
+                let valDisplay = val > 0 ? val + "€" : ""; 
+                let isCurrent = (idx === currentMonth) ? 'color: var(--neon-cyan);' : '';
+
+                monthChartBox.innerHTML += `
+                    <div class="month-col">
+                        <div class="month-val">${valDisplay}</div>
+                        <div class="month-bar" data-height="${percentage}%"></div>
+                        <div class="month-label" style="${isCurrent}">${monthNames[idx]}</div>
+                    </div>
+                `;
+            });
+
             setTimeout(() => {
-                const loader = document.getElementById('app-loader');
-                loader.style.opacity = '0'; // Blendet den Text "BOOTING..." aus
+                document.querySelectorAll('.month-bar').forEach(bar => bar.style.height = bar.getAttribute('data-height'));
+                document.querySelectorAll('.month-val').forEach(val => val.style.opacity = '1');
+            }, 50);
+        }
+
+        function renderCategoryStream() {
+            const streamBox = document.getElementById('category-stream');
+            streamBox.innerHTML = '';
+            const catData = calculatedValues.catData;
+            let maxCatAmount = Math.max(catData.kat1.amount, catData.kat2.amount, catData.kat3.amount, 1);
+
+            Object.keys(catData).forEach(k => {
+                const c = catData[k];
+                const percentage = Math.round((c.amount / maxCatAmount) * 100);
+                
+                streamBox.innerHTML += `
+                    <div class="progress-row">
+                        <div class="progress-name" style="color: ${c.color}">${c.name}</div>
+                        <div class="progress-track">
+                            <div class="progress-fill-data" style="background: ${c.color}; box-shadow: 0 0 10px ${c.color};" data-width="${percentage}%"></div>
+                        </div>
+                        <div class="progress-value">${c.amount}€</div>
+                    </div>
+                `;
+            });
+
+            setTimeout(() => {
+                document.querySelectorAll('.progress-fill-data').forEach(bar => bar.style.width = bar.getAttribute('data-width'));
+            }, 50);
+        }
+
+        // 3. START-SEQUENZ
+        window.onload = () => {
+            calculateStats(); // Daten berechnen
+            
+            setTimeout(() => {
+                const mainLoader = document.getElementById('app-loader');
+                mainLoader.style.opacity = '0'; 
                 
                 setTimeout(() => {
-                    loader.remove(); // Entfernt den schwarzen Screen
+                    mainLoader.remove(); 
+                    runTerminal(); // Terminal sofort starten
                     
-                    // STARTET DIE KASKADE (Karten laden nacheinander)
-                    document.getElementById('main-container').classList.add('system-loaded');
+                    // LADE-BALKEN SEQUENZ STARTEN (Passend zu --load-time)
+                    revealCard('week', 800, () => animateValue('val-week', calculatedValues.revW));
+                    revealCard('month', 1200, () => animateValue('val-month', calculatedValues.revM));
+                    revealCard('forecast', 1500, () => animateValue('val-forecast', calculatedValues.revFuture));
+                    revealCard('year', 1800, () => animateValue('val-year', calculatedValues.revY));
                     
-                    // STARTET DEN TERMINAL TEXT
-                    runTerminal(); 
-                }, 400); // Kurze Pause nach dem Ausblenden
-            }, 800); // Initiale Boot-Dauer
+                    revealCard('chart', 2200, () => renderMonthChart());
+                    revealCard('stream', 2500, () => renderCategoryStream());
+                    
+                    revealCard('matrix1', 2800, () => { document.getElementById('val-success').innerText = calculatedValues.successRate + "%"; });
+                    revealCard('matrix2', 2800, () => { document.getElementById('val-noshow').innerText = calculatedValues.noshowRate + "%"; });
+
+                }, 400); 
+            }, 500); 
         };
     </script>
 </body>

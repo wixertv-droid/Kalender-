@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.9 - CLOUD STABILITY UPDATE)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.9 - CLOUD SYNC AKTIV)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -48,10 +48,10 @@ localStorage.setItem = function(key, value) {
                         einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
                         pin: localStorage.getItem('appPin') || "0000" 
                     }, { merge: true });
-                    console.log("☁️ Cloud Upload (gebündelt) erfolgreich!");
+                    console.log("☁️ Cloud Upload erfolgreich!");
                 } catch(e) { console.error("Cloud Upload Fehler:", e); }
             }
-        }, 150); 
+        }, 300); // 300ms Puffer, um doppelte Uploads zu vermeiden
     }
 };
 
@@ -201,12 +201,7 @@ function generiereWochenAnsicht() {
 
         if (i === 0 && document.getElementById('header-monat')) {
             const monate = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-            
-            const cloudDot = (typeof db !== 'undefined' && db !== null) 
-                ? ' <span id="cloud-dot-indicator" style="color: var(--neon-green); font-size: 0.6em; vertical-align: super; text-shadow: 0 0 10px var(--neon-green);" title="Cloud Sync Aktiv">●</span>' 
-                : '';
-                
-            document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
+            document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}`;
         }
 
         container.innerHTML += `
@@ -260,7 +255,6 @@ function openModal(editId = null) {
             document.getElementById('terminKontakt').value = t.kontakt || '';
             document.getElementById('terminNotizen').value = t.notizen || '';
             
-            // NEU: Werte laden, falls Element existiert
             if(document.getElementById('terminPreis')) document.getElementById('terminPreis').value = t.preis || '';
             if(document.getElementById('terminPraeferenz')) document.getElementById('terminPraeferenz').value = t.praeferenz || 'none';
         }
@@ -271,7 +265,6 @@ function openModal(editId = null) {
         document.getElementById('terminStart').value = '';
         document.getElementById('terminEnde').value = '';
         
-        // NEU: Werte zurücksetzen
         if(document.getElementById('terminPreis')) document.getElementById('terminPreis').value = '';
         if(document.getElementById('terminPraeferenz')) document.getElementById('terminPraeferenz').value = 'none';
     }
@@ -312,7 +305,6 @@ function saveAppointment() {
         const kontakt = document.getElementById('terminKontakt').value;
         const notizen = document.getElementById('terminNotizen').value;
         
-        // NEU: Werte aus dem Formular ziehen (mit Fallback, falls das Feld fehlt)
         const preisInput = document.getElementById('terminPreis');
         const praefInput = document.getElementById('terminPraeferenz');
         const preis = preisInput ? preisInput.value : '';
@@ -359,8 +351,8 @@ function saveAppointment() {
                 name: name.trim(),
                 plattform: plattform !== 'none' ? plattform : '',
                 kontakt: kontakt.trim(),
-                preis: preis,           // NEU: Direkt in neues Profil übernehmen
-                praeferenz: praeferenz, // NEU: Direkt in neues Profil übernehmen
+                preis: preis,
+                praeferenz: praeferenz,
                 link: '', status: 'none',
                 notizen: 'Automatisch durch Termin erstellt.',
                 bild1: '', bild2: ''
@@ -368,7 +360,6 @@ function saveAppointment() {
             kunden.push(neuerKunde);
             localStorage.setItem('appKunden', JSON.stringify(kunden));
         } else {
-            // NEU: AUTO-SYNC! Wenn der Kunde existiert, aber noch keinen Preis/Präferenz hat, übernimm es aus dem Termin.
             let kIndex = kunden.findIndex(k => k.id === kundeGefunden.id);
             let updated = false;
             if (preis && (!kunden[kIndex].preis || kunden[kIndex].preis === '')) {
@@ -395,8 +386,8 @@ function saveAppointment() {
                 termine[index].plattform = plattform;
                 termine[index].kontakt = kontakt;
                 termine[index].notizen = notizen;
-                termine[index].preis = preis;           // NEU
-                termine[index].praeferenz = praeferenz; // NEU
+                termine[index].preis = preis;
+                termine[index].praeferenz = praeferenz;
             }
             currentEditId = null; 
         } else {
@@ -410,8 +401,8 @@ function saveAppointment() {
                 plattform: plattform,
                 kontakt: kontakt,
                 notizen: notizen,
-                preis: preis,           // NEU
-                praeferenz: praeferenz  // NEU
+                preis: preis,
+                praeferenz: praeferenz
             };
             termine.push(neuerTermin);
         }
@@ -625,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLiveSystem();
     setInterval(updateLiveSystem, 60000);
 
-    initCloud();
+    initCloud(); // <--- Cloud Sync ist jetzt wieder AN!
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {

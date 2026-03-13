@@ -304,7 +304,6 @@
             document.getElementById('detailKontaktFull').innerText = (t.plattform && t.plattform !== 'none') ? `${t.plattform}: ${t.kontakt}` : 'Kein Kontakt hinterlegt';
             document.getElementById('detailNotizen').innerHTML = (t.notizen || 'Keine Notizen vorhanden').replace(/\n/g, '<br>');
 
-            // CLEVERER FALLBACK: Wenn Termin keinen Preis hat, nimm Kundenpreis
             let displayPreis = t.preis || (kunde ? kunde.preis : '');
             let displayPraeferenz = t.praeferenz || (kunde ? kunde.praeferenz : 'none');
 
@@ -340,7 +339,6 @@
                 } else { vorliebenDiv.style.display = 'none'; }
             } else { dbContainer.style.display = 'none'; }
 
-            // BILDER IM DETAIL-MODAL
             const b = document.getElementById('detailKundenBilder'); 
             b.innerHTML = '';
             if (kunde) {
@@ -365,18 +363,41 @@
         function submitAbrechnung(status) {
             let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            // NEU: Einstellungen laden für den Test-Bestand
+            let settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+
             const tIndex = termine.findIndex(t => t.id === currentAbrechnungId);
             if(tIndex === -1) return;
             const t = termine[tIndex];
 
+            // Kunden-Datenbank Eintrag suchen (brauchen wir für AO-Check und No-Show)
+            const kIndex = kunden.findIndex(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
+
             if (status === 'done') {
                 const umsatz = document.getElementById('umsatzInput').value;
                 if (!umsatz) { alert("Bitte einen Umsatzbetrag eintragen."); return; }
+                
                 termine[tIndex].status = 'done';
                 termine[tIndex].umsatz = umsatz;
+
+                // --- NEU: INVENTAR LOGIK FÜR TESTS ---
+                // Finde heraus, ob AO eingestellt war (entweder direkt im Termin oder beim Kunden)
+                let praeferenz = t.praeferenz || (kIndex > -1 ? kunden[kIndex].praeferenz : 'none');
+
+                if (praeferenz === 'AO') {
+                    let aktuellerBestand = settings.testBestand !== undefined ? parseInt(settings.testBestand) : 0;
+                    
+                    if (aktuellerBestand > 0) {
+                        settings.testBestand = aktuellerBestand - 1;
+                        localStorage.setItem('appEinstellungen', JSON.stringify(settings));
+                        alert("✔️ Umsatz gespeichert! Ein Test wurde automatisch vom Inventar abgezogen.");
+                    } else {
+                        alert("✔️ Umsatz gespeichert.\n\n⚠️ ACHTUNG: Der Kunde hatte 'AO', aber dein Test-Inventar in den Einstellungen steht bereits auf 0!");
+                    }
+                }
+
             } else if (status === 'noshow') {
                 termine[tIndex].status = 'noshow';
-                const kIndex = kunden.findIndex(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
                 if (kIndex > -1) {
                     kunden[kIndex].noshows = (kunden[kIndex].noshows || 0) + 1;
                     localStorage.setItem('appKunden', JSON.stringify(kunden));
@@ -432,7 +453,6 @@
                         const isPast = (datum < currentDate) || (datum === currentDate && t.ende <= currentTime);
                         let dbKunde = kundenDB.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
 
-                        // CLEVERER FALLBACK: Wenn Termin keinen Preis hat, nimm Kundenpreis
                         let displayPreis = t.preis || (dbKunde ? dbKunde.preis : '');
                         let displayPraeferenz = t.praeferenz || (dbKunde ? dbKunde.praeferenz : 'none');
                         
@@ -445,7 +465,6 @@
 
                         let deleteHTML = `<button onclick="event.stopPropagation(); deleteTermin(${t.id})" style="background: rgba(255, 0, 60, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; transition: 0.2s;">✖ Löschen</button>`;
 
-                        // AVATAR BILD FÜR DIE KARTE
                         let avatarHTML = '';
                         let initials = t.name ? t.name.substring(0,2).toUpperCase() : "??";
                         if (dbKunde && dbKunde.bild1) {

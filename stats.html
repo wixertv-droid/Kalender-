@@ -39,13 +39,12 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
         /* =========================================
-           NEU: INDIVIDUELLE CYBER-LADEBALKEN
+           INDIVIDUELLE CYBER-LADEBALKEN
            ========================================= */
         .stat-loader { display: flex; flex-direction: column; justify-content: center; min-height: 80px; padding: 10px 0; }
         .loader-text { font-size: 0.65rem; color: var(--neon-cyan); font-family: monospace; letter-spacing: 2px; margin-bottom: 8px; }
         .loader-track { width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; position: relative; }
         
-        /* Der gestreifte, animierte Bar-Style */
         .loader-fill { 
             height: 100%; width: 0%; border-radius: 4px;
             background-image: repeating-linear-gradient(
@@ -260,9 +259,17 @@
         // 1. PHASE: Alles berechnen
         function calculateStats() {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { kat1_name: 'VIP', kat2_name: 'Stamm', kat3_name: 'Neu' };
+            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
             
-            // FIX: Korrekte lokale Zeit für den "Heute"-Vergleich (verhindert Nacht-Zeitzonen-Fehler)
+            // NEU: Lade Namen und Farben DIREKT aus den App-Einstellungen (mit Fallbacks)
+            const k1Name = settings.kat1_name || 'VIP';
+            const k2Name = settings.kat2_name || 'Stamm';
+            const k3Name = settings.kat3_name || 'Neu';
+            
+            const k1Farbe = settings.kat1_farbe || 'var(--neon-gold)';
+            const k2Farbe = settings.kat2_farbe || 'var(--neon-pink)';
+            const k3Farbe = settings.kat3_farbe || 'var(--neon-cyan)';
+            
             const now = new Date();
             const localNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
             const todayStr = localNow.toISOString().split('T')[0];
@@ -274,10 +281,11 @@
             let noShows = 0, completed = 0;
             let monthlyRev = new Array(12).fill(0);
 
+            // NEU: Setze die dynamischen Namen und Farben in den Data Stream ein
             let catData = {
-                kat1: { name: settings.kat1_name, color: 'var(--neon-gold)', amount: 0 },
-                kat2: { name: settings.kat2_name, color: 'var(--neon-pink)', amount: 0 },
-                kat3: { name: settings.kat3_name, color: 'var(--neon-cyan)', amount: 0 }
+                kat1: { name: k1Name, color: k1Farbe, amount: 0 },
+                kat2: { name: k2Name, color: k2Farbe, amount: 0 },
+                kat3: { name: k3Name, color: k3Farbe, amount: 0 }
             };
 
             const currentYear = now.getFullYear();
@@ -299,7 +307,6 @@
                 const tMonth = tDate.getMonth(); 
                 const tWeek = getWeek(tDate);
                 
-                // FIX: Fallback auf 0, falls Preis leer ist (verhindert NaN Crash)
                 let price = 0;
                 if (t.status === 'done' && t.umsatz) price = parseFloat(t.umsatz) || 0;
                 else if (t.preis) price = parseFloat(t.preis) || 0;
@@ -308,7 +315,6 @@
                 if (t.status === 'noshow') noShows++;
                 if (t.status === 'done') completed++;
 
-                // FIX: Zukunft ist ab HEUTE, solange nicht abgesagt/erledigt
                 if (t.datum >= todayStr && t.status !== 'noshow' && t.status !== 'done') {
                     revFuture += price; 
                     countFuture++;

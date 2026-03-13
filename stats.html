@@ -30,11 +30,12 @@
         .border-violet { border-left: 4px solid var(--neon-violet); }
         .border-gold { border-left: 4px solid var(--neon-gold); }
         .border-green { border-left: 4px solid var(--neon-green); }
+        .border-blue { border-left: 4px solid #00f0ff; } /* NEU: Für Inventar */
 
         .label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
         .label-highlight { color: var(--neon-cyan); }
         .value { font-size: 2.2rem; font-weight: 900; color: white; margin-top: 5px; text-shadow: 0 0 15px rgba(255,255,255,0.2); font-family: monospace; }
-        .sub-info { font-size: 0.85rem; color: #888; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; display: flex; justify-content: space-between; }
+        .sub-info { font-size: 0.85rem; color: #888; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; display: flex; justify-content: space-between; align-items: center;}
         
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
@@ -178,7 +179,25 @@
             </div>
             <div class="stat-content" id="content-forecast">
                 <div id="val-forecast" class="value">0 €</div>
-                <div class="sub-info"><span id="count-forecast">0 Anstehende Buchungen</span><span>Prognose aktueller Monat</span></div>
+                <div class="sub-info"><span id="count-forecast">0 Anstehende Buchungen</span><span>Restlicher Monat</span></div>
+            </div>
+        </div>
+
+        <div class="finance-card border-blue">
+            <div class="label" style="color: #00f0ff;">Med-Inventory Status</div>
+            <div class="stat-loader" id="loader-inventory">
+                <div class="loader-text blink" style="color: #00f0ff;">SCANNING_STOCK_LEVELS...</div>
+                <div class="loader-track"><div class="loader-fill" style="--bar-color: #00f0ff; --load-time: 1.8s;"></div></div>
+            </div>
+            <div class="stat-content" id="content-inventory">
+                <div style="display: flex; align-items: baseline; gap: 10px;">
+                    <div id="val-inventory" class="value" style="font-size: 2.8rem;">0</div>
+                    <div style="color: #00f0ff; font-weight: bold; font-size: 1.2rem;">TESTS</div>
+                </div>
+                <div class="sub-info">
+                    <span id="inv-status">Lade Bestand...</span>
+                    <button onclick="location.href='einstellungen.html'" style="background: rgba(0, 240, 255, 0.1); border: 1px solid #00f0ff; color: #00f0ff; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 0.7rem; font-weight: bold;">EDIT</button>
+                </div>
             </div>
         </div>
 
@@ -232,7 +251,7 @@
             "Initializing deep scan of local storage...",
             "Decrypting 'appTermine' sector...",
             "Cross-referencing revenue entries...",
-            "Calculating monthly breakdown algorithms...",
+            "Checking inventory levels...",
             "Compiling category data streams...",
             "System metrics stable. Visualizing..."
         ];
@@ -268,6 +287,9 @@
             const k1Farbe = settings.kat1_farbe || 'var(--neon-gold)';
             const k2Farbe = settings.kat2_farbe || 'var(--neon-pink)';
             const k3Farbe = settings.kat3_farbe || 'var(--neon-cyan)';
+            
+            // NEU: Inventar laden
+            const testBestand = settings.testBestand !== undefined ? parseInt(settings.testBestand) : 0;
             
             const now = new Date();
             const localNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
@@ -313,7 +335,6 @@
                 if (t.status === 'noshow') noShows++;
                 if (t.status === 'done') completed++;
 
-                // NEU: ZUKUNFT - Berechnet nur Termine ab heute, die im AKTUELLEN Monat und Jahr liegen
                 if (t.datum >= todayStr && tYear === currentYear && tMonth === currentMonth && t.status !== 'noshow' && t.status !== 'done') {
                     revFuture += price; 
                     countFuture++;
@@ -339,7 +360,7 @@
                 revW, revM, revY, revFuture,
                 countW, countM, countY, countFuture,
                 successRate, noshowRate,
-                catData, monthlyRev, currentYear
+                catData, monthlyRev, currentYear, testBestand
             };
 
             document.getElementById('current-year').innerText = currentYear;
@@ -364,23 +385,37 @@
         }
 
         // Zähler hochzählen lassen (Matrix Style)
-        function animateValue(id, endValue) {
+        function animateValue(id, endValue, suffix = " €") {
             const obj = document.getElementById(id);
             let start = 0;
             const duration = 1200;
+            // Wenn der Wert 0 ist, direkt setzen und abbrechen
+            if (endValue <= 0) {
+                obj.innerText = "0" + suffix;
+                return;
+            }
+            
             const increment = endValue / (duration / 16); 
             
             function update() {
                 start += increment;
                 if (start >= endValue) {
-                    obj.innerText = endValue.toFixed(2).replace('.00', '') + " €";
+                    // Für Inventar (ganze Zahlen)
+                    if(suffix === "") {
+                        obj.innerText = Math.round(endValue);
+                    } else {
+                        obj.innerText = endValue.toFixed(2).replace('.00', '') + suffix;
+                    }
                 } else {
-                    obj.innerText = start.toFixed(2).replace('.00', '') + " €";
+                    if(suffix === "") {
+                        obj.innerText = Math.round(start);
+                    } else {
+                        obj.innerText = start.toFixed(2).replace('.00', '') + suffix;
+                    }
                     requestAnimationFrame(update);
                 }
             }
-            if(endValue > 0) update();
-            else obj.innerText = "0 €";
+            update();
         }
 
         function renderMonthChart() {
@@ -452,8 +487,27 @@
                     revealCard('week', 800, () => animateValue('val-week', calculatedValues.revW));
                     revealCard('month', 1200, () => animateValue('val-month', calculatedValues.revM));
                     revealCard('forecast', 1500, () => animateValue('val-forecast', calculatedValues.revFuture));
-                    revealCard('year', 1800, () => animateValue('val-year', calculatedValues.revY));
                     
+                    // NEU: Inventar laden
+                    revealCard('inventory', 1600, () => { 
+                        animateValue('val-inventory', calculatedValues.testBestand, ""); 
+                        const statusText = document.getElementById('inv-status');
+                        const valBox = document.getElementById('val-inventory');
+                        if(calculatedValues.testBestand <= 0) {
+                            statusText.innerText = "DEPLETED // LEER";
+                            statusText.style.color = "var(--neon-red)";
+                            valBox.style.color = "var(--neon-red)";
+                        } else if(calculatedValues.testBestand <= 5) {
+                            statusText.innerText = "CRITICAL LEVEL // NACHBESTELLEN";
+                            statusText.style.color = "var(--neon-gold)";
+                            valBox.style.color = "var(--neon-gold)";
+                        } else {
+                            statusText.innerText = "BESTAND OPTIMAL";
+                            statusText.style.color = "#00f0ff";
+                        }
+                    });
+
+                    revealCard('year', 1800, () => animateValue('val-year', calculatedValues.revY));
                     revealCard('chart', 2200, () => renderMonthChart());
                     revealCard('stream', 2500, () => renderCategoryStream());
                     

@@ -363,14 +363,12 @@
         function submitAbrechnung(status) {
             let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-            // NEU: Einstellungen laden für den Test-Bestand
             let settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
 
             const tIndex = termine.findIndex(t => t.id === currentAbrechnungId);
             if(tIndex === -1) return;
             const t = termine[tIndex];
 
-            // Kunden-Datenbank Eintrag suchen (brauchen wir für AO-Check und No-Show)
             const kIndex = kunden.findIndex(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
 
             if (status === 'done') {
@@ -380,8 +378,7 @@
                 termine[tIndex].status = 'done';
                 termine[tIndex].umsatz = umsatz;
 
-                // --- NEU: INVENTAR LOGIK FÜR TESTS ---
-                // Finde heraus, ob AO eingestellt war (entweder direkt im Termin oder beim Kunden)
+                // --- INTELLIGENTES FRÜHWARN-SYSTEM FÜR TESTS ---
                 let praeferenz = t.praeferenz || (kIndex > -1 ? kunden[kIndex].praeferenz : 'none');
 
                 if (praeferenz === 'AO') {
@@ -389,10 +386,19 @@
                     
                     if (aktuellerBestand > 0) {
                         settings.testBestand = aktuellerBestand - 1;
+                        let neuerBestand = settings.testBestand;
                         localStorage.setItem('appEinstellungen', JSON.stringify(settings));
-                        alert("✔️ Umsatz gespeichert! Ein Test wurde automatisch vom Inventar abgezogen.");
+                        
+                        // Das Warn-System
+                        if (neuerBestand === 0) {
+                            alert("✔️ Umsatz gespeichert!\n\n🚨 WARNUNG: Das war dein letzter Test! Dein Lagerbestand ist jetzt bei 0.");
+                        } else if (neuerBestand <= 3) {
+                            alert(`✔️ Umsatz gespeichert!\n\n⚠️ ACHTUNG: Du hast jetzt nur noch ${neuerBestand} Test(s) zur Verfügung! Bitte rechtzeitig nachbestellen.`);
+                        } else {
+                            alert(`✔️ Umsatz gespeichert! Ein Test wurde abgezogen. (Noch ${neuerBestand} übrig)`);
+                        }
                     } else {
-                        alert("✔️ Umsatz gespeichert.\n\n⚠️ ACHTUNG: Der Kunde hatte 'AO', aber dein Test-Inventar in den Einstellungen steht bereits auf 0!");
+                        alert("✔️ Umsatz gespeichert.\n\n❌ ACHTUNG: Der Kunde hatte 'AO', aber dein Test-Inventar steht bereits auf 0! Es konnte kein Test abgezogen werden.");
                     }
                 }
 

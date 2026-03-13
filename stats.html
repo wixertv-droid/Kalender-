@@ -257,12 +257,15 @@
             });
         }
 
-        // 1. PHASE: Alles berechnen (aber noch nicht anzeigen)
+        // 1. PHASE: Alles berechnen
         function calculateStats() {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { kat1_name: 'VIP', kat2_name: 'Stamm', kat3_name: 'Neu' };
+            
+            // FIX: Korrekte lokale Zeit für den "Heute"-Vergleich (verhindert Nacht-Zeitzonen-Fehler)
             const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
+            const localNow = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+            const todayStr = localNow.toISOString().split('T')[0];
             
             let revW = 0, countW = 0;
             let revM = 0, countM = 0;
@@ -296,16 +299,19 @@
                 const tMonth = tDate.getMonth(); 
                 const tWeek = getWeek(tDate);
                 
+                // FIX: Fallback auf 0, falls Preis leer ist (verhindert NaN Crash)
                 let price = 0;
-                if (t.status === 'done' && t.umsatz) price = parseFloat(t.umsatz);
-                else if (t.preis) price = parseFloat(t.preis);
-                else if (settings[t.kat + "_preis"]) price = parseFloat(settings[t.kat + "_preis"]);
+                if (t.status === 'done' && t.umsatz) price = parseFloat(t.umsatz) || 0;
+                else if (t.preis) price = parseFloat(t.preis) || 0;
+                else if (settings[t.kat + "_preis"]) price = parseFloat(settings[t.kat + "_preis"]) || 0;
 
                 if (t.status === 'noshow') noShows++;
                 if (t.status === 'done') completed++;
 
-                if (t.datum > todayStr && t.status !== 'noshow') {
-                    revFuture += price; countFuture++;
+                // FIX: Zukunft ist ab HEUTE, solange nicht abgesagt/erledigt
+                if (t.datum >= todayStr && t.status !== 'noshow' && t.status !== 'done') {
+                    revFuture += price; 
+                    countFuture++;
                 }
 
                 if (t.status === 'done' && tYear === currentYear) {
@@ -324,7 +330,6 @@
                 noshowRate = Math.round((noShows / totalPast) * 100);
             }
 
-            // Speichert alles ins globale Objekt
             calculatedValues = {
                 revW, revM, revY, revFuture,
                 countW, countM, countY, countFuture,
@@ -332,7 +337,6 @@
                 catData, monthlyRev, currentYear
             };
 
-            // Setzt feste Texte (die schon beim Laden da sein können)
             document.getElementById('current-year').innerText = currentYear;
             document.getElementById('count-week').innerText = countW + " Termine";
             document.getElementById('count-month').innerText = countM + " Termine";
@@ -430,7 +434,7 @@
 
         // 3. START-SEQUENZ
         window.onload = () => {
-            calculateStats(); // Daten berechnen
+            calculateStats(); 
             
             setTimeout(() => {
                 const mainLoader = document.getElementById('app-loader');
@@ -438,9 +442,8 @@
                 
                 setTimeout(() => {
                     mainLoader.remove(); 
-                    runTerminal(); // Terminal sofort starten
+                    runTerminal(); 
                     
-                    // LADE-BALKEN SEQUENZ STARTEN (Passend zu --load-time)
                     revealCard('week', 800, () => animateValue('val-week', calculatedValues.revW));
                     revealCard('month', 1200, () => animateValue('val-month', calculatedValues.revM));
                     revealCard('forecast', 1500, () => animateValue('val-forecast', calculatedValues.revFuture));

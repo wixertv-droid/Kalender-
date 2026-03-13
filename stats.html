@@ -171,14 +171,14 @@
         </div>
 
         <div class="finance-card border-green">
-            <div class="label" style="color: var(--neon-green);">System Projection // Future Forecast</div>
+            <div class="label" style="color: var(--neon-green);">System Projection // Current Month</div>
             <div class="stat-loader" id="loader-forecast">
                 <div class="loader-text blink" style="color: var(--neon-green);">CALCULATING_PROJECTIONS...</div>
                 <div class="loader-track"><div class="loader-fill" style="--bar-color: var(--neon-green); --load-time: 1.5s;"></div></div>
             </div>
             <div class="stat-content" id="content-forecast">
                 <div id="val-forecast" class="value">0 €</div>
-                <div class="sub-info"><span id="count-forecast">0 Anstehende Buchungen</span><span>Erwartet</span></div>
+                <div class="sub-info"><span id="count-forecast">0 Anstehende Buchungen</span><span>Restlicher Monat</span></div>
             </div>
         </div>
 
@@ -261,7 +261,6 @@
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
             
-            // NEU: Lade Namen und Farben DIREKT aus den App-Einstellungen (mit Fallbacks)
             const k1Name = settings.kat1_name || 'VIP';
             const k2Name = settings.kat2_name || 'Stamm';
             const k3Name = settings.kat3_name || 'Neu';
@@ -281,7 +280,6 @@
             let noShows = 0, completed = 0;
             let monthlyRev = new Array(12).fill(0);
 
-            // NEU: Setze die dynamischen Namen und Farben in den Data Stream ein
             let catData = {
                 kat1: { name: k1Name, color: k1Farbe, amount: 0 },
                 kat2: { name: k2Name, color: k2Farbe, amount: 0 },
@@ -315,7 +313,8 @@
                 if (t.status === 'noshow') noShows++;
                 if (t.status === 'done') completed++;
 
-                if (t.datum >= todayStr && t.status !== 'noshow' && t.status !== 'done') {
+                // NEU: ZUKUNFT - Berechnet nur Termine ab heute, die im AKTUELLEN Monat und Jahr liegen
+                if (t.datum >= todayStr && tYear === currentYear && tMonth === currentMonth && t.status !== 'noshow' && t.status !== 'done') {
                     revFuture += price; 
                     countFuture++;
                 }

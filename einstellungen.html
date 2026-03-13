@@ -49,6 +49,15 @@
             <button onclick="changeSystemPin()" class="btn-save" style="margin-top: 10px; padding: 15px; font-size: 1rem;">PIN Aktualisieren</button>
         </div>
 
+        <div class="settings-card" style="border-left: 4px solid var(--neon-green);">
+            <div class="setting-title" style="color: var(--neon-green); border-bottom-color: rgba(57, 255, 20, 0.3);">Medizinisches Inventar</div>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Trage hier deinen aktuellen Bestand an Tests ein. Das System zieht automatisch 1 Test ab, wenn ein Termin mit der Präferenz "AO" erfolgreich abgerechnet wird.</p>
+            <div class="form-group">
+                <label class="input-label" style="color: var(--neon-green);">Verfügbare Tests</label>
+                <input type="number" id="testBestand" class="cyber-input-full" placeholder="z.B. 50" style="font-size: 1.5rem; text-align: center; color: var(--neon-green);">
+            </div>
+        </div>
+
         <div class="settings-card">
             <div class="setting-title">Zeit-Matrix (Arbeitszeit)</div>
             <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Definiert die Breite der Timeline in der Wochen- und Tagesansicht.</p>
@@ -143,13 +152,17 @@
                 kat1_name: 'VIP', kat1_farbe: '#e5b05c',
                 kat2_name: 'Stamm', kat2_farbe: '#ff2a6d',
                 kat3_name: 'Neu', kat3_farbe: '#05d9e8',
-                plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon'
+                plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon',
+                testBestand: 0 // NEU: Standardwert für Tests
             };
             
             const s = saved ? JSON.parse(saved) : d;
 
             document.getElementById('arbeitsStart').value = s.arbeitsStart || d.arbeitsStart;
             document.getElementById('arbeitsEnde').value = s.arbeitsEnde || d.arbeitsEnde;
+
+            // NEU: Lädt den Testbestand
+            document.getElementById('testBestand').value = s.testBestand !== undefined ? s.testBestand : d.testBestand;
 
             document.getElementById('kat1_name').value = s.kat1_name || d.kat1_name;
             document.getElementById('kat1_farbe').value = s.kat1_farbe || d.kat1_farbe;
@@ -196,6 +209,10 @@
             const newSettings = {
                 arbeitsStart: document.getElementById('arbeitsStart').value || '08:00',
                 arbeitsEnde: document.getElementById('arbeitsEnde').value || '22:00',
+                
+                // NEU: Speichert den Testbestand sicher ab
+                testBestand: parseInt(document.getElementById('testBestand').value) || 0,
+
                 kat1_name: document.getElementById('kat1_name').value,
                 kat1_farbe: document.getElementById('kat1_farbe').value,
                 kat2_name: document.getElementById('kat2_name').value,
@@ -218,7 +235,7 @@
         }
 
         function resetAllData() {
-            if(confirm("SYSTEMWARNUNG: Alle TERMINE werden unwiderruflich gelöscht! (Kunden bleiben erhalten)")) {
+            if(confirm("SYSTEMWARNUNG: Alle TERMINE werden unwiderruflich gelöscht! (Kundendaten bleiben erhalten)")) {
                 const btn = document.querySelector('.btn-danger');
                 if(btn) {
                     btn.innerText = "LÖSCHEN LÄUFT...";
@@ -233,7 +250,6 @@
             }
         }
 
-        // --- NEU: DATENBANK EXPORTIEREN (BACKUP) ---
         function exportDatabase() {
             const backupData = {
                 termine: JSON.parse(localStorage.getItem('appTermine')) || [],
@@ -245,7 +261,6 @@
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
             const downloadAnchorNode = document.createElement('a');
             
-            // Formatierter Dateiname mit Datum (z.B. agenda2050_backup_27-02-2026.json)
             const dateStr = new Date().toLocaleDateString('de-DE').replace(/\./g, '-');
             
             downloadAnchorNode.setAttribute("href", dataStr);
@@ -255,7 +270,6 @@
             downloadAnchorNode.remove();
         }
 
-        // --- NEU: DATENBANK IMPORTIEREN (RESTORE) ---
         function importDatabase(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -272,12 +286,11 @@
                         if (importedData.einstellungen) localStorage.setItem('appEinstellungen', JSON.stringify(importedData.einstellungen));
                         
                         alert("✅ SYNC ERFOLGREICH: Alle Daten wurden wiederhergestellt!");
-                        location.reload(); // Seite neu laden, damit die importierten Einstellungen sofort sichtbar werden
+                        location.reload(); 
                     }
                 } catch (err) {
                     alert("❌ FEHLER: Ungültige oder beschädigte Backup-Datei!");
                 }
-                // Input Feld zurücksetzen, damit man die gleiche Datei noch mal auswählen kann
                 event.target.value = ''; 
             };
             reader.readAsText(file);

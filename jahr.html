@@ -12,6 +12,23 @@
     <title>Agenda 2050 | Jahreskalender</title>
     <link rel="stylesheet" href="style.css">
     <script src="app.js" defer></script>
+    
+    <style>
+        /* Optische Hervorhebung für die aktuelle Woche und den heutigen Tag */
+        .aktuelle-woche {
+            background: rgba(5, 217, 232, 0.2) !important;
+            border-radius: 6px;
+            box-shadow: 0 0 10px rgba(5, 217, 232, 0.1);
+        }
+        
+        .heute-markierung {
+            background: var(--neon-pink) !important;
+            color: white !important;
+            font-weight: bold;
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--neon-pink);
+        }
+    </style>
 </head>
 <body>
 
@@ -96,6 +113,28 @@
                 karte.innerHTML = html;
                 container.appendChild(karte);
             }
+
+            // NEU: Automatisch zum aktuellen Monat scrollen und die aktuelle Woche markieren
+            setTimeout(() => {
+                const heuteEl = document.querySelector('.heute-markierung');
+                if (heuteEl) {
+                    // Die ganze aktuelle Woche dauerhaft markieren
+                    const wochenId = heuteEl.getAttribute('data-wochenid');
+                    if (wochenId) {
+                        document.querySelectorAll(`[data-wochenid="${wochenId}"]`).forEach(el => {
+                            if (!el.classList.contains('leer')) {
+                                el.classList.add('aktuelle-woche');
+                            }
+                        });
+                    }
+                    
+                    // Zum aktuellen Monat scrollen
+                    const monatKarte = heuteEl.closest('.monat-karte');
+                    if (monatKarte) {
+                        monatKarte.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }, 100); // 100ms warten, damit der Browser Zeit hat, das HTML aufzubauen
         }
 
         function wechsleJahr(richtung) {

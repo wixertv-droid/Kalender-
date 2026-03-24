@@ -134,7 +134,7 @@
 
         <button class="btn-save" id="save-btn" onclick="saveSystemSettings()">KONFIGURATION SPEICHERN</button>
         
-        <button onclick="location.href='woche.html'" style="width: 100%; background: none; border: none; color: #555; font-size: 1rem; padding: 20px; text-transform: uppercase; cursor: pointer; letter-spacing: 2px;">Abbrechen</button>
+        <button onclick="location.href='woche.html'" style="width: 100%; background: none; border: none; color: #555; font-size: 1rem; padding: 20px; text-transform: uppercase; cursor: pointer; letter-spacing: 2px;">Zurück zum Kalender</button>
 
         <div class="danger-zone">
             <div class="danger-title">Danger Zone</div>
@@ -153,7 +153,7 @@
                 kat2_name: 'Stamm', kat2_farbe: '#ff2a6d',
                 kat3_name: 'Neu', kat3_farbe: '#05d9e8',
                 plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon',
-                testBestand: 0 // NEU: Standardwert für Tests
+                testBestand: 0
             };
             
             const s = saved ? JSON.parse(saved) : d;
@@ -161,7 +161,6 @@
             document.getElementById('arbeitsStart').value = s.arbeitsStart || d.arbeitsStart;
             document.getElementById('arbeitsEnde').value = s.arbeitsEnde || d.arbeitsEnde;
 
-            // NEU: Lädt den Testbestand
             document.getElementById('testBestand').value = s.testBestand !== undefined ? s.testBestand : d.testBestand;
 
             document.getElementById('kat1_name').value = s.kat1_name || d.kat1_name;
@@ -204,15 +203,15 @@
 
         function saveSystemSettings() {
             const btn = document.getElementById('save-btn');
-            btn.innerText = "SAVING...";
+            btn.innerText = "SPEICHERT IN CLOUD...";
+            
+            let tb = parseInt(document.getElementById('testBestand').value);
+            if (isNaN(tb)) tb = 0; // Verhindert Fehler, falls das Feld leer ist
             
             const newSettings = {
                 arbeitsStart: document.getElementById('arbeitsStart').value || '08:00',
                 arbeitsEnde: document.getElementById('arbeitsEnde').value || '22:00',
-                
-                // NEU: Speichert den Testbestand sicher ab
-                testBestand: parseInt(document.getElementById('testBestand').value) || 0,
-
+                testBestand: tb,
                 kat1_name: document.getElementById('kat1_name').value,
                 kat1_farbe: document.getElementById('kat1_farbe').value,
                 kat2_name: document.getElementById('kat2_name').value,
@@ -225,13 +224,25 @@
                 plat4: document.getElementById('plat4').value
             };
 
+            // Speichert lokal. app.js lädt dies im Hintergrund automatisch zu Supabase hoch!
             localStorage.setItem('appEinstellungen', JSON.stringify(newSettings));
+            
+            // Farben sofort auf dieser Seite anwenden (falls die Funktion in app.js existiert)
+            if (typeof ladeUndWendeEinstellungenAn === 'function') {
+                ladeUndWendeEinstellungenAn();
+            }
             
             btn.style.background = "var(--neon-green)";
             btn.style.color = "#000";
-            btn.innerText = "SYSTEM UPDATED!";
+            btn.innerText = "✅ ERFOLGREICH GESPEICHERT";
             
-            setTimeout(() => { location.href = 'woche.html'; }, 800);
+            // WICHTIG: KEIN AUTOMATISCHER SEITENWECHSEL MEHR!
+            // Wir lassen die Seite offen. Die Cloud hat so alle Zeit der Welt, die Daten im Hintergrund hochzuladen.
+            setTimeout(() => { 
+                btn.style.background = ""; 
+                btn.style.color = ""; 
+                btn.innerText = "KONFIGURATION SPEICHERN"; 
+            }, 3000);
         }
 
         function resetAllData() {

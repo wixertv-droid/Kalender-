@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.6 - TIMER & TIMELINE FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.7 - CLOCK-DRIFT SYNC FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -36,7 +36,8 @@ localStorage.setItem = function(key, value) {
         clearTimeout(syncTimeout);
         syncTimeout = setTimeout(async () => {
             isUploading = true;
-            const newTimestamp = new Date().toISOString();
+            // Wir erzeugen einen unverwechselbaren Fingerabdruck für dieses Update
+            const newTimestamp = new Date().toISOString() + "-" + Math.random().toString(36).substring(2, 8);
             
             const payload = {
                 id: 1, 
@@ -89,10 +90,9 @@ async function autoFetchCloud() {
             const dbData = data[0];
             const localUpdate = localStorage.getItem('lastCloudUpdate');
             
-            const dbTime = dbData.last_update ? new Date(dbData.last_update).getTime() : 0;
-            const localTime = localUpdate ? new Date(localUpdate).getTime() : 0;
-            
-            if (dbTime <= localTime) return;
+            // FIX: Absolutes, stures Vergleichen! Ist der Stempel exakt identisch? 
+            // Wenn nicht (egal ob älter oder neuer), dann ZIEH DIE DATEN!
+            if (!dbData.last_update || dbData.last_update === localUpdate) return;
 
             isSyncingFromCloud = true;
             
@@ -114,7 +114,7 @@ async function autoFetchCloud() {
             updateLiveSystem(); 
             
             isSyncingFromCloud = false;
-            console.log("☁️ Auto-Sync Update empfangen!");
+            console.log("☁️ Auto-Sync Update empfangen! (Neue Daten vom anderen Gerät)");
         }
     } catch(e) { console.log("Cloud Sync Hintergrundfehler:", e); }
 }
@@ -133,7 +133,6 @@ async function initCloud() {
         hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
         
         setTimeout(() => {
-            // HIER IST DIE FEHLENDE ZEILE: Timer-Sperre aufheben!
             hdCountdown.innerText = "SYNCING..."; 
             
             hdCountdown.style.color = "";
@@ -142,7 +141,7 @@ async function initCloud() {
             
             if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
             if(typeof renderWeek === 'function') renderWeek(); 
-            updateLiveSystem(); // Startet den Timer & zeichnet die rote Linie
+            updateLiveSystem(); 
             
         }, 3000);
     }

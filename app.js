@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V4.9 - CLOUD SYNC AKTIV)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.0 - SUPABASE MANUAL SYNC)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -15,108 +15,113 @@ const DEFAULTS = {
 let currentEditId = null; 
 
 /* ==========================================================================
-   >>> FIREBASE CLOUD ANBINDUNG (STABLE MAGIC SYNC) <<<
+   >>> SUPABASE ANBINDUNG (ECHTE POSTGRES DATENBANK) <<<
    ========================================================================== */
-const firebaseConfig = {
-    apiKey: "AIzaSyAEUmqJJVTb-6HLJelRavBYX7HYbYgAOk4",
-    authDomain: "project-905317930122069871.firebaseapp.com",
-    projectId: "project-905317930122069871",
-    storageBucket: "project-905317930122069871.firebasestorage.app",
-    messagingSenderId: "614371371179",
-    appId: "1:614371371179:web:c79cabf95b410b70142fee"
-};
+const SUPABASE_URL = 'https://xdynlrghhnxbmcylafxg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkeW5scmdoaG54Ym1jeWxhZnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDcxMzgsImV4cCI6MjA4OTkyMzEzOH0.Zre-Vv5MElN3q6-R804ZrhYxnvEwhB0b3f8_ohFoe3A';
 
-let db, setDoc, doc;
-let isSyncingFromCloud = false;
-let syncTimeout = null; 
+async function initCloud() {
+    // Zeigt nur an, dass das System bereit ist. Lädt NICHT mehr automatisch drüber!
+    const hdCountdown = document.getElementById('header-countdown');
+    if(hdCountdown) {
+        hdCountdown.innerText = "SUPABASE READY";
+        hdCountdown.style.color = "var(--neon-green)";
+        hdCountdown.style.borderColor = "var(--neon-green)";
+        hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
+        
+        setTimeout(() => {
+            hdCountdown.style.color = "";
+            hdCountdown.style.borderColor = "";
+            hdCountdown.style.textShadow = "";
+            updateLiveSystem(); 
+        }, 3000);
+    }
+}
 
-const originalSetItem = localStorage.setItem;
+// ☁️ MANUELLER UPLOAD (Schießt deine lokalen Daten sicher in die Datenbank)
+window.forceCloudUpload = async function() {
+    const btn = document.getElementById('btn-cloud-upload');
+    if(btn) { btn.innerText = "LÄDT HOCH..."; btn.style.opacity = "0.5"; }
 
-localStorage.setItem = function(key, value) {
-    originalSetItem.call(localStorage, key, value);
+    const payload = {
+        id: 1, // Wir nutzen Zeile 1 als unseren Tresor
+        termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
+        kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
+        einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
+        pin: localStorage.getItem('appPin') || "0000",
+        last_update: new Date().toISOString()
+    };
 
-    if (isSyncingFromCloud) return;
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
+            method: 'PATCH', 
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(payload)
+        });
 
-    if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
-        clearTimeout(syncTimeout);
-        syncTimeout = setTimeout(async () => {
-            if (db && setDoc && doc) {
-                try {
-                    await setDoc(doc(db, "agenda2050", "systemdaten"), {
-                        termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
-                        kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
-                        einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
-                        pin: localStorage.getItem('appPin') || "0000" 
-                    }, { merge: true });
-                    console.log("☁️ Cloud Upload erfolgreich!");
-                } catch(e) { console.error("Cloud Upload Fehler:", e); }
-            }
-        }, 300); // 300ms Puffer, um doppelte Uploads zu vermeiden
+        if (!response.ok) throw new Error("Netzwerkfehler");
+
+        if(btn) { 
+            btn.innerText = "✅ IN CLOUD GESPEICHERT"; 
+            btn.style.background = "var(--neon-green)"; 
+            btn.style.color = "#000"; 
+            btn.style.opacity = "1"; 
+        }
+        setTimeout(() => { if(btn) { btn.innerText = "☁️ IN CLOUD HOCHLADEN"; btn.style.background = ""; btn.style.color = ""; } }, 3000);
+    } catch(e) { 
+        alert("❌ Fehler beim Hochladen. Bist du mit dem Internet verbunden?"); 
+        if(btn) { btn.innerText = "☁️ IN CLOUD HOCHLADEN"; btn.style.opacity = "1"; }
     }
 };
 
-async function initCloud() {
+// ☁️ MANUELLER DOWNLOAD (Holt Supabase Daten und überschreibt dein Handy/PC)
+window.forceCloudDownload = async function() {
+    if(!confirm("⚠️ ACHTUNG: Das überschreibt deine aktuellen lokalen Daten mit dem Stand aus der Cloud. Fortfahren?")) return;
+
+    const btn = document.getElementById('btn-cloud-download');
+    if(btn) { btn.innerText = "LÄDT HERUNTER..."; btn.style.opacity = "0.5"; }
+
     try {
-        const fbApp = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js");
-        const fbDb = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
-        
-        const app = fbApp.initializeApp(firebaseConfig);
-        db = fbDb.getFirestore(app);
-        doc = fbDb.doc;
-        setDoc = fbDb.setDoc;
-        const onSnapshot = fbDb.onSnapshot;
-
-        const hdCountdown = document.getElementById('header-countdown');
-        if(hdCountdown) {
-            hdCountdown.innerText = "CLOUD CONNECTED";
-            hdCountdown.style.color = "var(--neon-green)";
-            hdCountdown.style.borderColor = "var(--neon-green)";
-            hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
-            
-            setTimeout(() => {
-                hdCountdown.innerText = "SYNCING...";
-                hdCountdown.style.color = "";
-                hdCountdown.style.borderColor = "";
-                hdCountdown.style.textShadow = "";
-                updateLiveSystem(); 
-            }, 3000);
-        }
-
-        onSnapshot(doc(db, "agenda2050", "systemdaten"), (docSnap) => {
-            if (docSnap.exists()) {
-                isSyncingFromCloud = true; 
-                const data = docSnap.data();
-                
-                if (data.termine) originalSetItem.call(localStorage, 'appTermine', JSON.stringify(data.termine));
-                if (data.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(data.kunden));
-                if (data.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(data.einstellungen));
-                if (data.pin) originalSetItem.call(localStorage, 'appPin', data.pin);
-                
-                ladeUndWendeEinstellungenAn();
-                
-                if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
-                if(typeof renderWeek === 'function') renderWeek();
-                if(typeof renderKunden === 'function') renderKunden();
-                
-                if(typeof renderTimeline === 'function') {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    let d = urlParams.get('d');
-                    if(!d) {
-                        const heute = new Date();
-                        d = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                    }
-                    renderTimeline(d);
-                }
-
-                updateLiveSystem(); 
-                isSyncingFromCloud = false; 
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*`, {
+            method: 'GET',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`
             }
         });
 
-    } catch(e) {
-        console.log("Offline-Modus aktiv (Cloud nicht erreichbar)");
+        if (!response.ok) throw new Error("Netzwerkfehler");
+        
+        const data = await response.json();
+        
+        if(data && data.length > 0) {
+            const dbData = data[0];
+            if (dbData.termine) localStorage.setItem('appTermine', JSON.stringify(dbData.termine));
+            if (dbData.kunden) localStorage.setItem('appKunden', JSON.stringify(dbData.kunden));
+            if (dbData.einstellungen) localStorage.setItem('appEinstellungen', JSON.stringify(dbData.einstellungen));
+            if (dbData.pin) localStorage.setItem('appPin', dbData.pin);
+            
+            alert("✅ Daten erfolgreich aus der Datenbank geladen!");
+            location.reload();
+        } else {
+            alert("❌ Es wurden keine Daten in der Cloud gefunden.");
+            if(btn) { btn.innerText = "☁️ AUS CLOUD LADEN"; btn.style.opacity = "1"; }
+        }
+    } catch(e) { 
+        alert("❌ Fehler beim Herunterladen."); 
+        if(btn) { btn.innerText = "☁️ AUS CLOUD LADEN"; btn.style.opacity = "1"; }
     }
-}
+};
+
+
+/* ==========================================================================
+   >>> REST DER APP-LOGIK <<<
+   ========================================================================== */
 
 function parseTimeStr(timeStr, defaultStr) {
     if (!timeStr || !timeStr.includes(':')) timeStr = defaultStr;
@@ -479,7 +484,7 @@ function updateLiveSystem() {
     }
 
     const countdownElement = document.getElementById('header-countdown');
-    if (countdownElement && countdownElement.innerText !== "CLOUD CONNECTED") {
+    if (countdownElement && countdownElement.innerText !== "SUPABASE READY") {
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         const jetzt = new Date();
         const jetztTime = jetzt.getTime();
@@ -616,7 +621,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLiveSystem();
     setInterval(updateLiveSystem, 60000);
 
-    initCloud(); // <--- Cloud Sync ist jetzt wieder AN!
+    initCloud(); // Startet die Anzeige
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {

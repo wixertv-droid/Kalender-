@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.0 - SUPABASE MANUAL SYNC)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.1 - SUPABASE + TIMER FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -20,31 +20,38 @@ let currentEditId = null;
 const SUPABASE_URL = 'https://xdynlrghhnxbmcylafxg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkeW5scmdoaG54Ym1jeWxhZnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDcxMzgsImV4cCI6MjA4OTkyMzEzOH0.Zre-Vv5MElN3q6-R804ZrhYxnvEwhB0b3f8_ohFoe3A';
 
+let isCloudConnected = false; // Steuert den grünen Punkt
+
 async function initCloud() {
-    // Zeigt nur an, dass das System bereit ist. Lädt NICHT mehr automatisch drüber!
+    isCloudConnected = true;
+    
     const hdCountdown = document.getElementById('header-countdown');
     if(hdCountdown) {
-        hdCountdown.innerText = "SUPABASE READY";
+        hdCountdown.innerText = "SUPABASE CONNECTED";
         hdCountdown.style.color = "var(--neon-green)";
         hdCountdown.style.borderColor = "var(--neon-green)";
         hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
         
         setTimeout(() => {
+            // Nach 3 Sekunden geben wir das Feld wieder für den Timer frei!
+            hdCountdown.innerText = "SYNCING...";
             hdCountdown.style.color = "";
             hdCountdown.style.borderColor = "";
             hdCountdown.style.textShadow = "";
+            
             updateLiveSystem(); 
+            generiereWochenAnsicht(); // Läd den Monat neu, um den grünen Punkt zu setzen
         }, 3000);
     }
 }
 
-// ☁️ MANUELLER UPLOAD (Schießt deine lokalen Daten sicher in die Datenbank)
+// ☁️ MANUELLER UPLOAD
 window.forceCloudUpload = async function() {
     const btn = document.getElementById('btn-cloud-upload');
     if(btn) { btn.innerText = "LÄDT HOCH..."; btn.style.opacity = "0.5"; }
 
     const payload = {
-        id: 1, // Wir nutzen Zeile 1 als unseren Tresor
+        id: 1, 
         termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
         kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
         einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
@@ -79,7 +86,7 @@ window.forceCloudUpload = async function() {
     }
 };
 
-// ☁️ MANUELLER DOWNLOAD (Holt Supabase Daten und überschreibt dein Handy/PC)
+// ☁️ MANUELLER DOWNLOAD
 window.forceCloudDownload = async function() {
     if(!confirm("⚠️ ACHTUNG: Das überschreibt deine aktuellen lokalen Daten mit dem Stand aus der Cloud. Fortfahren?")) return;
 
@@ -117,7 +124,6 @@ window.forceCloudDownload = async function() {
         if(btn) { btn.innerText = "☁️ AUS CLOUD LADEN"; btn.style.opacity = "1"; }
     }
 };
-
 
 /* ==========================================================================
    >>> REST DER APP-LOGIK <<<
@@ -204,9 +210,15 @@ function generiereWochenAnsicht() {
         let isHeute = (isoDatum === heuteISO) ? 'heute' : '';
         let timelineId = (isoDatum === heuteISO) ? 'id="timeline-heute"' : '';
 
+        // HIER IST DER GRÜNE PUNKT WIEDER DA!
         if (i === 0 && document.getElementById('header-monat')) {
             const monate = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-            document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}`;
+            
+            const cloudDot = isCloudConnected 
+                ? ' <span id="cloud-dot-indicator" style="color: var(--neon-green); font-size: 0.6em; vertical-align: super; text-shadow: 0 0 10px var(--neon-green);" title="Cloud Sync Aktiv">●</span>' 
+                : '';
+                
+            document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
         container.innerHTML += `
@@ -484,7 +496,8 @@ function updateLiveSystem() {
     }
 
     const countdownElement = document.getElementById('header-countdown');
-    if (countdownElement && countdownElement.innerText !== "SUPABASE READY") {
+    // HIER WIRD DER TIMER WIEDER FREIGEGEBEN (Wenn der Text nicht mehr "SUPABASE CONNECTED" ist)
+    if (countdownElement && countdownElement.innerText !== "SUPABASE CONNECTED") {
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         const jetzt = new Date();
         const jetztTime = jetzt.getTime();
@@ -621,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateLiveSystem();
     setInterval(updateLiveSystem, 60000);
 
-    initCloud(); // Startet die Anzeige
+    initCloud();
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {

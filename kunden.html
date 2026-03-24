@@ -45,6 +45,26 @@
         .badge-ao { color: #ffcc00; border-color: #ffcc00; }
         .badge-save { color: #00ff00; border-color: #00ff00; }
         .badge-preis { color: var(--neon-gold); }
+
+        /* Stil für den klickbaren Link */
+        .link-button {
+            color: var(--neon-cyan); 
+            text-decoration: none; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 5px; 
+            background: rgba(5,217,232,0.1); 
+            padding: 3px 10px; 
+            border-radius: 6px; 
+            border: 1px solid rgba(5,217,232,0.3); 
+            transition: 0.2s;
+            font-weight: bold;
+        }
+        .link-button:hover {
+            background: var(--neon-cyan);
+            color: #000;
+            box-shadow: 0 0 10px var(--neon-cyan);
+        }
     </style>
 </head>
 <body>
@@ -121,18 +141,33 @@
                 </div>
             </div>
 
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 5px;">
                 <div class="form-group" style="flex: 1; min-width: 120px;">
-                    <label class="input-label">Plattform</label>
+                    <label class="input-label">Plattform 1</label>
                     <select id="kundePlattform" class="cyber-select"></select>
                 </div>
                 <div class="form-group" style="flex: 2; min-width: 200px;">
-                    <label class="input-label">Kontakt / Nummer</label>
+                    <label class="input-label">Kontakt / Nummer 1</label>
                     <input type="text" id="kundeKontakt" class="cyber-input-full" placeholder="@username / Nummer">
                 </div>
             </div>
 
             <div style="display: flex; gap: 15px; flex-wrap: wrap; background: rgba(5, 217, 232, 0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(5,217,232,0.3); margin-bottom: 15px;">
+                <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                    <label class="input-label">Plattform 2</label>
+                    <select id="kundePlattform2" class="cyber-select"></select>
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
+                    <label class="input-label">Nickname 2</label>
+                    <input type="text" id="kundeKontakt2" class="cyber-input-full" placeholder="Nickname">
+                </div>
+                <div class="form-group" style="flex: 2; min-width: 200px; margin-bottom: 0;">
+                    <label class="input-label" style="color: var(--neon-cyan);">Profil-Link (URL)</label>
+                    <input type="url" id="kundeLink" class="cyber-input-full" placeholder="https://...">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; background: rgba(229, 176, 92, 0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(229, 176, 92, 0.3); margin-bottom: 15px;">
                 <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
                     <label class="input-label" style="color: var(--neon-gold);">Preis (€)</label>
                     <input type="number" id="kundePreis" class="cyber-input-full" placeholder="z.B. 150">
@@ -229,7 +264,6 @@
             }
         }
 
-        // NEU: INTELLIGENTER BILD-KOMPRESSOR (Damit Supabase die Bilder nicht blockiert!)
         function uploadImage(event, num) {
             const file = event.target.files[0];
             if(!file) return;
@@ -239,7 +273,7 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 500; // Maximale Größe (verhindert riesige Dateien)
+                    const MAX_WIDTH = 500; 
                     const MAX_HEIGHT = 500;
                     let width = img.width;
                     let height = img.height;
@@ -255,7 +289,6 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // Bild als schlankes JPG komprimieren (Qualität 0.8)
                     imgData['bild' + num] = canvas.toDataURL('image/jpeg', 0.8);
                     updateImageUI(num);
                 };
@@ -308,12 +341,13 @@
             
             liste.innerHTML = '';
             
-            // 1. Filtern
+            // 1. Filtern (sucht jetzt auch im 2. Nickname)
             let filtered = kunden.filter(k => {
                 if (!k || !k.name) return false; 
                 const searchName = k.name.toLowerCase();
-                const searchKontakt = k.kontakt ? k.kontakt.toLowerCase() : '';
-                return searchName.includes(search) || searchKontakt.includes(search);
+                const searchKontakt1 = k.kontakt ? k.kontakt.toLowerCase() : '';
+                const searchKontakt2 = k.kontakt2 ? k.kontakt2.toLowerCase() : '';
+                return searchName.includes(search) || searchKontakt1.includes(search) || searchKontakt2.includes(search);
             });
 
             // 2. Sortieren
@@ -340,9 +374,23 @@
                 else if (k.praeferenz === 'Save') praeferenzBadge = `<div class="stat-badge badge-save">Save</div>`;
 
                 let preisBadge = k.preis ? `<div class="stat-badge badge-preis">💰 ${k.preis}€</div>` : '';
-                
-                // Strike-Badge anzeigen, falls vorhanden
                 let strikeBadge = (k.noshows && k.noshows > 0) ? `<div class="stat-badge" style="color:var(--neon-red); border-color:var(--neon-red);">⚠️ ${k.noshows}x No-Show</div>` : '';
+
+                // NEU: Anzeige für Kontakt 1 & 2
+                let kontakt1HTML = (k.plattform !== 'none' && k.plattform ? `<span style="color:var(--neon-cyan)">${k.plattform}:</span> ` : '') + (k.kontakt || '');
+                
+                let kontakt2HTML = '';
+                if ((k.plattform2 && k.plattform2 !== 'none') || k.kontakt2 || k.profilLink) {
+                    let plat2Text = (k.plattform2 !== 'none' && k.plattform2 ? k.plattform2 + ': ' : '') + (k.kontakt2 || 'Profil');
+                    
+                    if (k.profilLink) {
+                        let linkUrl = k.profilLink.startsWith('http') ? k.profilLink : 'https://' + k.profilLink;
+                        // Button, der direkt das Portal öffnet, ohne die Karte anzuklicken
+                        kontakt2HTML = `<div style="margin-top: 6px;"><a href="${linkUrl}" target="_blank" onclick="event.stopPropagation();" class="link-button">🔗 ${plat2Text}</a></div>`;
+                    } else {
+                        kontakt2HTML = `<div style="margin-top: 4px; color: #888; font-size: 0.8rem;">${plat2Text}</div>`;
+                    }
+                }
 
                 liste.innerHTML += `
                     <div class="kunden-karte" onclick="openKundeModal(${k.id})">
@@ -351,7 +399,10 @@
                         <div class="kunden-info">
                             <div style="flex-grow: 1;">
                                 <div class="kunden-name">${k.name} ${badgeHTML}</div>
-                                <div class="kunden-kontakt" style="font-size: 0.85rem; opacity: 0.7; margin-top: 2px;">${k.plattform !== 'none' && k.plattform ? k.plattform + ': ' : ''}${k.kontakt || ''}</div>
+                                <div class="kunden-kontakt" style="font-size: 0.85rem; margin-top: 4px;">
+                                    <div>${kontakt1HTML}</div>
+                                    ${kontakt2HTML}
+                                </div>
                             </div>
                             
                             <div class="kunden-stats-row">
@@ -381,6 +432,12 @@
                     document.getElementById('kundeStatus').value = k.status || 'none';
                     document.getElementById('kundePlattform').value = k.plattform || 'none';
                     document.getElementById('kundeKontakt').value = k.kontakt || '';
+                    
+                    // NEUE FELDER LADEN
+                    document.getElementById('kundePlattform2').value = k.plattform2 || 'none';
+                    document.getElementById('kundeKontakt2').value = k.kontakt2 || '';
+                    document.getElementById('kundeLink').value = k.profilLink || '';
+
                     document.getElementById('kundePreis').value = k.preis || '';
                     document.getElementById('kundePraeferenz').value = k.praeferenz || 'none';
                     document.getElementById('kundeGroesse').value = k.groesse || 'Unbekannt';
@@ -399,6 +456,12 @@
                 document.getElementById('kundeStatus').value = 'none';
                 document.getElementById('kundePlattform').value = 'none';
                 document.getElementById('kundeKontakt').value = '';
+                
+                // NEUE FELDER RESETTEN
+                document.getElementById('kundePlattform2').value = 'none';
+                document.getElementById('kundeKontakt2').value = '';
+                document.getElementById('kundeLink').value = '';
+
                 document.getElementById('kundePreis').value = '';
                 document.getElementById('kundePraeferenz').value = 'none';
                 document.getElementById('kundeGroesse').value = 'Unbekannt';
@@ -426,6 +489,12 @@
                 status: document.getElementById('kundeStatus').value,
                 plattform: document.getElementById('kundePlattform').value,
                 kontakt: document.getElementById('kundeKontakt').value,
+                
+                // NEUE FELDER SPEICHERN
+                plattform2: document.getElementById('kundePlattform2').value,
+                kontakt2: document.getElementById('kundeKontakt2').value,
+                profilLink: document.getElementById('kundeLink').value,
+
                 preis: document.getElementById('kundePreis').value,
                 praeferenz: document.getElementById('kundePraeferenz').value,
                 groesse: document.getElementById('kundeGroesse').value,
@@ -436,7 +505,6 @@
                 bild1: imgData.bild1, bild2: imgData.bild2
             };
 
-            // FIX: Erhält wichtige Bestandsdaten (wie noshows), die nicht im Formular stehen!
             if (editKundeId) {
                 kunden = kunden.map(k => k.id === editKundeId ? { ...k, ...data } : k);
             } else {
@@ -445,7 +513,6 @@
             
             localStorage.setItem('appKunden', JSON.stringify(kunden));
             
-            // Warte kurz, damit app.js in Ruhe an Supabase senden kann, bevor das Fenster zugeht
             setTimeout(() => {
                 closeKundeModal(); 
                 renderKunden();
@@ -459,7 +526,6 @@
                 let k = JSON.parse(localStorage.getItem('appKunden')) || [];
                 localStorage.setItem('appKunden', JSON.stringify(k.filter(x => x && x.id !== id)));
                 
-                // Visuelles Feedback beim Löschen, damit man sieht, dass die Cloud arbeitet
                 const loader = document.getElementById('app-loader');
                 loader.querySelector('.loader-text').innerText = "DELETING & SYNCING...";
                 loader.style.display = 'flex';
@@ -476,7 +542,10 @@
         function ladeModalEinstellungen() {
             const s = JSON.parse(localStorage.getItem('appEinstellungen')) || { kat1_name:'VIP', kat2_name:'Stamm', kat3_name:'Neu', plat1:'WhatsApp', plat2:'Instagram' };
             document.getElementById('kundeStatus').innerHTML = `<option value="none">Status wählen</option><option value="kat1">${s.kat1_name}</option><option value="kat2">${s.kat2_name}</option><option value="kat3">${s.kat3_name}</option>`;
-            document.getElementById('kundePlattform').innerHTML = `<option value="none">Keine</option><option value="${s.plat1}">${s.plat1}</option><option value="${s.plat2}">${s.plat2}</option><option value="${s.plat3 || 'Telegram'}">${s.plat3 || 'Telegram'}</option><option value="${s.plat4 || 'Telefon'}">${s.plat4 || 'Telefon'}</option>`;
+            
+            const platOptions = `<option value="none">Keine</option><option value="${s.plat1}">${s.plat1}</option><option value="${s.plat2}">${s.plat2}</option><option value="${s.plat3 || 'Telegram'}">${s.plat3 || 'Telegram'}</option><option value="${s.plat4 || 'Telefon'}">${s.plat4 || 'Telefon'}</option>`;
+            document.getElementById('kundePlattform').innerHTML = platOptions;
+            document.getElementById('kundePlattform2').innerHTML = platOptions; // Für das zweite Dropdown!
         }
 
         function closeKundeModal() { document.getElementById('kundeModal').style.display = 'none'; }

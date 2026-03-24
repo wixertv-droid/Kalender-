@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.5 - TIMELINE & SYNC FIXES)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.6 - TIMER & TIMELINE FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -34,7 +34,6 @@ localStorage.setItem = function(key, value) {
 
     if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
         clearTimeout(syncTimeout);
-        // Upload-Verzögerung auf 300ms, damit vor Seitenwechseln gespeichert wird
         syncTimeout = setTimeout(async () => {
             isUploading = true;
             const newTimestamp = new Date().toISOString();
@@ -90,7 +89,6 @@ async function autoFetchCloud() {
             const dbData = data[0];
             const localUpdate = localStorage.getItem('lastCloudUpdate');
             
-            // Verhindert das Überschreiben mit alten Daten
             const dbTime = dbData.last_update ? new Date(dbData.last_update).getTime() : 0;
             const localTime = localUpdate ? new Date(localUpdate).getTime() : 0;
             
@@ -113,7 +111,7 @@ async function autoFetchCloud() {
                 const urlParams = new URLSearchParams(window.location.search);
                 renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
             }
-            updateLiveSystem(); // Hier ist die Reihenfolge richtig
+            updateLiveSystem(); 
             
             isSyncingFromCloud = false;
             console.log("☁️ Auto-Sync Update empfangen!");
@@ -135,14 +133,16 @@ async function initCloud() {
         hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
         
         setTimeout(() => {
+            // HIER IST DIE FEHLENDE ZEILE: Timer-Sperre aufheben!
+            hdCountdown.innerText = "SYNCING..."; 
+            
             hdCountdown.style.color = "";
             hdCountdown.style.borderColor = "";
             hdCountdown.style.textShadow = "";
             
-            // FIX: ZUERST Kalender & Termine aufbauen, DANN erst die rote Linie zeichnen!
             if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
             if(typeof renderWeek === 'function') renderWeek(); 
-            updateLiveSystem(); // Muss zwingend als letztes kommen!
+            updateLiveSystem(); // Startet den Timer & zeichnet die rote Linie
             
         }, 3000);
     }
@@ -661,7 +661,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderWeek();             
     updateLiveSystem();
     
-    // Cloud anwerfen
     initCloud();
 
     if ('serviceWorker' in navigator) {

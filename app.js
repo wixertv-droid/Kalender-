@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.4 - SYNC & TIMEOUT FIXES)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.5 - TIMELINE & SYNC FIXES)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -34,7 +34,7 @@ localStorage.setItem = function(key, value) {
 
     if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
         clearTimeout(syncTimeout);
-        // FIX: Zeit auf 300ms reduziert, damit er vor einem Seitenwechsel garantiert hochlädt!
+        // Upload-Verzögerung auf 300ms, damit vor Seitenwechseln gespeichert wird
         syncTimeout = setTimeout(async () => {
             isUploading = true;
             const newTimestamp = new Date().toISOString();
@@ -90,7 +90,7 @@ async function autoFetchCloud() {
             const dbData = data[0];
             const localUpdate = localStorage.getItem('lastCloudUpdate');
             
-            // FIX: Nur updaten, wenn die DB-Zeit WIRKLICH jünger ist als unsere lokale (verhindert Überschreiben mit alten Daten)
+            // Verhindert das Überschreiben mit alten Daten
             const dbTime = dbData.last_update ? new Date(dbData.last_update).getTime() : 0;
             const localTime = localUpdate ? new Date(localUpdate).getTime() : 0;
             
@@ -113,7 +113,7 @@ async function autoFetchCloud() {
                 const urlParams = new URLSearchParams(window.location.search);
                 renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
             }
-            updateLiveSystem();
+            updateLiveSystem(); // Hier ist die Reihenfolge richtig
             
             isSyncingFromCloud = false;
             console.log("☁️ Auto-Sync Update empfangen!");
@@ -139,11 +139,11 @@ async function initCloud() {
             hdCountdown.style.borderColor = "";
             hdCountdown.style.textShadow = "";
             
-            updateLiveSystem(); 
-            
-            // FIX: Wenn der Countdown verschwindet, müssen die Termine zwingend neu gemalt werden!
+            // FIX: ZUERST Kalender & Termine aufbauen, DANN erst die rote Linie zeichnen!
             if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
             if(typeof renderWeek === 'function') renderWeek(); 
+            updateLiveSystem(); // Muss zwingend als letztes kommen!
+            
         }, 3000);
     }
 }
@@ -661,6 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderWeek();             
     updateLiveSystem();
     
+    // Cloud anwerfen
     initCloud();
 
     if ('serviceWorker' in navigator) {

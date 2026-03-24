@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.3 - SUPABASE STABILITY FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.4 - SYNC & TIMEOUT FIXES)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -34,6 +34,7 @@ localStorage.setItem = function(key, value) {
 
     if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
         clearTimeout(syncTimeout);
+        // FIX: Zeit auf 300ms reduziert, damit er vor einem Seitenwechsel garantiert hochlädt!
         syncTimeout = setTimeout(async () => {
             isUploading = true;
             const newTimestamp = new Date().toISOString();
@@ -59,20 +60,19 @@ localStorage.setItem = function(key, value) {
                     body: JSON.stringify(payload)
                 });
                 
-                // Wichtig: Wir merken uns unseren eigenen Zeitstempel, damit die App nicht blinkt!
                 originalSetItem.call(localStorage, 'lastCloudUpdate', newTimestamp);
                 console.log("☁️ Auto-Upload erfolgreich!");
             } catch(e) { console.error("Cloud Upload Fehler:", e); }
             finally {
                 isUploading = false;
             }
-        }, 1000); // 1 Sekunde warten, bis alles gespeichert ist
+        }, 300); 
     }
 };
 
 // --- 2. DER AUTO-DOWNLOAD ---
 async function autoFetchCloud() {
-    if (isUploading) return; // Nicht stören, während wir tippen/speichern!
+    if (isUploading) return; 
     
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*`, {
@@ -90,8 +90,11 @@ async function autoFetchCloud() {
             const dbData = data[0];
             const localUpdate = localStorage.getItem('lastCloudUpdate');
             
-            // Nur aktualisieren, wenn Supabase neuer ist als wir
-            if (!dbData.last_update || localUpdate === dbData.last_update) return;
+            // FIX: Nur updaten, wenn die DB-Zeit WIRKLICH jünger ist als unsere lokale (verhindert Überschreiben mit alten Daten)
+            const dbTime = dbData.last_update ? new Date(dbData.last_update).getTime() : 0;
+            const localTime = localUpdate ? new Date(localUpdate).getTime() : 0;
+            
+            if (dbTime <= localTime) return;
 
             isSyncingFromCloud = true;
             
@@ -121,10 +124,7 @@ async function autoFetchCloud() {
 async function initCloud() {
     isCloudConnected = true;
     
-    // Direkt beim Start synchronisieren
     await autoFetchCloud();
-    
-    // Alle 10 Sekunden auf neue Termine prüfen
     setInterval(autoFetchCloud, 10000); 
 
     const hdCountdown = document.getElementById('header-countdown');
@@ -135,46 +135,22 @@ async function initCloud() {
         hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
         
         setTimeout(() => {
-            hdCountdown.innerText = "SYNCING...";
             hdCountdown.style.color = "";
             hdCountdown.style.borderColor = "";
             hdCountdown.style.textShadow = "";
             
             updateLiveSystem(); 
+            
+            // FIX: Wenn der Countdown verschwindet, müssen die Termine zwingend neu gemalt werden!
             if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
+            if(typeof renderWeek === 'function') renderWeek(); 
         }, 3000);
     }
 }
 
-// ☁️ Manueller Button (Nur für den Import-Fix wichtig!)
-window.forceCloudUpload = async function() {
-    const btn = document.getElementById('btn-cloud-upload');
-    if(btn) { btn.innerText = "LÄDT HOCH..."; btn.style.opacity = "0.5"; }
-
-    const newTimestamp = new Date().toISOString();
-    const payload = {
-        id: 1, 
-        termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
-        kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
-        einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
-        pin: localStorage.getItem('appPin') || "0000",
-        last_update: newTimestamp
-    };
-
-    try {
-        await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
-            method: 'PATCH', 
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify(payload)
-        });
-        originalSetItem.call(localStorage, 'lastCloudUpdate', newTimestamp);
-        if(btn) { btn.innerText = "✅ IN CLOUD GESPEICHERT"; btn.style.background = "var(--neon-green)"; btn.style.color = "#000"; btn.style.opacity = "1"; }
-        setTimeout(() => { if(btn) { btn.innerText = "☁️ IN CLOUD HOCHLADEN"; btn.style.background = ""; btn.style.color = ""; } }, 3000);
-    } catch(e) { alert("❌ Fehler beim manuellen Upload."); }
-};
-
+window.forceCloudUpload = async function() { alert("Das System speichert jetzt alles sofort vollautomatisch!"); };
 window.forceCloudDownload = async function() {
-    alert("Das System lädt jetzt alles automatisch! Du brauchst diesen Button eigentlich nicht mehr.");
+    alert("Manueller Sync gestartet...");
     await autoFetchCloud();
 }
 
@@ -194,13 +170,11 @@ function parseTimeStr(timeStr, defaultStr) {
 }
 
 function getArbeitsZeiten(settingsObj) {
-    // FIX: Falls undefined, lade DEFAULTS rein
     const settings = { ...DEFAULTS, ...settingsObj };
     let startMin = parseTimeStr(settings.arbeitsStart, "08:00");
     let endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
     
     if (settings.arbeitsEnde === "00:00" || endeMin === 0) endeMin = 1440;
-    
     if (endeMin <= startMin) endeMin = startMin + 60; 
     return { startMin, endeMin, gesamtArbeitsMin: endeMin - startMin };
 }
@@ -234,7 +208,7 @@ function generiereWochenAnsicht() {
     const heuteISO = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
-    const settings = { ...DEFAULTS, ...storedSettings }; // FIX: Verhindert 'undefined'
+    const settings = { ...DEFAULTS, ...storedSettings }; 
     
     const zeiten = getArbeitsZeiten(settings);
     const startMin = zeiten.startMin;
@@ -687,7 +661,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderWeek();             
     updateLiveSystem();
     
-    // Cloud anwerfen (lädt den aktuellen Stand runter, falls wir hier hinterherhinken)
     initCloud();
 
     if ('serviceWorker' in navigator) {

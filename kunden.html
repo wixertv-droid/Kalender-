@@ -1,4 +1,4 @@
-                <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <script>
@@ -191,7 +191,7 @@
                 <textarea id="kundeNotizen" class="cyber-input-full" rows="3" placeholder="Wichtige Fakten..."></textarea>
             </div>
 
-            <button class="btn-save" onclick="saveKunde()">PROFIL SPEICHERN</button>
+            <button class="btn-save" id="btn-save-profil" onclick="saveKunde()">PROFIL SPEICHERN</button>
             <button onclick="closeKundeModal()" style="width:100%; background:none; border:none; color:#666; padding:15px; cursor:pointer; text-transform:uppercase; letter-spacing:2px; font-weight:bold;">Abbrechen</button>
         </div>
     </div>
@@ -229,13 +229,37 @@
             }
         }
 
+        // NEU: INTELLIGENTER BILD-KOMPRESSOR (Damit Supabase die Bilder nicht blockiert!)
         function uploadImage(event, num) {
             const file = event.target.files[0];
             if(!file) return;
+
             const reader = new FileReader();
-            reader.onload = (e) => {
-                imgData['bild' + num] = e.target.result;
-                updateImageUI(num);
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 500; // Maximale Größe (verhindert riesige Dateien)
+                    const MAX_HEIGHT = 500;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    } else {
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Bild als schlankes JPG komprimieren (Qualität 0.8)
+                    imgData['bild' + num] = canvas.toDataURL('image/jpeg', 0.8);
+                    updateImageUI(num);
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
@@ -284,9 +308,9 @@
             
             liste.innerHTML = '';
             
-            // 1. Filtern (KUGELSICHER: Ignoriert defekte/leere Einträge)
+            // 1. Filtern
             let filtered = kunden.filter(k => {
-                if (!k || !k.name) return false; // Schutzschild
+                if (!k || !k.name) return false; 
                 const searchName = k.name.toLowerCase();
                 const searchKontakt = k.kontakt ? k.kontakt.toLowerCase() : '';
                 return searchName.includes(search) || searchKontakt.includes(search);
@@ -305,7 +329,7 @@
             });
 
             // 3. Karten zeichnen
-                filtered.forEach(k => {
+            filtered.forEach(k => {
                 const avatarImg = k.bild1 ? `background-image:url('${k.bild1}'); background-size:cover; background-position:center;` : "";
                 const avatarText = k.bild1 ? "" : (k.name ? k.name.substring(0,2).toUpperCase() : "??");
                 
@@ -316,6 +340,9 @@
                 else if (k.praeferenz === 'Save') praeferenzBadge = `<div class="stat-badge badge-save">Save</div>`;
 
                 let preisBadge = k.preis ? `<div class="stat-badge badge-preis">💰 ${k.preis}€</div>` : '';
+                
+                // Strike-Badge anzeigen, falls vorhanden
+                let strikeBadge = (k.noshows && k.noshows > 0) ? `<div class="stat-badge" style="color:var(--neon-red); border-color:var(--neon-red);">⚠️ ${k.noshows}x No-Show</div>` : '';
 
                 liste.innerHTML += `
                     <div class="kunden-karte" onclick="openKundeModal(${k.id})">
@@ -333,6 +360,7 @@
                                 <div class="stat-badge">📐 ${k.groesse || '?'}</div>
                                 <div class="stat-badge">V: ${getStarString(k.vibe)}</div>
                                 <div class="stat-badge">P: ${getStarString(k.perf)}</div>
+                                ${strikeBadge}
                             </div>
                             
                             ${k.vorlieben && viewMode === 'grid' ? `<div class="kunden-notiz" style="border-left-color:var(--neon-violet); margin-top:10px;"><strong>Vorlieben:</strong> ${k.vorlieben}</div>` : ''}
@@ -387,6 +415,10 @@
             const name = document.getElementById('kundeName').value;
             if(!name) return alert("Name fehlt!");
             
+            const btn = document.getElementById('btn-save-profil');
+            btn.innerText = "SPEICHERT IN CLOUD...";
+            btn.style.opacity = "0.7";
+            
             let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             const data = {
                 id: editKundeId || Date.now(),
@@ -404,18 +436,40 @@
                 bild1: imgData.bild1, bild2: imgData.bild2
             };
 
-            if (editKundeId) kunden = kunden.map(k => k.id === editKundeId ? data : k);
-            else kunden.push(data);
+            // FIX: Erhält wichtige Bestandsdaten (wie noshows), die nicht im Formular stehen!
+            if (editKundeId) {
+                kunden = kunden.map(k => k.id === editKundeId ? { ...k, ...data } : k);
+            } else {
+                kunden.push(data);
+            }
             
             localStorage.setItem('appKunden', JSON.stringify(kunden));
-            closeKundeModal(); renderKunden();
+            
+            // Warte kurz, damit app.js in Ruhe an Supabase senden kann, bevor das Fenster zugeht
+            setTimeout(() => {
+                closeKundeModal(); 
+                renderKunden();
+                btn.innerText = "PROFIL SPEICHERN";
+                btn.style.opacity = "1";
+            }, 800);
         }
 
         function deleteKunde(id) {
             if(confirm("Dieses Profil wirklich löschen?")) {
                 let k = JSON.parse(localStorage.getItem('appKunden')) || [];
                 localStorage.setItem('appKunden', JSON.stringify(k.filter(x => x && x.id !== id)));
-                renderKunden();
+                
+                // Visuelles Feedback beim Löschen, damit man sieht, dass die Cloud arbeitet
+                const loader = document.getElementById('app-loader');
+                loader.querySelector('.loader-text').innerText = "DELETING & SYNCING...";
+                loader.style.display = 'flex';
+                loader.style.opacity = '1';
+                
+                setTimeout(() => {
+                    renderKunden();
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.display = 'none', 500);
+                }, 800);
             }
         }
 

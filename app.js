@@ -1,47 +1,50 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.2 - SUPABASE AUTO-SYNC)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.3 - SUPABASE STABILITY FIX)
    ========================================================================== */
 
 const DEFAULTS = {
-    arbeitsStart: '08:00',
-    arbeitsEnde: '22:00',
-    wochenstart: 'MO',
+    arbeitsStart: '08:00', arbeitsEnde: '22:00', wochenstart: 'MO',
     kat1_name: 'VIP', kat1_farbe: '#e5b05c',
     kat2_name: 'Stamm', kat2_farbe: '#ff2a6d',
     kat3_name: 'Neu', kat3_farbe: '#05d9e8',
-    plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon'
+    plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon',
+    testBestand: 0
 };
 
 let currentEditId = null; 
 
 /* ==========================================================================
-   >>> SUPABASE ANBINDUNG (ECHTE POSTGRES DATENBANK MIT AUTO-SYNC) <<<
+   >>> SUPABASE ANBINDUNG (ECHTE POSTGRES DATENBANK) <<<
    ========================================================================== */
 const SUPABASE_URL = 'https://xdynlrghhnxbmcylafxg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkeW5scmdoaG54Ym1jeWxhZnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDcxMzgsImV4cCI6MjA4OTkyMzEzOH0.Zre-Vv5MElN3q6-R804ZrhYxnvEwhB0b3f8_ohFoe3A';
 
 let isCloudConnected = false; 
 let isSyncingFromCloud = false;
+let isUploading = false;
 let syncTimeout = null;
 
-// --- 1. DER AUTO-UPLOAD (Speichert jede Änderung sofort in der Cloud) ---
+// --- 1. DER AUTO-UPLOAD ---
 const originalSetItem = localStorage.setItem;
 
 localStorage.setItem = function(key, value) {
     originalSetItem.call(localStorage, key, value);
 
-    if (isSyncingFromCloud) return; // Verhindert Endlos-Schleife beim Herunterladen
+    if (isSyncingFromCloud) return; 
 
     if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
         clearTimeout(syncTimeout);
         syncTimeout = setTimeout(async () => {
+            isUploading = true;
+            const newTimestamp = new Date().toISOString();
+            
             const payload = {
                 id: 1, 
                 termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
                 kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
                 einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
                 pin: localStorage.getItem('appPin') || "0000",
-                last_update: new Date().toISOString()
+                last_update: newTimestamp
             };
 
             try {
@@ -55,14 +58,22 @@ localStorage.setItem = function(key, value) {
                     },
                     body: JSON.stringify(payload)
                 });
-                console.log("☁️ Auto-Upload zu Supabase erfolgreich!");
+                
+                // Wichtig: Wir merken uns unseren eigenen Zeitstempel, damit die App nicht blinkt!
+                originalSetItem.call(localStorage, 'lastCloudUpdate', newTimestamp);
+                console.log("☁️ Auto-Upload erfolgreich!");
             } catch(e) { console.error("Cloud Upload Fehler:", e); }
-        }, 500); // 500ms Puffer, wartet bis alle Speichervorgänge fertig sind
+            finally {
+                isUploading = false;
+            }
+        }, 1000); // 1 Sekunde warten, bis alles gespeichert ist
     }
 };
 
-// --- 2. DER AUTO-DOWNLOAD (Holt neue Daten unsichtbar im Hintergrund) ---
+// --- 2. DER AUTO-DOWNLOAD ---
 async function autoFetchCloud() {
+    if (isUploading) return; // Nicht stören, während wir tippen/speichern!
+    
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*`, {
             method: 'GET',
@@ -73,15 +84,14 @@ async function autoFetchCloud() {
         });
 
         if (!response.ok) return;
-        
         const data = await response.json();
         
         if(data && data.length > 0) {
             const dbData = data[0];
-            
-            // Nur aktualisieren, wenn sich wirklich was geändert hat (spart Leistung)
             const localUpdate = localStorage.getItem('lastCloudUpdate');
-            if (localUpdate === dbData.last_update) return;
+            
+            // Nur aktualisieren, wenn Supabase neuer ist als wir
+            if (!dbData.last_update || localUpdate === dbData.last_update) return;
 
             isSyncingFromCloud = true;
             
@@ -89,15 +99,13 @@ async function autoFetchCloud() {
             if (dbData.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(dbData.kunden));
             if (dbData.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen));
             if (dbData.pin) originalSetItem.call(localStorage, 'appPin', dbData.pin);
-            originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update || '');
+            originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update);
             
             ladeUndWendeEinstellungenAn();
-            
-            // Ansichten leise aktualisieren
             if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
             if(typeof renderWeek === 'function') renderWeek();
             if(typeof renderKunden === 'function') renderKunden();
-            if(typeof calculateStats === 'function') { calculateStats(); /* Refresht Stats-Werte */ }
+            if(typeof calculateStats === 'function') calculateStats();
             if(typeof renderTimeline === 'function') {
                 const urlParams = new URLSearchParams(window.location.search);
                 renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
@@ -113,10 +121,10 @@ async function autoFetchCloud() {
 async function initCloud() {
     isCloudConnected = true;
     
-    // Direkt beim Start einmal kräftig synchronisieren!
+    // Direkt beim Start synchronisieren
     await autoFetchCloud();
     
-    // Alle 10 Sekunden checkt die App im Hintergrund, ob es neue Termine von anderen Geräten gibt
+    // Alle 10 Sekunden auf neue Termine prüfen
     setInterval(autoFetchCloud, 10000); 
 
     const hdCountdown = document.getElementById('header-countdown');
@@ -133,14 +141,42 @@ async function initCloud() {
             hdCountdown.style.textShadow = "";
             
             updateLiveSystem(); 
-            if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht(); // Grünen Punkt rendern
+            if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
         }, 3000);
     }
 }
 
-// Manuelle Buttons (Falls du sie in den Einstellungen noch nutzen willst, sonst ignorieren)
-window.forceCloudUpload = async function() { alert("Dein System speichert jetzt automatisch im Hintergrund! Du brauchst diesen Button nicht mehr."); }
-window.forceCloudDownload = async function() { alert("Dein System lädt Updates jetzt automatisch! Du brauchst diesen Button nicht mehr."); }
+// ☁️ Manueller Button (Nur für den Import-Fix wichtig!)
+window.forceCloudUpload = async function() {
+    const btn = document.getElementById('btn-cloud-upload');
+    if(btn) { btn.innerText = "LÄDT HOCH..."; btn.style.opacity = "0.5"; }
+
+    const newTimestamp = new Date().toISOString();
+    const payload = {
+        id: 1, 
+        termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
+        kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
+        einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
+        pin: localStorage.getItem('appPin') || "0000",
+        last_update: newTimestamp
+    };
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
+            method: 'PATCH', 
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify(payload)
+        });
+        originalSetItem.call(localStorage, 'lastCloudUpdate', newTimestamp);
+        if(btn) { btn.innerText = "✅ IN CLOUD GESPEICHERT"; btn.style.background = "var(--neon-green)"; btn.style.color = "#000"; btn.style.opacity = "1"; }
+        setTimeout(() => { if(btn) { btn.innerText = "☁️ IN CLOUD HOCHLADEN"; btn.style.background = ""; btn.style.color = ""; } }, 3000);
+    } catch(e) { alert("❌ Fehler beim manuellen Upload."); }
+};
+
+window.forceCloudDownload = async function() {
+    alert("Das System lädt jetzt alles automatisch! Du brauchst diesen Button eigentlich nicht mehr.");
+    await autoFetchCloud();
+}
 
 
 /* ==========================================================================
@@ -157,7 +193,9 @@ function parseTimeStr(timeStr, defaultStr) {
     return h * 60 + m;
 }
 
-function getArbeitsZeiten(settings) {
+function getArbeitsZeiten(settingsObj) {
+    // FIX: Falls undefined, lade DEFAULTS rein
+    const settings = { ...DEFAULTS, ...settingsObj };
     let startMin = parseTimeStr(settings.arbeitsStart, "08:00");
     let endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
     
@@ -169,14 +207,14 @@ function getArbeitsZeiten(settings) {
 
 function ladeUndWendeEinstellungenAn() {
     try {
-        const gespeicherteDaten = localStorage.getItem('appEinstellungen');
-        const settings = gespeicherteDaten ? JSON.parse(gespeicherteDaten) : DEFAULTS;
+        const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+        const settings = { ...DEFAULTS, ...storedSettings };
 
         const root = document.documentElement;
-        root.style.setProperty('--color-kat1', settings.kat1_farbe || DEFAULTS.kat1_farbe);
-        root.style.setProperty('--color-kat2', settings.kat2_farbe || DEFAULTS.kat2_farbe);
-        root.style.setProperty('--color-kat3', settings.kat3_farbe || DEFAULTS.kat3_farbe);
-    } catch (e) { console.error("Fehler in ladeUndWendeEinstellungenAn:", e); }
+        root.style.setProperty('--color-kat1', settings.kat1_farbe);
+        root.style.setProperty('--color-kat2', settings.kat2_farbe);
+        root.style.setProperty('--color-kat3', settings.kat3_farbe);
+    } catch (e) {}
 }
 
 function generiereWochenAnsicht() {
@@ -195,7 +233,8 @@ function generiereWochenAnsicht() {
     const heute = new Date();
     const heuteISO = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
-    const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
+    const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+    const settings = { ...DEFAULTS, ...storedSettings }; // FIX: Verhindert 'undefined'
     
     const zeiten = getArbeitsZeiten(settings);
     const startMin = zeiten.startMin;
@@ -228,14 +267,9 @@ function generiereWochenAnsicht() {
         let isHeute = (isoDatum === heuteISO) ? 'heute' : '';
         let timelineId = (isoDatum === heuteISO) ? 'id="timeline-heute"' : '';
 
-        // HIER IST DER GRÜNE PUNKT WIEDER DA!
         if (i === 0 && document.getElementById('header-monat')) {
             const monate = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-            
-            const cloudDot = isCloudConnected 
-                ? ' <span id="cloud-dot-indicator" style="color: var(--neon-green); font-size: 0.6em; vertical-align: super; text-shadow: 0 0 10px var(--neon-green);" title="Cloud Sync Aktiv">●</span>' 
-                : '';
-                
+            const cloudDot = isCloudConnected ? ' <span id="cloud-dot-indicator" style="color: var(--neon-green); font-size: 0.6em; vertical-align: super; text-shadow: 0 0 10px var(--neon-green);" title="Cloud Sync Aktiv">●</span>' : '';
             document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
@@ -255,14 +289,15 @@ function openModal(editId = null) {
 
     currentEditId = editId;
 
-    const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
+    const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+    const settings = { ...DEFAULTS, ...storedSettings };
     
     const catDropdown = document.getElementById('terminKategorie');
     if (catDropdown) {
         catDropdown.innerHTML = `
-            <option value="kat1">${settings.kat1_name || 'VIP'}</option>
-            <option value="kat2">${settings.kat2_name || 'Stamm'}</option>
-            <option value="kat3">${settings.kat3_name || 'Neu'}</option>
+            <option value="kat1">${settings.kat1_name}</option>
+            <option value="kat2">${settings.kat2_name}</option>
+            <option value="kat3">${settings.kat3_name}</option>
         `;
     }
 
@@ -270,10 +305,10 @@ function openModal(editId = null) {
     if (platDropdown) {
         platDropdown.innerHTML = `
             <option value="none">Keine Plattform</option>
-            <option value="${settings.plat1 || 'WhatsApp'}">${settings.plat1 || 'WhatsApp'}</option>
-            <option value="${settings.plat2 || 'Instagram'}">${settings.plat2 || 'Instagram'}</option>
-            <option value="${settings.plat3 || 'Telegram'}">${settings.plat3 || 'Telegram'}</option>
-            <option value="${settings.plat4 || 'Telefon'}">${settings.plat4 || 'Telefon'}</option>
+            <option value="${settings.plat1}">${settings.plat1}</option>
+            <option value="${settings.plat2}">${settings.plat2}</option>
+            <option value="${settings.plat3}">${settings.plat3}</option>
+            <option value="${settings.plat4}">${settings.plat4}</option>
         `;
     }
 
@@ -466,7 +501,8 @@ function saveAppointment() {
 function updateLiveSystem() {
     const containerHeute = document.getElementById('timeline-heute');
     if (containerHeute) {
-        const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
+        const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+        const settings = { ...DEFAULTS, ...storedSettings };
         
         const zeiten = getArbeitsZeiten(settings);
         const startMin = zeiten.startMin;
@@ -560,7 +596,8 @@ function renderWeek() {
     if (!wochenContainer) return;
 
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-    const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || DEFAULTS;
+    const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+    const settings = { ...DEFAULTS, ...storedSettings };
 
     const zeiten = getArbeitsZeiten(settings);
     const startMin = zeiten.startMin;
@@ -649,8 +686,8 @@ document.addEventListener('DOMContentLoaded', () => {
     generiereWochenAnsicht(); 
     renderWeek();             
     updateLiveSystem();
-    setInterval(updateLiveSystem, 60000);
-
+    
+    // Cloud anwerfen (lädt den aktuellen Stand runter, falls wir hier hinterherhinken)
     initCloud();
 
     if ('serviceWorker' in navigator) {

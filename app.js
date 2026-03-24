@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.1 - SUPABASE + TIMER FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.2 - SUPABASE AUTO-SYNC)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -15,84 +15,54 @@ const DEFAULTS = {
 let currentEditId = null; 
 
 /* ==========================================================================
-   >>> SUPABASE ANBINDUNG (ECHTE POSTGRES DATENBANK) <<<
+   >>> SUPABASE ANBINDUNG (ECHTE POSTGRES DATENBANK MIT AUTO-SYNC) <<<
    ========================================================================== */
 const SUPABASE_URL = 'https://xdynlrghhnxbmcylafxg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkeW5scmdoaG54Ym1jeWxhZnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDcxMzgsImV4cCI6MjA4OTkyMzEzOH0.Zre-Vv5MElN3q6-R804ZrhYxnvEwhB0b3f8_ohFoe3A';
 
-let isCloudConnected = false; // Steuert den grünen Punkt
+let isCloudConnected = false; 
+let isSyncingFromCloud = false;
+let syncTimeout = null;
 
-async function initCloud() {
-    isCloudConnected = true;
-    
-    const hdCountdown = document.getElementById('header-countdown');
-    if(hdCountdown) {
-        hdCountdown.innerText = "SUPABASE CONNECTED";
-        hdCountdown.style.color = "var(--neon-green)";
-        hdCountdown.style.borderColor = "var(--neon-green)";
-        hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
-        
-        setTimeout(() => {
-            // Nach 3 Sekunden geben wir das Feld wieder für den Timer frei!
-            hdCountdown.innerText = "SYNCING...";
-            hdCountdown.style.color = "";
-            hdCountdown.style.borderColor = "";
-            hdCountdown.style.textShadow = "";
-            
-            updateLiveSystem(); 
-            generiereWochenAnsicht(); // Läd den Monat neu, um den grünen Punkt zu setzen
-        }, 3000);
-    }
-}
+// --- 1. DER AUTO-UPLOAD (Speichert jede Änderung sofort in der Cloud) ---
+const originalSetItem = localStorage.setItem;
 
-// ☁️ MANUELLER UPLOAD
-window.forceCloudUpload = async function() {
-    const btn = document.getElementById('btn-cloud-upload');
-    if(btn) { btn.innerText = "LÄDT HOCH..."; btn.style.opacity = "0.5"; }
+localStorage.setItem = function(key, value) {
+    originalSetItem.call(localStorage, key, value);
 
-    const payload = {
-        id: 1, 
-        termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
-        kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
-        einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
-        pin: localStorage.getItem('appPin') || "0000",
-        last_update: new Date().toISOString()
-    };
+    if (isSyncingFromCloud) return; // Verhindert Endlos-Schleife beim Herunterladen
 
-    try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
-            method: 'PATCH', 
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(payload)
-        });
+    if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
+        clearTimeout(syncTimeout);
+        syncTimeout = setTimeout(async () => {
+            const payload = {
+                id: 1, 
+                termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
+                kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
+                einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
+                pin: localStorage.getItem('appPin') || "0000",
+                last_update: new Date().toISOString()
+            };
 
-        if (!response.ok) throw new Error("Netzwerkfehler");
-
-        if(btn) { 
-            btn.innerText = "✅ IN CLOUD GESPEICHERT"; 
-            btn.style.background = "var(--neon-green)"; 
-            btn.style.color = "#000"; 
-            btn.style.opacity = "1"; 
-        }
-        setTimeout(() => { if(btn) { btn.innerText = "☁️ IN CLOUD HOCHLADEN"; btn.style.background = ""; btn.style.color = ""; } }, 3000);
-    } catch(e) { 
-        alert("❌ Fehler beim Hochladen. Bist du mit dem Internet verbunden?"); 
-        if(btn) { btn.innerText = "☁️ IN CLOUD HOCHLADEN"; btn.style.opacity = "1"; }
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
+                    method: 'PATCH', 
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                console.log("☁️ Auto-Upload zu Supabase erfolgreich!");
+            } catch(e) { console.error("Cloud Upload Fehler:", e); }
+        }, 500); // 500ms Puffer, wartet bis alle Speichervorgänge fertig sind
     }
 };
 
-// ☁️ MANUELLER DOWNLOAD
-window.forceCloudDownload = async function() {
-    if(!confirm("⚠️ ACHTUNG: Das überschreibt deine aktuellen lokalen Daten mit dem Stand aus der Cloud. Fortfahren?")) return;
-
-    const btn = document.getElementById('btn-cloud-download');
-    if(btn) { btn.innerText = "LÄDT HERUNTER..."; btn.style.opacity = "0.5"; }
-
+// --- 2. DER AUTO-DOWNLOAD (Holt neue Daten unsichtbar im Hintergrund) ---
+async function autoFetchCloud() {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*`, {
             method: 'GET',
@@ -102,28 +72,76 @@ window.forceCloudDownload = async function() {
             }
         });
 
-        if (!response.ok) throw new Error("Netzwerkfehler");
+        if (!response.ok) return;
         
         const data = await response.json();
         
         if(data && data.length > 0) {
             const dbData = data[0];
-            if (dbData.termine) localStorage.setItem('appTermine', JSON.stringify(dbData.termine));
-            if (dbData.kunden) localStorage.setItem('appKunden', JSON.stringify(dbData.kunden));
-            if (dbData.einstellungen) localStorage.setItem('appEinstellungen', JSON.stringify(dbData.einstellungen));
-            if (dbData.pin) localStorage.setItem('appPin', dbData.pin);
             
-            alert("✅ Daten erfolgreich aus der Datenbank geladen!");
-            location.reload();
-        } else {
-            alert("❌ Es wurden keine Daten in der Cloud gefunden.");
-            if(btn) { btn.innerText = "☁️ AUS CLOUD LADEN"; btn.style.opacity = "1"; }
+            // Nur aktualisieren, wenn sich wirklich was geändert hat (spart Leistung)
+            const localUpdate = localStorage.getItem('lastCloudUpdate');
+            if (localUpdate === dbData.last_update) return;
+
+            isSyncingFromCloud = true;
+            
+            if (dbData.termine) originalSetItem.call(localStorage, 'appTermine', JSON.stringify(dbData.termine));
+            if (dbData.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(dbData.kunden));
+            if (dbData.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen));
+            if (dbData.pin) originalSetItem.call(localStorage, 'appPin', dbData.pin);
+            originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update || '');
+            
+            ladeUndWendeEinstellungenAn();
+            
+            // Ansichten leise aktualisieren
+            if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
+            if(typeof renderWeek === 'function') renderWeek();
+            if(typeof renderKunden === 'function') renderKunden();
+            if(typeof calculateStats === 'function') { calculateStats(); /* Refresht Stats-Werte */ }
+            if(typeof renderTimeline === 'function') {
+                const urlParams = new URLSearchParams(window.location.search);
+                renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
+            }
+            updateLiveSystem();
+            
+            isSyncingFromCloud = false;
+            console.log("☁️ Auto-Sync Update empfangen!");
         }
-    } catch(e) { 
-        alert("❌ Fehler beim Herunterladen."); 
-        if(btn) { btn.innerText = "☁️ AUS CLOUD LADEN"; btn.style.opacity = "1"; }
+    } catch(e) { console.log("Cloud Sync Hintergrundfehler:", e); }
+}
+
+async function initCloud() {
+    isCloudConnected = true;
+    
+    // Direkt beim Start einmal kräftig synchronisieren!
+    await autoFetchCloud();
+    
+    // Alle 10 Sekunden checkt die App im Hintergrund, ob es neue Termine von anderen Geräten gibt
+    setInterval(autoFetchCloud, 10000); 
+
+    const hdCountdown = document.getElementById('header-countdown');
+    if(hdCountdown) {
+        hdCountdown.innerText = "SUPABASE CONNECTED";
+        hdCountdown.style.color = "var(--neon-green)";
+        hdCountdown.style.borderColor = "var(--neon-green)";
+        hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
+        
+        setTimeout(() => {
+            hdCountdown.innerText = "SYNCING...";
+            hdCountdown.style.color = "";
+            hdCountdown.style.borderColor = "";
+            hdCountdown.style.textShadow = "";
+            
+            updateLiveSystem(); 
+            if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht(); // Grünen Punkt rendern
+        }, 3000);
     }
-};
+}
+
+// Manuelle Buttons (Falls du sie in den Einstellungen noch nutzen willst, sonst ignorieren)
+window.forceCloudUpload = async function() { alert("Dein System speichert jetzt automatisch im Hintergrund! Du brauchst diesen Button nicht mehr."); }
+window.forceCloudDownload = async function() { alert("Dein System lädt Updates jetzt automatisch! Du brauchst diesen Button nicht mehr."); }
+
 
 /* ==========================================================================
    >>> REST DER APP-LOGIK <<<
@@ -496,7 +514,6 @@ function updateLiveSystem() {
     }
 
     const countdownElement = document.getElementById('header-countdown');
-    // HIER WIRD DER TIMER WIEDER FREIGEGEBEN (Wenn der Text nicht mehr "SUPABASE CONNECTED" ist)
     if (countdownElement && countdownElement.innerText !== "SUPABASE CONNECTED") {
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         const jetzt = new Date();

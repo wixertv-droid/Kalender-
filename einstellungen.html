@@ -46,7 +46,7 @@
                     <input type="password" id="newPin" class="cyber-input-full" placeholder="4 Ziffern" inputmode="numeric">
                 </div>
             </div>
-            <button onclick="changeSystemPin()" class="btn-save" style="margin-top: 10px; padding: 15px; font-size: 1rem;">PIN Aktualisieren</button>
+            <button onclick="changeSystemPin(this)" class="btn-save" style="margin-top: 10px; padding: 15px; font-size: 1rem;">PIN Aktualisieren</button>
         </div>
 
         <div class="settings-card" style="border-left: 4px solid var(--neon-green);">
@@ -144,36 +144,48 @@
     </div>
 
     <script>
-        window.addEventListener('load', () => {
+        // Globale Variable für den aktuellen PIN aus der Datenbank
+        let currentDbPin = "0000";
+
+        window.addEventListener('load', async () => {
+            // Lade aktuelle Einstellungen
             const saved = localStorage.getItem('appEinstellungen');
             const d = {
-                arbeitsStart: '08:00',
-                arbeitsEnde: '22:00',
+                arbeitsStart: '08:00', arbeitsEnde: '22:00',
                 kat1_name: 'VIP', kat1_farbe: '#e5b05c',
                 kat2_name: 'Stamm', kat2_farbe: '#ff2a6d',
                 kat3_name: 'Neu', kat3_farbe: '#05d9e8',
                 plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon',
                 testBestand: 0
             };
-            
             const s = saved ? JSON.parse(saved) : d;
 
             document.getElementById('arbeitsStart').value = s.arbeitsStart || d.arbeitsStart;
             document.getElementById('arbeitsEnde').value = s.arbeitsEnde || d.arbeitsEnde;
-
             document.getElementById('testBestand').value = s.testBestand !== undefined ? s.testBestand : d.testBestand;
-
             document.getElementById('kat1_name').value = s.kat1_name || d.kat1_name;
             document.getElementById('kat1_farbe').value = s.kat1_farbe || d.kat1_farbe;
             document.getElementById('kat2_name').value = s.kat2_name || d.kat2_name;
             document.getElementById('kat2_farbe').value = s.kat2_farbe || d.kat2_farbe;
             document.getElementById('kat3_name').value = s.kat3_name || d.kat3_name;
             document.getElementById('kat3_farbe').value = s.kat3_farbe || d.kat3_farbe;
-            
             document.getElementById('plat1').value = s.plat1 || d.plat1;
             document.getElementById('plat2').value = s.plat2 || d.plat2;
             document.getElementById('plat3').value = s.plat3 || d.plat3;
             document.getElementById('plat4').value = s.plat4 || d.plat4;
+
+            // NEU: PIN aus Supabase laden (Nutzt die Variablen supabaseUrl und supabaseKey aus deiner app.js)
+            try {
+                const res = await fetch(`${supabaseUrl}/rest/v1/app_settings?id=eq.1&select=pin_code`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.length > 0) currentDbPin = data[0].pin_code;
+                }
+            } catch (e) {
+                console.error("Fehler beim Laden der PIN aus Supabase:", e);
+            }
 
             setTimeout(() => {
                 const loader = document.getElementById('app-loader');
@@ -181,12 +193,12 @@
             }, 400);
         });
 
-        function changeSystemPin() {
+        // NEU: PIN in Supabase speichern
+        async function changeSystemPin(btnElement) {
             const oldInput = document.getElementById('oldPin').value;
             const newInput = document.getElementById('newPin').value;
-            const currentPin = localStorage.getItem('appPin') || "0000";
 
-            if (oldInput !== currentPin) {
+            if (oldInput !== currentDbPin) {
                 alert("❌ Die aktuelle PIN ist falsch!");
                 return;
             }
@@ -195,18 +207,43 @@
                 return;
             }
 
-            localStorage.setItem('appPin', newInput);
-            alert("✅ System-PIN wurde erfolgreich aktualisiert!");
-            document.getElementById('oldPin').value = '';
-            document.getElementById('newPin').value = '';
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "WIRD GESPEICHERT...";
+
+            try {
+                const res = await fetch(`${supabaseUrl}/rest/v1/app_settings?id=eq.1`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ pin_code: newInput })
+                });
+
+                if (res.ok) {
+                    alert("✅ System-PIN wurde erfolgreich in der Cloud aktualisiert!");
+                    currentDbPin = newInput;
+                    document.getElementById('oldPin').value = '';
+                    document.getElementById('newPin').value = '';
+                } else {
+                    alert("❌ Fehler beim Speichern in Supabase!");
+                }
+            } catch (e) {
+                alert("❌ Netzwerkfehler beim Speichern der PIN!");
+            }
+            
+            btnElement.innerText = originalText;
         }
 
+        // Ab hier alles original Agenda 2050
         function saveSystemSettings() {
             const btn = document.getElementById('save-btn');
             btn.innerText = "SPEICHERT IN CLOUD...";
             
             let tb = parseInt(document.getElementById('testBestand').value);
-            if (isNaN(tb)) tb = 0; // Verhindert Fehler, falls das Feld leer ist
+            if (isNaN(tb)) tb = 0; 
             
             const newSettings = {
                 arbeitsStart: document.getElementById('arbeitsStart').value || '08:00',
@@ -224,10 +261,8 @@
                 plat4: document.getElementById('plat4').value
             };
 
-            // Speichert lokal. app.js lädt dies im Hintergrund automatisch zu Supabase hoch!
             localStorage.setItem('appEinstellungen', JSON.stringify(newSettings));
             
-            // Farben sofort auf dieser Seite anwenden (falls die Funktion in app.js existiert)
             if (typeof ladeUndWendeEinstellungenAn === 'function') {
                 ladeUndWendeEinstellungenAn();
             }
@@ -236,8 +271,6 @@
             btn.style.color = "#000";
             btn.innerText = "✅ ERFOLGREICH GESPEICHERT";
             
-            // WICHTIG: KEIN AUTOMATISCHER SEITENWECHSEL MEHR!
-            // Wir lassen die Seite offen. Die Cloud hat so alle Zeit der Welt, die Daten im Hintergrund hochzuladen.
             setTimeout(() => { 
                 btn.style.background = ""; 
                 btn.style.color = ""; 

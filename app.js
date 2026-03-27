@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.7 - CLOCK-DRIFT SYNC FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.8 - EVENT SYNC INTEGRATION)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -32,7 +32,8 @@ localStorage.setItem = function(key, value) {
 
     if (isSyncingFromCloud) return; 
 
-    if (["appTermine", "appKunden", "appEinstellungen", "appPin"].includes(key)) {
+    // NEU: appEvents zur Überwachungsliste hinzugefügt
+    if (["appTermine", "appKunden", "appEinstellungen", "appPin", "appEvents"].includes(key)) {
         clearTimeout(syncTimeout);
         syncTimeout = setTimeout(async () => {
             isUploading = true;
@@ -45,6 +46,7 @@ localStorage.setItem = function(key, value) {
                 kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
                 einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
                 pin: localStorage.getItem('appPin') || "0000",
+                events: JSON.parse(localStorage.getItem('appEvents') || '[]'), // NEU: Events einpacken
                 last_update: newTimestamp
             };
 
@@ -61,7 +63,7 @@ localStorage.setItem = function(key, value) {
                 });
                 
                 originalSetItem.call(localStorage, 'lastCloudUpdate', newTimestamp);
-                console.log("☁️ Auto-Upload erfolgreich!");
+                console.log("☁️ Auto-Upload (inkl. Events) erfolgreich!");
             } catch(e) { console.error("Cloud Upload Fehler:", e); }
             finally {
                 isUploading = false;
@@ -90,8 +92,7 @@ async function autoFetchCloud() {
             const dbData = data[0];
             const localUpdate = localStorage.getItem('lastCloudUpdate');
             
-            // FIX: Absolutes, stures Vergleichen! Ist der Stempel exakt identisch? 
-            // Wenn nicht (egal ob älter oder neuer), dann ZIEH DIE DATEN!
+            // Absolutes, stures Vergleichen!
             if (!dbData.last_update || dbData.last_update === localUpdate) return;
 
             isSyncingFromCloud = true;
@@ -100,6 +101,8 @@ async function autoFetchCloud() {
             if (dbData.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(dbData.kunden));
             if (dbData.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen));
             if (dbData.pin) originalSetItem.call(localStorage, 'appPin', dbData.pin);
+            if (dbData.events) originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events)); // NEU: Events entpacken
+            
             originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update);
             
             ladeUndWendeEinstellungenAn();
@@ -107,6 +110,7 @@ async function autoFetchCloud() {
             if(typeof renderWeek === 'function') renderWeek();
             if(typeof renderKunden === 'function') renderKunden();
             if(typeof calculateStats === 'function') calculateStats();
+            if(typeof renderEvents === 'function') renderEvents(); // Aktualisiert die Event-Seite live
             if(typeof renderTimeline === 'function') {
                 const urlParams = new URLSearchParams(window.location.search);
                 renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);

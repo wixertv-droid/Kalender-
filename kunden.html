@@ -18,9 +18,10 @@
     <script src="app.js" defer></script>
 
     <style>
-        /* --- BESSERE STRUKTUR FÜR DIE KUNDEN-LISTEN --- */
+        /* --- BESSERE STRUKTUR FÜR DIE KUNDEN-LISTEN (TABLET/HANDY SAFE) --- */
         .kunden-container { padding: 15px; margin-bottom: 80px; }
         
+        /* Listen-Ansicht: Flexbox mit Wrap, damit es am Handy nicht zerquetscht wird */
         .kunde-row { 
             position: relative;
             display: flex; 
@@ -37,6 +38,7 @@
         }
         .kunde-row:hover { background: rgba(5, 217, 232, 0.05); border-color: var(--neon-cyan); }
         
+        /* Karten-Ansicht: Aufgeräumt */
         .kunde-card { 
             position: relative; 
             background: rgba(10, 15, 20, 0.7); 
@@ -236,11 +238,7 @@
                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
                         <label>Status</label>
                         <select id="kStatus" class="cyber-select">
-                            <option value="none">Keiner</option>
-                            <option value="kat1">VIP</option>
-                            <option value="kat2">Stamm</option>
-                            <option value="kat3">Neu</option>
-                        </select>
+                            </select>
                     </div>
                 </div>
             </div>
@@ -289,12 +287,13 @@
                         </select>
                     </div>
                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                        <label>Penis</label>
+                        <label>Körperbau</label>
                         <select id="kGroesse" class="cyber-select">
                             <option value="Unbekannt">Unbekannt</option>
-                            <option value="Zierlich">klein</option>
+                            <option value="Zierlich">Zierlich</option>
                             <option value="Mittel">Mittel</option>
                             <option value="Groß">Groß</option>
+                            <option value="Kurvig">Kurvig</option>
                         </select>
                     </div>
                 </div>
@@ -338,18 +337,37 @@
         let ansicht = localStorage.getItem('kundenAnsicht') || 'liste';
 
         function loadDropdowns() {
-            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon' };
+            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { 
+                plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon',
+                kat1_name: 'VIP', kat2_name: 'Stamm', kat3_name: 'Neu'
+            };
+            
+            // Lade dynamische Kategorie-Namen aus den Settings oder nutze Fallbacks
+            const kat1 = settings.kat1_name || 'VIP';
+            const kat2 = settings.kat2_name || 'Stamm';
+            const kat3 = settings.kat3_name || 'Neu';
+            
+            const statusSelect = document.getElementById('kStatus');
+            if (statusSelect) {
+                statusSelect.innerHTML = `
+                    <option value="none">Keiner</option>
+                    <option value="kat1">${kat1}</option>
+                    <option value="kat2">${kat2}</option>
+                    <option value="kat3">${kat3}</option>
+                `;
+            }
+
             const p1 = document.getElementById('kPlattform');
             const p2 = document.getElementById('kPlattform2');
-            const html = `
+            const htmlPlattform = `
                 <option value="none">Keine</option>
-                <option value="${settings.plat1}">${settings.plat1}</option>
-                <option value="${settings.plat2}">${settings.plat2}</option>
-                <option value="${settings.plat3}">${settings.plat3}</option>
-                <option value="${settings.plat4}">${settings.plat4}</option>
+                <option value="${settings.plat1 || 'WhatsApp'}">${settings.plat1 || 'WhatsApp'}</option>
+                <option value="${settings.plat2 || 'Instagram'}">${settings.plat2 || 'Instagram'}</option>
+                <option value="${settings.plat3 || 'Telegram'}">${settings.plat3 || 'Telegram'}</option>
+                <option value="${settings.plat4 || 'Telefon'}">${settings.plat4 || 'Telefon'}</option>
             `;
-            if (p1) p1.innerHTML = html;
-            if (p2) p2.innerHTML = html;
+            if (p1) p1.innerHTML = htmlPlattform;
+            if (p2) p2.innerHTML = htmlPlattform;
         }
 
         function toggleAnsicht() {
@@ -508,7 +526,6 @@
                     
                     const initials = (k.name ? k.name.substring(0,2) : '??').toUpperCase();
                     
-                    // Avatar-Bild anzeigen + Klickbar machen für Lightbox!
                     let avatarStyle = "";
                     let avatarInhalt = initials;
                     let avatarClick = "";
@@ -563,7 +580,6 @@
                     
                     const initials = (k.name ? k.name.substring(0,2) : '??').toUpperCase();
                     
-                    // Avatar-Bild anzeigen + Klickbar machen für Lightbox!
                     let avatarStyle = "width:38px; height:38px; font-size:0.9rem; ";
                     let avatarInhalt = initials;
                     let avatarClick = "";

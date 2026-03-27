@@ -438,7 +438,7 @@
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
         }
 
-        // --- HAUPT-RENDER FÜR DIE TIMELINE ---
+        // --- HAUPT-RENDER FÜR DIE DYNAMISCHE TIMELINE ---
         function renderTimeline(datum) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
@@ -449,11 +449,9 @@
                 if(!liste) return;
                 liste.innerHTML = '';
                 
-                // Wir filtern normale Termine UND Events für diesen Tag
                 const tagesTermine = termine.filter(t => t.datum === datum);
                 const tagesEvents = events.filter(e => e.datum === datum).map(e => ({...e, isEvent: true, start: e.start || "00:00", ende: e.ende || "23:59"}));
                 
-                // Alles zusammenmischen und sortieren
                 let combinedItems = [...tagesTermine, ...tagesEvents];
                 combinedItems.sort((a,b) => (a.start || "").localeCompare(b.start || ""));
 
@@ -480,23 +478,34 @@
                     el.className = 'timeline-item';
                     
                     if(item.isMarker) {
+                        el.style.alignItems = 'center';
                         el.innerHTML = `
                             <div class="timeline-time" style="opacity:0.4; color: var(--neon-cyan); text-shadow:none; font-weight: normal;">${item.time}</div>
                             <div class="timeline-dot" style="width:14px; height:14px; left:-25.5px; border-color:rgba(5, 217, 232, 0.3); background: transparent; box-shadow:none;"></div>
                             <div style="flex-grow: 1; margin-left:20px; border-bottom:1px dashed rgba(5, 217, 232, 0.15); height: 1px; margin-top: 5px;"></div>
                         `;
                     } else {
+                        // KARTEN ALIGNMENT & HÖHEN-BERECHNUNG
+                        el.style.alignItems = 'flex-start';
                         const t = item.data;
                         const isPast = (datum < currentDate) || (datum === currentDate && t.ende <= currentTime);
                         
-                        // EVENT KARTEN RENDERN (NEU)
+                        // Zeit in Minuten umrechnen für die Kästchenhöhe (1 Min = 1.5px)
+                        let startMin = parseTimeStr(t.start, "00:00");
+                        let endeMin = parseTimeStr(t.ende, "23:59");
+                        if (t.ende === "00:00") endeMin = 1440;
+                        if (endeMin <= startMin) endeMin += 1440;
+                        let dauer = endeMin - startMin;
+                        let cardHeight = Math.max(120, dauer * 1.5);
+                        
+                        // EVENT KARTEN RENDERN
                         if (t.isEvent) {
                             const f = t.color || '#ff3300';
                             el.innerHTML = `
-                                <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f};">${t.start}</div>
-                                <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f};"></div>
+                                <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f}; top: 25px;">${t.start}</div>
+                                <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f}; top: 27px;"></div>
                                 
-                                <div class="termin-karte" style="border-left-color:${f}; background: rgba(255, 51, 0, 0.05);" onclick="location.href='events.html'">
+                                <div class="termin-karte" style="border-left-color:${f}; background: rgba(255, 51, 0, 0.05); min-height: ${cardHeight}px; align-items: flex-start;" onclick="location.href='events.html'">
                                     <div style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid ${f}; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-right: 15px; flex-shrink: 0; box-shadow: 0 0 10px ${f};">🔥</div>
                                     <div class="slot-inhalt" style="flex-grow: 1;">
                                         <div style="font-size: 1.4rem; font-weight: 900; color: ${f}; text-transform: uppercase; letter-spacing: 1px;">
@@ -518,7 +527,6 @@
 
                             let displayPreis = t.preis || (dbKunde ? dbKunde.preis : '');
                             let displayPraeferenz = t.praeferenz || (dbKunde ? dbKunde.praeferenz : 'none');
-                            
                             let expectedPreis = displayPreis || ''; 
                             
                             let statusHTML = '';
@@ -555,10 +563,10 @@
                             let preisHTML = displayPreis ? `<span class="stat-badge badge-preis" style="margin-left: 5px; font-size: 0.75rem; padding: 2px 6px;">💰 ${displayPreis}€</span>` : '';
 
                             el.innerHTML = `
-                                <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f};">${t.start}</div>
-                                <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f};"></div>
+                                <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f}; top: 25px;">${t.start}</div>
+                                <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f}; top: 27px;"></div>
                                 
-                                <div class="termin-karte" style="border-left-color:${f}" onclick="openDetailModal(${t.id})">
+                                <div class="termin-karte" style="border-left-color:${f}; min-height: ${cardHeight}px; align-items: flex-start;" onclick="openDetailModal(${t.id})">
                                     ${avatarHTML}
                                     <div class="slot-inhalt" style="flex-grow: 1;">
                                         <div style="font-size: 1.4rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px;">
@@ -571,7 +579,7 @@
                                         </div>
                                         ${dbExtensionsHTML}
                                     </div>
-                                    <div style="display: flex; flex-direction: column; gap: 8px; align-items: stretch; justify-content: center; margin-left: 15px; min-width: 110px;">
+                                    <div style="display: flex; flex-direction: column; gap: 8px; justify-content: flex-start; margin-left: 15px; min-width: 110px;">
                                         ${statusHTML}
                                         ${deleteHTML}
                                     </div>

@@ -2,7 +2,6 @@
 <html lang="de">
 <head>
     <script>
-        // HÄRTESTER TÜRSTEHER DER WELT
         if (!sessionStorage.getItem('authKey')) {
             window.location.replace('index.html');
         }
@@ -19,7 +18,6 @@
     <script src="app.js" defer></script>
 
     <style>
-        /* Lightbox für Vollbild-Ansicht */
         #lightbox { 
             display: none; position: fixed; z-index: 7000; 
             top: 0; left: 0; width: 100%; height: 100%; 
@@ -31,14 +29,14 @@
             box-shadow: 0 0 50px rgba(5, 217, 232, 0.5); border: 2px solid var(--neon-cyan); 
         }
 
-        /* Timeline Styles */
-        .vertical-timeline { position: relative; padding-left: 100px; margin-top: 40px; }
+        /* NEU: Starre Matrix Container */
+        .vertical-timeline { position: relative; padding-left: 100px; margin-top: 40px; width: 100%; }
         .vertical-timeline::before { 
             content: ''; position: absolute; top: 0; left: 80px; 
             width: 4px; height: 100%; background: rgba(5, 217, 232, 0.3); 
             border-radius: 2px; box-shadow: 0 0 10px rgba(5, 217, 232, 0.2); 
         }
-        .timeline-item { position: relative; margin-bottom: 50px; min-height: 40px; display: flex; align-items: center; }
+        
         .timeline-time { 
             position: absolute; left: -100px; width: 75px; text-align: right; 
             font-size: 1.1rem; font-weight: 900; letter-spacing: 1px; 
@@ -50,17 +48,15 @@
             border-radius: 50%; z-index: 2; box-shadow: 0 0 15px var(--neon-cyan); 
         }
 
-        /* Termin Karte */
         .termin-karte { 
-            background: var(--glass-bg); padding: 25px; border-radius: 16px; 
+            background: var(--glass-bg); padding: 15px 25px; border-radius: 16px; 
             display: flex; justify-content: space-between; align-items: center; 
             border: 1px solid rgba(5, 217, 232, 0.1); border-left: 6px solid var(--neon-cyan); 
-            margin-left: 10px; cursor: pointer; width: 100%; 
+            margin-left: 10px; cursor: pointer; width: calc(100% - 10px); box-sizing: border-box;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: transform 0.3s, box-shadow 0.3s; 
         }
         .termin-karte:hover { transform: translateX(5px); box-shadow: 0 15px 40px rgba(5, 217, 232, 0.15); border-color: rgba(5, 217, 232, 0.3); }
 
-        /* Auto-Suggest Kunden Suche */
         #kundenVorschlaege { 
             position: absolute; z-index: 1000; width: 100%; background: rgba(5, 15, 25, 0.95); 
             border: 1px solid var(--neon-cyan); max-height: 250px; overflow-y: auto; 
@@ -69,7 +65,6 @@
         .vorschlag-item { padding: 15px; cursor: pointer; border-bottom: 1px solid rgba(5, 217, 232, 0.1); color: var(--neon-cyan); transition: background 0.2s; }
         .vorschlag-item:hover { background: rgba(5, 217, 232, 0.15); }
         
-        /* Checkout & Status Styles */
         .btn-abrechnen { 
             background: rgba(229, 176, 92, 0.1); border: 1px solid var(--neon-gold); 
             color: var(--neon-gold); padding: 10px 15px; border-radius: 8px; 
@@ -81,7 +76,6 @@
         .status-done { color: var(--neon-green); font-weight: bold; font-size: 0.9rem; border: 1px solid var(--neon-green); padding: 4px 10px; border-radius: 6px; background: rgba(57, 255, 20, 0.1); white-space: nowrap; }
         .status-noshow { color: var(--neon-red); font-weight: bold; font-size: 0.9rem; border: 1px solid var(--neon-red); padding: 4px 10px; border-radius: 6px; background: rgba(255, 0, 60, 0.1); white-space: nowrap; }
 
-        /* Badges */
         .badge-ao { color: #ffcc00; border-color: #ffcc00; }
         .badge-save { color: #00ff00; border-color: #00ff00; }
         .badge-preis { color: var(--neon-gold); }
@@ -112,8 +106,8 @@
         </div>
     </div>
 
-    <div class="tag-detail-container" style="padding-bottom: 90px;">
-        <div id="tages-liste" class="vertical-timeline" style="min-height: 80vh;"></div>
+    <div class="tag-detail-container" style="padding-bottom: 90px; overflow-x: hidden;">
+        <div id="tages-liste" class="vertical-timeline"></div>
     </div>
 
     <nav class="bottom-nav">
@@ -212,15 +206,11 @@
             <div id="detailKundenBilder" style="display: flex; gap: 15px; margin-bottom: 25px; justify-content: center;"></div>
             
             <div style="background: rgba(0,0,0,0.4); padding: 30px; border-radius: 20px; border-left: 4px solid var(--neon-cyan); margin-bottom: 25px;">
-                
                 <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Kunde / Bezeichnung</div>
                 <div id="detailName" style="font-size: 1.8rem; font-weight: 900; color: white; margin-bottom: 15px;">-</div>
-                
                 <div id="detailTerminSettings" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;"></div>
-
                 <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Zeit & Typ</div>
                 <div id="detailZeitKat" style="font-size: 1.2rem; color: var(--neon-gold); font-weight: bold; margin-bottom: 15px;">-</div>
-                
                 <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Kontakt</div>
                 <div id="detailKontaktFull" style="font-size: 1.1rem; color: white; margin-bottom: 15px;">-</div>
 
@@ -255,7 +245,6 @@
             <div style="background: rgba(255, 0, 60, 0.05); padding: 20px; border-radius: 15px; border: 1px dashed var(--neon-red);">
                 <div style="color: var(--neon-red); font-weight: bold; margin-bottom: 10px; text-transform: uppercase;">❌ Nicht erschienen</div>
                 <button onclick="submitAbrechnung('noshow')" style="width: 100%; padding: 15px; border-radius: 10px; background: var(--neon-red); color: white; font-weight: bold; border: none; cursor: pointer;">NO-SHOW EINTRAGEN</button>
-                <p style="font-size: 0.8rem; color: #888; margin-top: 10px;">Vermerkt einen "Strike" in der Kundendatenbank.</p>
             </div>
 
             <button onclick="document.getElementById('abrechnungModal').style.display='none'" style="width: 100%; background: none; border: none; color: #666; margin-top: 20px; cursor: pointer; text-transform: uppercase;">Später erledigen</button>
@@ -274,14 +263,8 @@
             const input = document.getElementById('terminName').value.toLowerCase();
             const vBox = document.getElementById('kundenVorschlaege');
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-            
             if (input.length < 1) { vBox.style.display = 'none'; return; }
-            
-            const treffer = kunden.filter(k => 
-                (k.name && k.name.toLowerCase().includes(input)) || 
-                (k.kontakt && k.kontakt.toLowerCase().includes(input))
-            );
-            
+            const treffer = kunden.filter(k => (k.name && k.name.toLowerCase().includes(input)) || (k.kontakt && k.kontakt.toLowerCase().includes(input)));
             if (treffer.length > 0) {
                 vBox.innerHTML = '';
                 treffer.forEach(k => {
@@ -289,14 +272,12 @@
                     d.className = 'vorschlag-item';
                     let warningHTML = (k.noshows && k.noshows > 0) ? `<span style="color: var(--neon-red); font-weight: bold; float: right; font-size: 0.8rem;">⚠️ ${k.noshows}x NO-SHOW</span>` : '';
                     d.innerHTML = `<strong>${k.name}</strong> ${warningHTML}<br><small style="color:#aaa;">${k.plattform !== 'none' ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</small>`;
-                    
                     d.onclick = () => {
                         document.getElementById('terminName').value = k.name;
                         document.getElementById('terminPlattform').value = k.plattform || 'none';
                         document.getElementById('terminKontakt').value = k.kontakt || '';
                         document.getElementById('terminPreis').value = k.preis || '';
                         document.getElementById('terminPraeferenz').value = k.praeferenz || 'none';
-
                         if(typeof toggleKontaktFeld === 'function') toggleKontaktFeld();
                         vBox.style.display = 'none';
                         if(k.noshows && k.noshows > 0) alert(`ACHTUNG: Dieser Kunde ist in der Vergangenheit bereits ${k.noshows}x nicht erschienen!`);
@@ -317,7 +298,6 @@
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             const t = termine.find(x => x.id === id);
             if(!t) return;
-            
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             let kunde = kunden.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
@@ -332,9 +312,7 @@
 
             const settingsBox = document.getElementById('detailTerminSettings');
             settingsBox.innerHTML = '';
-            if (displayPreis) {
-                settingsBox.innerHTML += `<div class="stat-badge badge-preis" style="font-size: 1.1rem; padding: 5px 12px; margin-bottom: 5px;">💰 ${displayPreis} €</div>`;
-            }
+            if (displayPreis) settingsBox.innerHTML += `<div class="stat-badge badge-preis" style="font-size: 1.1rem; padding: 5px 12px; margin-bottom: 5px;">💰 ${displayPreis} €</div>`;
             if (displayPraeferenz && displayPraeferenz !== 'none') {
                 let pClass = displayPraeferenz === 'AO' ? 'badge-ao' : 'badge-save';
                 settingsBox.innerHTML += `<div class="stat-badge ${pClass}" style="font-size: 1.1rem; padding: 5px 12px; margin-bottom: 5px;">${displayPraeferenz}</div>`;
@@ -348,14 +326,7 @@
                 dbContainer.style.display = 'flex';
                 const groesse = kunde.groesse && kunde.groesse !== "Unbekannt" ? kunde.groesse : "?";
                 let noshowHTML = (kunde.noshows && kunde.noshows > 0) ? `<div class="stat-badge" style="border-color:var(--neon-red); color:var(--neon-red);">⚠️ ${kunde.noshows}x No-Show</div>` : '';
-
-                statsRow.innerHTML = `
-                    <div class="stat-badge">📐 ${groesse}</div>
-                    <div class="stat-badge">Vibe <span class="stars">${getStarString(kunde.vibe)}</span></div>
-                    <div class="stat-badge">Perf <span class="stars">${getStarString(kunde.perf)}</span></div> 
-                    ${noshowHTML}
-                `;
-
+                statsRow.innerHTML = `<div class="stat-badge">📐 ${groesse}</div><div class="stat-badge">Vibe <span class="stars">${getStarString(kunde.vibe)}</span></div><div class="stat-badge">Perf <span class="stars">${getStarString(kunde.perf)}</span></div>${noshowHTML}`;
                 if (kunde.vorlieben && kunde.vorlieben.trim() !== '') {
                     vorliebenDiv.style.display = 'block';
                     vorliebenDiv.innerHTML = `<strong>Vorlieben / Tabus:</strong><br>${kunde.vorlieben.replace(/\n/g, '<br>')}`;
@@ -368,7 +339,6 @@
                 if (kunde.bild1) b.innerHTML += `<div style="width:120px; height:120px; border-radius:50%; border:3px solid var(--neon-cyan); background-image:url(${kunde.bild1}); background-size:cover; background-position:center; cursor:pointer; box-shadow: 0 0 15px var(--neon-cyan);" onclick="openLightbox('${kunde.bild1}')"></div>`;
                 if (kunde.bild2) b.innerHTML += `<div style="width:120px; height:120px; border-radius:50%; border:3px solid var(--neon-cyan); background-image:url(${kunde.bild2}); background-size:cover; background-position:center; cursor:pointer; box-shadow: 0 0 15px var(--neon-cyan);" onclick="openLightbox('${kunde.bild2}')"></div>`;
             }
-
             document.getElementById('btn-edit-termin').onclick = function() { closeDetailModal(); openModal(id); };
             document.getElementById('detailModal').style.display = 'flex';
         }
@@ -387,11 +357,9 @@
             let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             let settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
-
             const tIndex = termine.findIndex(t => t.id === currentAbrechnungId);
             if(tIndex === -1) return;
             const t = termine[tIndex];
-
             const kIndex = kunden.findIndex(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
 
             if (status === 'done') {
@@ -402,27 +370,17 @@
                 termine[tIndex].umsatz = umsatz;
 
                 let praeferenz = t.praeferenz || (kIndex > -1 ? kunden[kIndex].praeferenz : 'none');
-
                 if (praeferenz === 'AO') {
                     let aktuellerBestand = settings.testBestand !== undefined ? parseInt(settings.testBestand) : 0;
-                    
                     if (aktuellerBestand > 0) {
                         settings.testBestand = aktuellerBestand - 1;
                         let neuerBestand = settings.testBestand;
                         localStorage.setItem('appEinstellungen', JSON.stringify(settings));
-                        
-                        if (neuerBestand === 0) {
-                            alert("✔️ Umsatz gespeichert!\n\n🚨 WARNUNG: Das war dein letzter Test! Dein Lagerbestand ist jetzt bei 0.");
-                        } else if (neuerBestand <= 3) {
-                            alert(`✔️ Umsatz gespeichert!\n\n⚠️ ACHTUNG: Du hast jetzt nur noch ${neuerBestand} Test(s) zur Verfügung! Bitte rechtzeitig nachbestellen.`);
-                        } else {
-                            alert(`✔️ Umsatz gespeichert! Ein Test wurde abgezogen. (Noch ${neuerBestand} übrig)`);
-                        }
-                    } else {
-                        alert("✔️ Umsatz gespeichert.\n\n❌ ACHTUNG: Der Kunde hatte 'AO', aber dein Test-Inventar steht bereits auf 0! Es konnte kein Test abgezogen werden.");
-                    }
+                        if (neuerBestand === 0) alert("✔️ Umsatz gespeichert!\n\n🚨 WARNUNG: Das war dein letzter Test! Dein Lagerbestand ist jetzt bei 0.");
+                        else if (neuerBestand <= 3) alert(`✔️ Umsatz gespeichert!\n\n⚠️ ACHTUNG: Du hast jetzt nur noch ${neuerBestand} Test(s) zur Verfügung! Bitte rechtzeitig nachbestellen.`);
+                        else alert(`✔️ Umsatz gespeichert! Ein Test wurde abgezogen. (Noch ${neuerBestand} übrig)`);
+                    } else alert("✔️ Umsatz gespeichert.\n\n❌ ACHTUNG: Der Kunde hatte 'AO', aber dein Test-Inventar steht bereits auf 0! Es konnte kein Test abgezogen werden.");
                 }
-
             } else if (status === 'noshow') {
                 termine[tIndex].status = 'noshow';
                 if (kIndex > -1) {
@@ -438,7 +396,10 @@
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
         }
 
-        // --- HAUPT-RENDER FÜR DIE DYNAMISCHE TIMELINE ---
+
+        /* ==========================================================================
+           >>> NEUE DYNAMISCHE TIMELINE LOGIK (STARRE MATRIX) <<<
+           ========================================================================== */
         function renderTimeline(datum) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
@@ -451,9 +412,7 @@
                 
                 const tagesTermine = termine.filter(t => t.datum === datum);
                 const tagesEvents = events.filter(e => e.datum === datum).map(e => ({...e, isEvent: true, start: e.start || "00:00", ende: e.ende || "23:59"}));
-                
                 let combinedItems = [...tagesTermine, ...tagesEvents];
-                combinedItems.sort((a,b) => (a.start || "").localeCompare(b.start || ""));
 
                 const now = new Date();
                 const currentDate = now.toISOString().split('T')[0];
@@ -463,146 +422,149 @@
                 let endeH = parseInt(settings.arbeitsEnde.split(':')[0]) || 22;
                 if (endeH <= startH) endeH += 24; 
                 
-                let dynamicHours = [];
-                for(let h = startH; h <= endeH; h += 2) dynamicHours.push(String(h % 24).padStart(2, '0') + ':00');
+                const startMinTag = startH * 60;
+                const endeMinTag = endeH * 60;
+                const gesamtMinuten = endeMinTag - startMinTag;
                 
-                let combined = [];
-                dynamicHours.forEach(h => { 
-                    if(!combinedItems.find(t => t.start === h)) combined.push({isMarker: true, time: h}); 
-                });
-                combinedItems.forEach(t => combined.push({isMarker: false, data: t, time: t.start}));
-                combined.sort((a,b) => a.time.localeCompare(b.time));
+                // SKALIERUNG: 2 Pixel pro Minute = 120 Pixel pro Stunde!
+                const PIXELS_PER_MIN = 2; 
+                
+                // Setze die feste Höhe des Containers anhand der Gesamtzeit
+                liste.style.height = (gesamtMinuten * PIXELS_PER_MIN + 100) + 'px';
+                liste.style.position = 'relative';
 
-                combined.forEach(item => {
-                    const el = document.createElement('div');
-                    el.className = 'timeline-item';
+                // 1. STARRE UHRZEIT-LINIEN ZEICHNEN (Jede Stunde eine Linie)
+                for(let h = startH; h <= endeH; h++) {
+                    const topPx = (h * 60 - startMinTag) * PIXELS_PER_MIN;
+                    const mark = document.createElement('div');
+                    mark.style.position = 'absolute';
+                    mark.style.top = topPx + 'px';
+                    mark.style.left = '0';
+                    mark.style.width = '100%';
+                    mark.style.zIndex = '1';
                     
-                    if(item.isMarker) {
-                        el.style.alignItems = 'center';
+                    const displayH = String(h % 24).padStart(2, '0') + ':00';
+                    
+                    mark.innerHTML = `
+                        <div class="timeline-time" style="opacity:0.3; color: var(--neon-cyan); text-shadow:none; font-weight: normal; top: -12px;">${displayH}</div>
+                        <div class="timeline-dot" style="width:12px; height:12px; left:-24px; top: -6px; border-color:rgba(5, 217, 232, 0.3); background: var(--bg-deep); box-shadow:none;"></div>
+                        <div style="border-bottom:1px dashed rgba(5, 217, 232, 0.15); width: 100%; position: absolute; top: 0; left: 0;"></div>
+                    `;
+                    liste.appendChild(mark);
+                }
+
+                // 2. KARTEN EXAKT PLATZIEREN (Absolute Position & Höhe)
+                combinedItems.forEach(t => {
+                    let sMin = parseTimeStr(t.start, "00:00");
+                    let eMin = parseTimeStr(t.ende, "23:59");
+                    if (t.ende === "00:00") eMin = 1440;
+                    if (eMin <= sMin) eMin += 1440;
+                    
+                    let anzeigeStart = Math.max(startMinTag, sMin);
+                    let anzeigeEnde = Math.min(endeMinTag, eMin);
+                    let dauer = anzeigeEnde - anzeigeStart;
+                    if (dauer < 30) dauer = 30; // Wenn ein Termin super kurz ist, trotzdem lesbar machen
+                    
+                    // Berechnung von Position & Höhe
+                    const topPx = (anzeigeStart - startMinTag) * PIXELS_PER_MIN;
+                    const heightPx = dauer * PIXELS_PER_MIN;
+
+                    const el = document.createElement('div');
+                    el.style.position = 'absolute';
+                    el.style.top = topPx + 'px';
+                    el.style.left = '0';
+                    el.style.width = '100%';
+                    el.style.zIndex = '5';
+                    
+                    const isPast = (datum < currentDate) || (datum === currentDate && t.ende <= currentTime);
+                    
+                    // EVENT KARTEN
+                    if (t.isEvent) {
+                        const f = t.color || '#ff3300';
                         el.innerHTML = `
-                            <div class="timeline-time" style="opacity:0.4; color: var(--neon-cyan); text-shadow:none; font-weight: normal;">${item.time}</div>
-                            <div class="timeline-dot" style="width:14px; height:14px; left:-25.5px; border-color:rgba(5, 217, 232, 0.3); background: transparent; box-shadow:none;"></div>
-                            <div style="flex-grow: 1; margin-left:20px; border-bottom:1px dashed rgba(5, 217, 232, 0.15); height: 1px; margin-top: 5px;"></div>
-                        `;
-                    } else {
-                        // KARTEN ALIGNMENT & HÖHEN-BERECHNUNG
-                        el.style.alignItems = 'flex-start';
-                        const t = item.data;
-                        const isPast = (datum < currentDate) || (datum === currentDate && t.ende <= currentTime);
-                        
-                        // Zeit in Minuten umrechnen für die Kästchenhöhe (1 Min = 1.5px)
-                        let startMin = parseTimeStr(t.start, "00:00");
-                        let endeMin = parseTimeStr(t.ende, "23:59");
-                        if (t.ende === "00:00") endeMin = 1440;
-                        if (endeMin <= startMin) endeMin += 1440;
-                        let dauer = endeMin - startMin;
-                        let cardHeight = Math.max(120, dauer * 1.5);
-                        
-                        // EVENT KARTEN RENDERN
-                        if (t.isEvent) {
-                            const f = t.color || '#ff3300';
-                            el.innerHTML = `
-                                <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f}; top: 25px;">${t.start}</div>
-                                <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f}; top: 27px;"></div>
-                                
-                                <div class="termin-karte" style="border-left-color:${f}; background: rgba(255, 51, 0, 0.05); min-height: ${cardHeight}px; align-items: flex-start;" onclick="location.href='events.html'">
-                                    <div style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid ${f}; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-right: 15px; flex-shrink: 0; box-shadow: 0 0 10px ${f};">🔥</div>
-                                    <div class="slot-inhalt" style="flex-grow: 1;">
-                                        <div style="font-size: 1.4rem; font-weight: 900; color: ${f}; text-transform: uppercase; letter-spacing: 1px;">
-                                            ${t.name}
-                                        </div>
-                                        <div style="font-size: 1rem; color: #aaa; margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
-                                            <span style="color:${f}; font-weight: bold;">${t.start} - ${t.ende}</span>
-                                            <span class="stat-badge" style="margin-left: 5px; font-size: 0.75rem; padding: 2px 6px; border-color:${f}; color:${f};">EVENT</span>
-                                        </div>
-                                        <div style="color: #888; font-size: 0.85rem; margin-top: 8px;">📍 ${t.stadt || t.ort || 'TBA'}</div>
+                            <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f}; top: -12px;">${t.start}</div>
+                            <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f}; top: -10px;"></div>
+                            
+                            <div class="termin-karte" style="border-left-color:${f}; background: rgba(255, 51, 0, 0.05); margin-top: -20px; min-height: ${heightPx}px; height: ${heightPx}px; align-items: center;" onclick="location.href='events.html'">
+                                <div style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid ${f}; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-right: 15px; flex-shrink: 0; box-shadow: 0 0 10px ${f};">🔥</div>
+                                <div class="slot-inhalt" style="flex-grow: 1;">
+                                    <div style="font-size: 1.4rem; font-weight: 900; color: ${f}; text-transform: uppercase; letter-spacing: 1px;">${t.name}</div>
+                                    <div style="font-size: 1rem; color: #aaa; margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
+                                        <span style="color:${f}; font-weight: bold;">${t.start} - ${t.ende}</span>
+                                        <span class="stat-badge" style="margin-left: 5px; font-size: 0.75rem; padding: 2px 6px; border-color:${f}; color:${f};">EVENT</span>
                                     </div>
+                                    <div style="color: #888; font-size: 0.85rem; margin-top: 8px;">📍 ${t.stadt || t.ort || 'TBA'}</div>
                                 </div>
-                            `;
-                        } 
-                        // NORMALE KUNDEN-TERMINE RENDERN
-                        else {
-                            const f = settings[t.kat+"_farbe"] || 'var(--neon-cyan)';
-                            let dbKunde = kundenDB.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
+                            </div>
+                        `;
+                    } 
+                    // NORMALE TERMINE
+                    else {
+                        const f = settings[t.kat+"_farbe"] || 'var(--neon-cyan)';
+                        let dbKunde = kundenDB.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
 
-                            let displayPreis = t.preis || (dbKunde ? dbKunde.preis : '');
-                            let displayPraeferenz = t.praeferenz || (dbKunde ? dbKunde.praeferenz : 'none');
-                            let expectedPreis = displayPreis || ''; 
-                            
-                            let statusHTML = '';
-                            if (t.status === 'done') statusHTML = `<div class="status-done">💰 ${t.umsatz} €</div>`;
-                            else if (t.status === 'noshow') statusHTML = `<div class="status-noshow">❌ NO SHOW</div>`;
-                            else if (isPast && !t.status) statusHTML = `<button class="btn-abrechnen" onclick="openAbrechnung(event, ${t.id}, '${t.name.replace(/'/g, "\\'")}', '${expectedPreis}')">💸 Abrechnen</button>`;
+                        let displayPreis = t.preis || (dbKunde ? dbKunde.preis : '');
+                        let displayPraeferenz = t.praeferenz || (dbKunde ? dbKunde.praeferenz : 'none');
+                        let expectedPreis = displayPreis || ''; 
+                        
+                        let statusHTML = '';
+                        if (t.status === 'done') statusHTML = `<div class="status-done">💰 ${t.umsatz} €</div>`;
+                        else if (t.status === 'noshow') statusHTML = `<div class="status-noshow">❌ NO SHOW</div>`;
+                        else if (isPast && !t.status) statusHTML = `<button class="btn-abrechnen" onclick="openAbrechnung(event, ${t.id}, '${t.name.replace(/'/g, "\\'")}', '${expectedPreis}')">💸 Abrechnen</button>`;
 
-                            let deleteHTML = `<button onclick="event.stopPropagation(); deleteTermin(${t.id})" style="background: rgba(255, 0, 60, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; transition: 0.2s;">✖ Löschen</button>`;
+                        let deleteHTML = `<button onclick="event.stopPropagation(); deleteTermin(${t.id})" style="background: rgba(255, 0, 60, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; transition: 0.2s;">✖ Löschen</button>`;
 
-                            let avatarHTML = '';
-                            let initials = t.name ? t.name.substring(0,2).toUpperCase() : "??";
-                            if (dbKunde && dbKunde.bild1) {
-                                avatarHTML = `<div style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid ${f}; background-image: url('${dbKunde.bild1}'); background-size: cover; background-position: center; margin-right: 15px; flex-shrink: 0; box-shadow: 0 0 10px rgba(5,217,232,0.2);"></div>`;
-                            } else {
-                                avatarHTML = `<div style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid ${f}; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; color: ${f}; background: rgba(0,0,0,0.4); margin-right: 15px; flex-shrink: 0; box-shadow: 0 0 10px rgba(5,217,232,0.2);">${initials}</div>`;
-                            }
+                        let avatarHTML = '';
+                        let initials = t.name ? t.name.substring(0,2).toUpperCase() : "??";
+                        if (dbKunde && dbKunde.bild1) {
+                            avatarHTML = `<div style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid ${f}; background-image: url('${dbKunde.bild1}'); background-size: cover; background-position: center; margin-right: 15px; flex-shrink: 0; box-shadow: 0 0 10px rgba(5,217,232,0.2);"></div>`;
+                        } else {
+                            avatarHTML = `<div style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid ${f}; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; color: ${f}; background: rgba(0,0,0,0.4); margin-right: 15px; flex-shrink: 0; box-shadow: 0 0 10px rgba(5,217,232,0.2);">${initials}</div>`;
+                        }
 
-                            let dbExtensionsHTML = '';
-                            if (dbKunde) {
-                                let warnHTML = (dbKunde.noshows && dbKunde.noshows > 0) ? `<span style="color:var(--neon-red); font-size: 0.8rem; margin-left: 10px;">⚠️ ${dbKunde.noshows} No-Shows</span>` : '';
-                                dbExtensionsHTML = `
-                                    <div class="kunden-stats-row" style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-                                        <div class="stat-badge">📐 ${dbKunde.groesse || '?'}</div>
-                                        <div class="stat-badge">Vibe <span class="stars">${getStarString(dbKunde.vibe)}</span></div>
-                                        ${warnHTML}
-                                    </div>
-                                `;
-                            }
-
-                            let praeferenzHTML = '';
-                            if (displayPraeferenz === 'AO') praeferenzHTML = `<span class="stat-badge badge-ao" style="margin-left: 5px; font-size: 0.75rem; padding: 2px 6px;">AO</span>`;
-                            else if (displayPraeferenz === 'Save') praeferenzHTML = `<span class="stat-badge badge-save" style="margin-left: 5px; font-size: 0.75rem; padding: 2px 6px;">Save</span>`;
-                            
-                            let preisHTML = displayPreis ? `<span class="stat-badge badge-preis" style="margin-left: 5px; font-size: 0.75rem; padding: 2px 6px;">💰 ${displayPreis}€</span>` : '';
-
-                            el.innerHTML = `
-                                <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f}; top: 25px;">${t.start}</div>
-                                <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f}; top: 27px;"></div>
-                                
-                                <div class="termin-karte" style="border-left-color:${f}; min-height: ${cardHeight}px; align-items: flex-start;" onclick="openDetailModal(${t.id})">
-                                    ${avatarHTML}
-                                    <div class="slot-inhalt" style="flex-grow: 1;">
-                                        <div style="font-size: 1.4rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px;">
-                                            ${t.name}
-                                        </div>
-                                        <div style="font-size: 1rem; color: #aaa; margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
-                                            <span style="color:${f}; font-weight: bold;">${t.start} - ${t.ende}</span>
-                                            ${preisHTML}
-                                            ${praeferenzHTML}
-                                        </div>
-                                        ${dbExtensionsHTML}
-                                    </div>
-                                    <div style="display: flex; flex-direction: column; gap: 8px; justify-content: flex-start; margin-left: 15px; min-width: 110px;">
-                                        ${statusHTML}
-                                        ${deleteHTML}
-                                    </div>
+                        let dbExtensionsHTML = '';
+                        if (dbKunde) {
+                            let warnHTML = (dbKunde.noshows && dbKunde.noshows > 0) ? `<span style="color:var(--neon-red); font-size: 0.8rem; margin-left: 10px;">⚠️ ${dbKunde.noshows} No-Shows</span>` : '';
+                            dbExtensionsHTML = `
+                                <div class="kunden-stats-row" style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <div class="stat-badge">📐 ${dbKunde.groesse || '?'}</div>
+                                    <div class="stat-badge">Vibe <span class="stars">${getStarString(dbKunde.vibe)}</span></div>
+                                    ${warnHTML}
                                 </div>
                             `;
                         }
+
+                        let praeferenzHTML = '';
+                        if (displayPraeferenz === 'AO') praeferenzHTML = `<span class="stat-badge badge-ao" style="margin-left: 5px; font-size: 0.75rem; padding: 2px 6px;">AO</span>`;
+                        else if (displayPraeferenz === 'Save') praeferenzHTML = `<span class="stat-badge badge-save" style="margin-left: 5px; font-size: 0.75rem; padding: 2px 6px;">Save</span>`;
+                        let preisHTML = displayPreis ? `<span class="stat-badge badge-preis" style="margin-left: 5px; font-size: 0.75rem; padding: 2px 6px;">💰 ${displayPreis}€</span>` : '';
+
+                        el.innerHTML = `
+                            <div class="timeline-time" style="color:${f}; text-shadow: 0 0 10px ${f}; top: -12px;">${t.start}</div>
+                            <div class="timeline-dot" style="border-color:${f}; box-shadow: 0 0 15px ${f}; top: -10px;"></div>
+                            
+                            <div class="termin-karte" style="border-left-color:${f}; margin-top: -20px; min-height: ${heightPx}px; height: ${heightPx}px; align-items: center;" onclick="openDetailModal(${t.id})">
+                                ${avatarHTML}
+                                <div class="slot-inhalt" style="flex-grow: 1;">
+                                    <div style="font-size: 1.4rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px;">${t.name}</div>
+                                    <div style="font-size: 1rem; color: #aaa; margin-top: 5px; display: flex; align-items: center; flex-wrap: wrap; gap: 5px;">
+                                        <span style="color:${f}; font-weight: bold;">${t.start} - ${t.ende}</span>
+                                        ${preisHTML}
+                                        ${praeferenzHTML}
+                                    </div>
+                                    ${dbExtensionsHTML}
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 8px; justify-content: center; margin-left: 15px; min-width: 110px;">
+                                    ${statusHTML}
+                                    ${deleteHTML}
+                                </div>
+                            </div>
+                        `;
                     }
                     liste.appendChild(el);
                 });
-                
-                const puffer = document.createElement('div');
-                puffer.style.height = "40px";
-                liste.appendChild(puffer);
 
             } catch(e) { console.log("Timeline Render Fehler", e); }
-        }
-
-        function deleteTermin(id) {
-            if(!confirm("Diesen Termin wirklich löschen?")) return;
-            let t = JSON.parse(localStorage.getItem('appTermine')) || [];
-            localStorage.setItem('appTermine', JSON.stringify(t.filter(x => x.id !== id)));
-            const urlParams = new URLSearchParams(window.location.search);
-            renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]); 
         }
 
         document.addEventListener('DOMContentLoaded', () => {

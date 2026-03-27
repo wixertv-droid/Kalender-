@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.8 - EVENT SYNC INTEGRATION)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.9 - EVENT TIMELINE FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -24,7 +24,6 @@ let isSyncingFromCloud = false;
 let isUploading = false;
 let syncTimeout = null;
 
-// --- 1. DER AUTO-UPLOAD ---
 const originalSetItem = localStorage.setItem;
 
 localStorage.setItem = function(key, value) {
@@ -32,12 +31,10 @@ localStorage.setItem = function(key, value) {
 
     if (isSyncingFromCloud) return; 
 
-    // NEU: appEvents zur Überwachungsliste hinzugefügt
     if (["appTermine", "appKunden", "appEinstellungen", "appPin", "appEvents"].includes(key)) {
         clearTimeout(syncTimeout);
         syncTimeout = setTimeout(async () => {
             isUploading = true;
-            // Wir erzeugen einen unverwechselbaren Fingerabdruck für dieses Update
             const newTimestamp = new Date().toISOString() + "-" + Math.random().toString(36).substring(2, 8);
             
             const payload = {
@@ -46,7 +43,7 @@ localStorage.setItem = function(key, value) {
                 kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
                 einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
                 pin: localStorage.getItem('appPin') || "0000",
-                events: JSON.parse(localStorage.getItem('appEvents') || '[]'), // NEU: Events einpacken
+                events: JSON.parse(localStorage.getItem('appEvents') || '[]'),
                 last_update: newTimestamp
             };
 
@@ -63,7 +60,7 @@ localStorage.setItem = function(key, value) {
                 });
                 
                 originalSetItem.call(localStorage, 'lastCloudUpdate', newTimestamp);
-                console.log("☁️ Auto-Upload (inkl. Events) erfolgreich!");
+                console.log("☁️ Auto-Upload erfolgreich!");
             } catch(e) { console.error("Cloud Upload Fehler:", e); }
             finally {
                 isUploading = false;
@@ -72,7 +69,6 @@ localStorage.setItem = function(key, value) {
     }
 };
 
-// --- 2. DER AUTO-DOWNLOAD ---
 async function autoFetchCloud() {
     if (isUploading) return; 
     
@@ -92,7 +88,6 @@ async function autoFetchCloud() {
             const dbData = data[0];
             const localUpdate = localStorage.getItem('lastCloudUpdate');
             
-            // Absolutes, stures Vergleichen!
             if (!dbData.last_update || dbData.last_update === localUpdate) return;
 
             isSyncingFromCloud = true;
@@ -101,7 +96,7 @@ async function autoFetchCloud() {
             if (dbData.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(dbData.kunden));
             if (dbData.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen));
             if (dbData.pin) originalSetItem.call(localStorage, 'appPin', dbData.pin);
-            if (dbData.events) originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events)); // NEU: Events entpacken
+            if (dbData.events) originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events));
             
             originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update);
             
@@ -110,7 +105,7 @@ async function autoFetchCloud() {
             if(typeof renderWeek === 'function') renderWeek();
             if(typeof renderKunden === 'function') renderKunden();
             if(typeof calculateStats === 'function') calculateStats();
-            if(typeof renderEvents === 'function') renderEvents(); // Aktualisiert die Event-Seite live
+            if(typeof renderEvents === 'function') renderEvents();
             if(typeof renderTimeline === 'function') {
                 const urlParams = new URLSearchParams(window.location.search);
                 renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
@@ -118,7 +113,7 @@ async function autoFetchCloud() {
             updateLiveSystem(); 
             
             isSyncingFromCloud = false;
-            console.log("☁️ Auto-Sync Update empfangen! (Neue Daten vom anderen Gerät)");
+            console.log("☁️ Auto-Sync Update empfangen!");
         }
     } catch(e) { console.log("Cloud Sync Hintergrundfehler:", e); }
 }
@@ -363,7 +358,6 @@ function saveAppointment() {
         }
 
         let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-        
         let nStartMin = parseTimeStr(start, "00:00");
         let nEndeMin = parseTimeStr(ende, "23:59");
         if (ende === "00:00" || nEndeMin === 0) nEndeMin = 1440; 
@@ -378,9 +372,22 @@ function saveAppointment() {
             return false;
         });
 
-        if (overlap) {
-            alert(`⚠️ DOPPELBUCHUNG VERHINDERT!\n\nDu hast zur selben Zeit bereits den Termin "${overlap.name}" (${overlap.start} - ${overlap.ende} Uhr).\nBitte ändere die Zeit.`);
-            return; 
+        // NEU: Doppelbuchungsschutz prüft auch Events!
+        const events = JSON.parse(localStorage.getItem('appEvents')) || [];
+        const overlapEvent = events.find(e => {
+            if (e.datum === datum) {
+                let eStartMin = parseTimeStr(e.start, "00:00");
+                let eEndeMin = parseTimeStr(e.ende, "23:59");
+                if (e.ende === "00:00" || eEndeMin === 0) eEndeMin = 1440;
+                return (nStartMin < eEndeMin && nEndeMin > eStartMin);
+            }
+            return false;
+        });
+
+        if (overlap || overlapEvent) {
+             let msg = overlap ? `den Termin "${overlap.name}"` : `das Event "${overlapEvent.name}"`;
+             alert(`⚠️ DOPPELBUCHUNG VERHINDERT!\n\nDu hast zur selben Zeit bereits ${msg}.\nBitte ändere die Zeit.`);
+             return;
         }
 
         let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
@@ -528,13 +535,18 @@ function updateLiveSystem() {
 
     const countdownElement = document.getElementById('header-countdown');
     if (countdownElement && countdownElement.innerText !== "SUPABASE CONNECTED") {
+        
+        // NEU: Der Countdown erkennt jetzt normale Termine UND Events
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+        const events = JSON.parse(localStorage.getItem('appEvents')) || [];
+        const allItems = [...termine, ...events];
+
         const jetzt = new Date();
         const jetztTime = jetzt.getTime();
         
         const heuteKalenderTime = new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate()).getTime();
 
-        let zukuenftigeTermine = termine
+        let zukuenftigeTermine = allItems
             .filter(t => t && t.datum && t.start && typeof t.start === 'string' && t.start.includes(':'))
             .map(t => {
                 const parts = t.datum.split('-'); 
@@ -572,7 +584,11 @@ function renderWeek() {
     const wochenContainer = document.querySelector('.wochen-container');
     if (!wochenContainer) return;
 
+    // NEU: Zieht sich jetzt Termine UND Events auf die Leiste!
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+    const events = JSON.parse(localStorage.getItem('appEvents')) || [];
+    const allItems = [...termine, ...events.map(e => ({...e, isEvent: true}))];
+
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
     const settings = { ...DEFAULTS, ...storedSettings };
 
@@ -585,7 +601,7 @@ function renderWeek() {
 
     if(gesamtArbeitsMin <= 0) return;
 
-    termine.forEach(t => {
+    allItems.forEach(t => {
         if (!t || !t.datum || !t.start || !t.ende || !t.start.includes(':') || !t.ende.includes(':')) return;
 
         const tagZeile = document.querySelector(`.tag-zeile[data-datum="${t.datum}"]`);
@@ -622,16 +638,23 @@ function renderWeek() {
                     const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
 
                     const segment = document.createElement('div');
-                    const safeKat = t.kat || 'kat1';
+                    
+                    const safeKat = t.isEvent ? 'event' : (t.kat || 'kat1');
                     segment.className = `termin-segment ${safeKat}`;
                     segment.style.left = linksPosition + '%';
                     segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
+                    
+                    // NEU: Wenn es ein Event ist, machen wir es rot und feuermäßig!
+                    if (t.isEvent) {
+                        segment.style.background = `rgba(255, 51, 0, 0.2)`;
+                        segment.style.borderLeft = `3px solid ${t.color || '#ff3300'}`;
+                    }
                     
                     if (isOutsideLeft || isOutsideRight) {
                         segment.style.opacity = '0.5';
                     }
                     
-                    const katName = settings[safeKat + "_name"] || "Termin";
+                    const katName = t.isEvent ? '🔥 ' + t.name : (settings[safeKat + "_name"] || "Termin");
                     
                     let timeText = `${t.start} - ${t.ende}`;
                     if(isOutsideLeft) timeText = `<< ${timeText}`;
@@ -639,7 +662,7 @@ function renderWeek() {
                     
                     segment.innerHTML = `
                         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
-                            <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
+                            <span class="status-label" style="margin-bottom: 2px; ${t.isEvent ? 'color:#ff3300;' : ''}">${katName}</span>
                             <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
                         </div>
                     `;

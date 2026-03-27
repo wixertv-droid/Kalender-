@@ -5,7 +5,6 @@
 let currentEditEventId = null;
 let currentGuests = [];
 
-// --- 1. HAUPTANSICHT RENDERN ---
 function renderEvents() {
     const container = document.getElementById('eventListe');
     if (!container) return;
@@ -34,6 +33,8 @@ function renderEvents() {
             dateStr = dObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
+        const anzeigeOrt = e.stadt || e.ort || 'TBA';
+
         container.innerHTML += `
             <div class="event-card" style="border-left-color: ${e.color || '#ff3300'}; opacity: ${opacity};" onclick="openEventDashboard(${e.id})">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -47,13 +48,12 @@ function renderEvents() {
                 </div>
 
                 <div style="color: #aaa; font-size: 0.85rem; margin-top: 5px;">📅 ${dateStr} | ⏰ ${e.start} - ${e.ende} Uhr</div>
-                <div style="color: #888; font-size: 0.8rem; margin-top: 5px;">📍 ${e.ort || 'TBA'} | 💦 ${e.praef}</div>
+                <div style="color: #888; font-size: 0.8rem; margin-top: 5px;">📍 ${anzeigeOrt} | 💦 ${e.praef}</div>
             </div>
         `;
     });
 }
 
-// --- 2. GÄSTE DASHBOARD ---
 function openEventDashboard(id) {
     currentEditEventId = id;
     const events = JSON.parse(localStorage.getItem('appEvents')) || [];
@@ -150,7 +150,8 @@ function openEventSetup(isNew = false) {
             document.getElementById('evStart').value = e.start || '';
             document.getElementById('evEnde').value = e.ende || '';
             document.getElementById('evColor').value = e.color || '#ff3300';
-            document.getElementById('evOrt').value = e.ort || '';
+            document.getElementById('evStadt').value = e.stadt || e.ort || '';
+            document.getElementById('evLocation').value = e.location || '';
             document.getElementById('evPreis').value = e.preis || '';
             
             document.getElementById('evGirlName').value = e.gName || '';
@@ -171,25 +172,26 @@ function openEventSetup(isNew = false) {
     } else {
         currentEditEventId = null;
         currentGuests = [];
-        document.getElementById('evName').value = '';
+        document.getElementById('evName').value = 'GB';
         const heute = new Date();
         document.getElementById('evDatum').value = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-        document.getElementById('evStart').value = '14:00';
-        document.getElementById('evEnde').value = '18:00';
+        document.getElementById('evStart').value = '11:00';
+        document.getElementById('evEnde').value = '14:00';
         document.getElementById('evColor').value = '#ff3300';
-        document.getElementById('evOrt').value = '';
-        document.getElementById('evPreis').value = '';
+        document.getElementById('evStadt').value = 'Leipzig';
+        document.getElementById('evLocation').value = 'Hotel / Privat';
+        document.getElementById('evPreis').value = '80';
         
-        document.getElementById('evGirlName').value = '';
-        document.getElementById('evGirlAge').value = '';
-        document.getElementById('evGirlHeight').value = '';
-        document.getElementById('evGirlWeight').value = '';
-        document.getElementById('evGirlType').value = '';
+        document.getElementById('evGirlName').value = 'Susi';
+        document.getElementById('evGirlAge').value = '35';
+        document.getElementById('evGirlHeight').value = '165';
+        document.getElementById('evGirlWeight').value = '64';
+        document.getElementById('evGirlType').value = 'Schlanke und naturgeile Dreilochstute';
         
-        document.getElementById('evVorlieben').value = '';
-        document.getElementById('evTabus').value = '';
-        document.getElementById('evNS').value = 'Nein';
-        document.getElementById('evVideo').value = 'Keine';
+        document.getElementById('evVorlieben').value = 'GV, anal, lecken, fingern, blasen, in Mund spritzen, schlucken, harter Sex, Körperbesamung';
+        document.getElementById('evTabus').value = 'Keine Schmerzen/Gewalt, kein KV';
+        document.getElementById('evNS').value = 'einzeln, passiv und aktiv in der Dusche möglich';
+        document.getElementById('evVideo').value = 'macht sie auch gerne NS-Videos, entweder einzeln oder wo sie von mehreren angepisst wird. Dies einfach vor Ort ansprechen. (Auch mit Maske möglich, ansonsten würden auch keine Gesichter gefilmt werden).';
         document.getElementById('evBilder').value = 'Ja';
         document.getElementById('evPraef').value = 'AO';
         
@@ -207,24 +209,26 @@ function closeEventSetup() {
     }
 }
 
-// --- PROMO GENERATOR (Heißer, versauter Text) ---
+// --- PROMO GENERATOR (Verbessert, heiß und grammatikalisch perfekt) ---
 function generatePromo() {
-    const name = document.getElementById('evName').value || 'exklusives Event';
+    const name = document.getElementById('evName').value || 'Event';
     const datum = document.getElementById('evDatum').value;
     const start = document.getElementById('evStart').value;
     const ende = document.getElementById('evEnde').value;
-    const ort = document.getElementById('evOrt').value || 'geheimen Location';
+    const stadt = document.getElementById('evStadt').value || 'Leipzig';
+    const location = document.getElementById('evLocation').value || 'wird privat mitgeteilt';
     
-    const gName = document.getElementById('evGirlName').value || 'Traumfrau';
-    const gAge = document.getElementById('evGirlAge').value || 'junge';
-    const gHeight = document.getElementById('evGirlHeight').value || 'süße';
-    const gWeight = document.getElementById('evGirlWeight').value || 'zierliche';
-    const gType = document.getElementById('evGirlType').value || 'geile Sau';
+    const gName = document.getElementById('evGirlName').value || 'Susi';
+    const gAge = document.getElementById('evGirlAge').value || '35';
+    const gHeight = document.getElementById('evGirlHeight').value || '165';
+    const gWeight = document.getElementById('evGirlWeight').value || '64';
+    const gType = document.getElementById('evGirlType').value || 'schlanke und naturgeile Dreilochstute';
 
     const vorlieben = document.getElementById('evVorlieben').value || 'Alles was Spaß macht';
-    const tabus = document.getElementById('evTabus').value || 'Keine Gewalt';
-    const preis = document.getElementById('evPreis').value || '?';
+    const tabus = document.getElementById('evTabus').value || 'Keine Schmerzen/Gewalt';
+    const preis = document.getElementById('evPreis').value || '80';
     const praef = document.getElementById('evPraef').value || 'AO';
+    const towels = document.getElementById('evTowels').value || 'Werden gestellt';
     
     const nsOpt = document.getElementById('evNS').value;
     const vidOpt = document.getElementById('evVideo').value;
@@ -241,29 +245,35 @@ function generatePromo() {
         dateStr = `${dd}.${mm}.`;
     }
 
-    let text = `🔥 *${name.toUpperCase()} IN ${ort.toUpperCase()}* 🔥\n\n`;
+    // Titel
+    let text = `🔥 *${name.toUpperCase()} IN ${stadt.toUpperCase()}* 🔥\n\n`;
     
-    text += `Hallo ihr Lieben, ich bin's, eure ${gName}! 💋\n`;
-    text += `Ich (${gAge} Jahre, ${gHeight}, ${gWeight}, ${gType}) veranstalte am ${weekdayStr}, den ${dateStr} von ${start} bis ${ende} Uhr ein absolut heißes Date und habe richtig Lust auf ein unvergessliches Erlebnis mit euch! 😈\n\n`;
+    // Begrüßung & Info
+    text += `Hallo ihr Lieben, hier ist eure ${gName}! 💋\n`;
+    text += `Ich bin eine ${gType} (${gAge} Jahre, ${gHeight} cm, ${gWeight} kg) und veranstalte am ${weekdayStr}, den ${dateStr} von ${start} bis ${ende} Uhr mein Event "${name}" in ${stadt} (Location: ${location}).\n\n`;
     
-    text += `💦 *Was ich will:* ${vorlieben}\n`;
+    text += `Ich bin schon richtig feucht und kann es kaum erwarten, es mit euch extrem versaut krachen zu lassen! 😈💦\n\n`;
     
+    // Details
+    text += `💦 *Gewollt:* ${vorlieben}\n`;
     if (nsOpt !== 'Nein') {
         text += `🚿 *Natursekt:* ${nsOpt}\n`;
     }
     if (vidOpt !== 'Keine') {
-        text += `📸 *Videos:* ${vidOpt}\n`;
+        text += `📸 *Videos:* Optional ${vidOpt}\n`;
     }
     
-    text += `\n🚫 *Meine Tabus:* ${tabus}\n`;
+    text += `🚫 *Tabus:* ${tabus}\n`;
     text += `💊 *Safe / AO:* ${praef}\n`;
     text += `💸 *Kosten:* ${preis} € p.P.\n`;
+    text += `🧖‍♀️ *Handtücher:* ${towels}\n`;
     
+    // Abschluss
     if (bilderOpt === 'Ja') {
-        text += `\nHeiße Bilder von mir schicke ich euch sehr gerne bei Interesse auf Anfrage! 😏\n`;
+        text += `\nHeiße Bilder von mir schicke ich euch bei Interesse sehr gerne auf Anfrage! 😏\n`;
     }
     
-    text += `\nDie Plätze sind begrenzt. Meldet euch direkt bei mir, wenn ihr dabei sein wollt. Ich freue mich auf euch! 🔥🔞`;
+    text += `\nDie Plätze sind streng limitiert. Wenn du dabei sein und mich vernaschen willst, melde dich schnell verbindlich bei mir. Ich freue mich extrem auf dich! 🔥🔞`;
     
     document.getElementById('promoBox').innerText = text;
 }
@@ -356,7 +366,7 @@ function changeGuestStatus(id, newStatus) {
         const oldStatus = guest.status;
         guest.status = newStatus;
         
-        // --- INVENTAR ABBUCHUNG (Nur wenn AO Event) ---
+        // --- INVENTAR ABBUCHUNG (Nur wenn AO im Dropdown gewählt ist) ---
         const events = JSON.parse(localStorage.getItem('appEvents')) || [];
         const ev = events.find(x => x.id === currentEditEventId);
         const isAO = ev && ev.praef && ev.praef.toLowerCase().includes('ao');
@@ -366,12 +376,12 @@ function changeGuestStatus(id, newStatus) {
             let bestand = parseInt(settings.testBestand) || 0;
             let changed = false;
 
-            // Wenn er jetzt erst erschienen ist: 1 Test abziehen
+            // Abziehen
             if (oldStatus !== 'erschienen' && newStatus === 'erschienen') {
                 bestand = Math.max(0, bestand - 1);
                 changed = true;
             } 
-            // Wenn er versehentlich auf 'erschienen' war und korrigiert wurde: Test zurückbuchen
+            // Zurückbuchen
             else if (oldStatus === 'erschienen' && newStatus !== 'erschienen') {
                 bestand += 1;
                 changed = true;
@@ -379,7 +389,7 @@ function changeGuestStatus(id, newStatus) {
 
             if (changed) {
                 settings.testBestand = bestand;
-                localStorage.setItem('appEinstellungen', JSON.stringify(settings)); // Triggt auch Cloud Upload
+                localStorage.setItem('appEinstellungen', JSON.stringify(settings)); 
             }
         }
 
@@ -417,7 +427,8 @@ function saveEvent() {
         start: document.getElementById('evStart').value,
         ende: document.getElementById('evEnde').value,
         color: document.getElementById('evColor').value,
-        ort: document.getElementById('evOrt').value,
+        stadt: document.getElementById('evStadt').value,
+        location: document.getElementById('evLocation').value,
         preis: document.getElementById('evPreis').value,
         
         gName: document.getElementById('evGirlName').value,
@@ -432,6 +443,7 @@ function saveEvent() {
         vorlieben: document.getElementById('evVorlieben').value,
         tabus: document.getElementById('evTabus').value,
         praef: document.getElementById('evPraef').value,
+        towels: document.getElementById('evTowels').value,
         
         guests: currentGuests
     };

@@ -185,7 +185,7 @@
     </div>
 
     <script>
-        // --- AUTO-FILL FUNKTION ---
+                // --- AUTO-FILL FUNKTION ---
         function sucheKundeFuerTermin() {
             const input = document.getElementById('terminName').value.toLowerCase();
             const vBox = document.getElementById('kundenVorschlaege');
@@ -205,7 +205,8 @@
                         document.getElementById('terminName').value = k.name;
                         document.getElementById('terminPlattform').value = k.plattform || 'none';
                         document.getElementById('terminKontakt').value = k.kontakt || '';
-                        document.getElementById('terminNotizen').value = k.notizen || '';
+                        
+                        // HIER WURDE DIE NOTIZ-ZEILE GELÖSCHT! (Termin-Notizen bleiben jetzt sauber)
                         
                         document.getElementById('terminPreis').value = k.preis || '';
                         document.getElementById('terminPraeferenz').value = k.praeferenz || 'none';
@@ -218,6 +219,7 @@
                 vBox.style.display = 'block';
             } else { vBox.style.display = 'none'; }
         }
+
 
         // --- NEU: NAVIGATIONS-LOGIK (+/- 7 Tage) ---
         function changeWeek(days) {

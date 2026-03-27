@@ -255,7 +255,7 @@ function generatePromo() {
     text += `Hallo ihr Lieben, hier ist eure ${gName}! 💋\n`;
     text += `Ich bin eine ${gType} (${gAge} Jahre${maßeStr}) und veranstalte am ${weekdayStr}, den ${dateStr} von ${start} bis ${ende} Uhr mein "${name}" in ${stadt} (Location: ${location}).\n\n`;
     
-    text += `Ich will eure gemeinsame Creampie-Schlampe sein. Nehmt mich nacheinander ran, bis ich von euch allen überlaufe! 🔥💦\n\n`;
+    text += `Ich will eure gemeinsame Creampie-Schlampe sein. Nehmt mich ran, bis ich von euch allen überlaufe! 🔥💦\n\n`;
     
     text += `💦 *Gewollt:* ${vorlieben}\n`;
     if (nsOpt !== 'Nein') {
@@ -266,7 +266,7 @@ function generatePromo() {
     }
     
     text += `🚫 *Tabus:* ${tabus}\n`;
-    text += `💊 *Safe / AO:* ${praef}\n`;
+    text += `💊 *Sex:* ${praef}\n`;
     text += `💸 *Kosten:* ${preis} € p.P.\n`;
     text += `🧖‍♀️ *Handtücher:* ${towels}\n`;
     

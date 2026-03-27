@@ -5,6 +5,7 @@
 let currentEditEventId = null;
 let currentGuests = [];
 
+// --- 1. HAUPTANSICHT RENDERN ---
 function renderEvents() {
     const container = document.getElementById('eventListe');
     if (!container) return;
@@ -52,6 +53,7 @@ function renderEvents() {
     });
 }
 
+// --- 2. GÄSTE DASHBOARD ---
 function openEventDashboard(id) {
     currentEditEventId = id;
     const events = JSON.parse(localStorage.getItem('appEvents')) || [];
@@ -162,34 +164,34 @@ function openEventSetup(isNew = false) {
             document.getElementById('evNS').value = e.ns || 'Nein';
             document.getElementById('evVideo').value = e.video || 'Keine';
             document.getElementById('evBilder').value = e.bilder || 'Ja';
-            document.getElementById('evPraef').value = e.praef || 'AO und safer Sex, beides möglich!';
+            document.getElementById('evPraef').value = e.praef || 'AO';
             
             document.getElementById('btnDelete').style.display = 'block';
         }
     } else {
         currentEditEventId = null;
         currentGuests = [];
-        document.getElementById('evName').value = 'GB';
+        document.getElementById('evName').value = '';
         const heute = new Date();
         document.getElementById('evDatum').value = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-        document.getElementById('evStart').value = '11:00';
-        document.getElementById('evEnde').value = '14:00';
+        document.getElementById('evStart').value = '14:00';
+        document.getElementById('evEnde').value = '18:00';
         document.getElementById('evColor').value = '#ff3300';
-        document.getElementById('evOrt').value = 'Leipzig';
-        document.getElementById('evPreis').value = '80';
+        document.getElementById('evOrt').value = '';
+        document.getElementById('evPreis').value = '';
         
-        document.getElementById('evGirlName').value = 'Susi';
-        document.getElementById('evGirlAge').value = '35';
-        document.getElementById('evGirlHeight').value = '1,65m';
-        document.getElementById('evGirlWeight').value = '64kg';
-        document.getElementById('evGirlType').value = 'Schlanke und naturgeile Dreilochstute';
+        document.getElementById('evGirlName').value = '';
+        document.getElementById('evGirlAge').value = '';
+        document.getElementById('evGirlHeight').value = '';
+        document.getElementById('evGirlWeight').value = '';
+        document.getElementById('evGirlType').value = '';
         
-        document.getElementById('evVorlieben').value = 'GV, anal, lecken, fingern, blasen, in Mund spritzen, schlucken, harter Sex, Körperbesamung';
-        document.getElementById('evTabus').value = 'Keine Schmerzen/Gewalt, kein KV';
-        document.getElementById('evNS').value = 'einzeln, passiv und aktiv in der Dusche möglich';
-        document.getElementById('evVideo').value = 'macht sie auch gerne NS-Videos, entweder einzeln oder wo sie von mehreren angepisst wird. Dies einfach vor Ort ansprechen. (Auch mit Maske möglich, ansonsten würden auch keine Gesichter gefilmt werden).';
+        document.getElementById('evVorlieben').value = '';
+        document.getElementById('evTabus').value = '';
+        document.getElementById('evNS').value = 'Nein';
+        document.getElementById('evVideo').value = 'Keine';
         document.getElementById('evBilder').value = 'Ja';
-        document.getElementById('evPraef').value = 'AO und safer Sex, beides möglich!';
+        document.getElementById('evPraef').value = 'AO';
         
         document.getElementById('btnDelete').style.display = 'none';
     }
@@ -205,31 +207,31 @@ function closeEventSetup() {
     }
 }
 
-// --- PROMO GENERATOR (Exakt nach der versauten Vorlage!) ---
+// --- PROMO GENERATOR (Heißer, versauter Text) ---
 function generatePromo() {
-    const name = document.getElementById('evName').value || 'GB';
+    const name = document.getElementById('evName').value || 'exklusives Event';
     const datum = document.getElementById('evDatum').value;
     const start = document.getElementById('evStart').value;
     const ende = document.getElementById('evEnde').value;
-    const ort = document.getElementById('evOrt').value || 'Leipzig';
+    const ort = document.getElementById('evOrt').value || 'geheimen Location';
     
-    const gName = document.getElementById('evGirlName').value || 'Susi';
-    const gAge = document.getElementById('evGirlAge').value || '35';
-    const gHeight = document.getElementById('evGirlHeight').value || '1,65m';
-    const gWeight = document.getElementById('evGirlWeight').value || '64kg';
-    const gType = document.getElementById('evGirlType').value || 'Schlanke und naturgeile Dreilochstute';
+    const gName = document.getElementById('evGirlName').value || 'Traumfrau';
+    const gAge = document.getElementById('evGirlAge').value || 'junge';
+    const gHeight = document.getElementById('evGirlHeight').value || 'süße';
+    const gWeight = document.getElementById('evGirlWeight').value || 'zierliche';
+    const gType = document.getElementById('evGirlType').value || 'geile Sau';
 
-    const vorlieben = document.getElementById('evVorlieben').value || 'GV, anal, lecken, fingern, blasen, in Mund spritzen, schlucken, harter Sex, Körperbesamung';
-    const tabus = document.getElementById('evTabus').value || 'Keine Schmerzen/Gewalt, kein KV';
-    const preis = document.getElementById('evPreis').value || '80';
-    const praef = document.getElementById('evPraef').value || 'AO und safer Sex, beides möglich!';
+    const vorlieben = document.getElementById('evVorlieben').value || 'Alles was Spaß macht';
+    const tabus = document.getElementById('evTabus').value || 'Keine Gewalt';
+    const preis = document.getElementById('evPreis').value || '?';
+    const praef = document.getElementById('evPraef').value || 'AO';
     
     const nsOpt = document.getElementById('evNS').value;
     const vidOpt = document.getElementById('evVideo').value;
     const bilderOpt = document.getElementById('evBilder').value;
     
     let dateStr = "TBA";
-    let weekdayStr = "Tag";
+    let weekdayStr = "";
     if (datum) {
         const dObj = new Date(datum);
         const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
@@ -239,25 +241,29 @@ function generatePromo() {
         dateStr = `${dd}.${mm}.`;
     }
 
-    let text = `🔥 *${name} am ${weekdayStr}, den ${dateStr} von ${start}-${ende} Uhr in ${ort}:* 🔥\n`;
-    text += `${gType}, ${gAge}-jährige, ${gHeight}, ${gWeight} (${gName}).\n`;
+    let text = `🔥 *${name.toUpperCase()} IN ${ort.toUpperCase()}* 🔥\n\n`;
     
-    let nsText = nsOpt !== 'Nein' ? `, NS (${nsOpt})` : '';
-    text += `Gewollt: ${vorlieben}${nsText}.\n`;
+    text += `Hallo ihr Lieben, ich bin's, eure ${gName}! 💋\n`;
+    text += `Ich (${gAge} Jahre, ${gHeight}, ${gWeight}, ${gType}) veranstalte am ${weekdayStr}, den ${dateStr} von ${start} bis ${ende} Uhr ein absolut heißes Date und habe richtig Lust auf ein unvergessliches Erlebnis mit euch! 😈\n\n`;
     
+    text += `💦 *Was ich will:* ${vorlieben}\n`;
+    
+    if (nsOpt !== 'Nein') {
+        text += `🚿 *Natursekt:* ${nsOpt}\n`;
+    }
     if (vidOpt !== 'Keine') {
-        text += `Optional ${vidOpt}\n`;
+        text += `📸 *Videos:* ${vidOpt}\n`;
     }
     
-    text += `Tabus: ${tabus}.\n`;
-    text += `${praef}\n`;
-    text += `Kosten: ${preis} Euro\n`;
+    text += `\n🚫 *Meine Tabus:* ${tabus}\n`;
+    text += `💊 *Safe / AO:* ${praef}\n`;
+    text += `💸 *Kosten:* ${preis} € p.P.\n`;
     
     if (bilderOpt === 'Ja') {
-        text += `Bilder zu ihr gibt es gerne bei Interesse auf Anfrage!\n`;
+        text += `\nHeiße Bilder von mir schicke ich euch sehr gerne bei Interesse auf Anfrage! 😏\n`;
     }
     
-    text += `Bei Interesse/Teilnahme einfach mir persönlich schreiben! 📩`;
+    text += `\nDie Plätze sind begrenzt. Meldet euch direkt bei mir, wenn ihr dabei sein wollt. Ich freue mich auf euch! 🔥🔞`;
     
     document.getElementById('promoBox').innerText = text;
 }
@@ -268,7 +274,7 @@ function copyPromo() {
     navigator.clipboard.writeText(text).then(() => alert("✅ Promo-Text kopiert!"));
 }
 
-// --- GÄSTE LOGIK (Live Save) ---
+// --- GÄSTE LOGIK (Live Save & Test Abbuchung) ---
 function autoSaveGuests() {
     if (!currentEditEventId) return;
     let events = JSON.parse(localStorage.getItem('appEvents')) || [];
@@ -304,7 +310,10 @@ function renderGuests() {
             `;
         } else if(g.status === 'erschienen') {
             statusColor = 'var(--neon-green)';
-            actionBtns = `<span style="color: var(--neon-green); font-size: 0.8rem; font-weight: bold; margin-right: 5px;">✓ Erschienen</span>`;
+            actionBtns = `
+                <span style="color: var(--neon-green); font-size: 0.8rem; font-weight: bold; margin-right: 5px;">✓ Erschienen</span>
+                <button class="btn-status" style="color: #666; border-color: #666; padding: 2px 5px; font-size: 0.6rem;" onclick="changeGuestStatus('${g.id}', 'noshow')">Storno</button>
+            `;
         } else if(g.status === 'noshow') {
             statusColor = 'var(--neon-red)';
             actionBtns = `<span style="color: var(--neon-red); font-size: 0.8rem; font-weight: bold; margin-right: 5px;">❌ No-Show</span>`;
@@ -344,7 +353,36 @@ function addGuest() {
 function changeGuestStatus(id, newStatus) {
     const guest = currentGuests.find(g => g.id === id);
     if(guest) {
+        const oldStatus = guest.status;
         guest.status = newStatus;
+        
+        // --- INVENTAR ABBUCHUNG (Nur wenn AO Event) ---
+        const events = JSON.parse(localStorage.getItem('appEvents')) || [];
+        const ev = events.find(x => x.id === currentEditEventId);
+        const isAO = ev && ev.praef && ev.praef.toLowerCase().includes('ao');
+
+        if (isAO) {
+            let settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+            let bestand = parseInt(settings.testBestand) || 0;
+            let changed = false;
+
+            // Wenn er jetzt erst erschienen ist: 1 Test abziehen
+            if (oldStatus !== 'erschienen' && newStatus === 'erschienen') {
+                bestand = Math.max(0, bestand - 1);
+                changed = true;
+            } 
+            // Wenn er versehentlich auf 'erschienen' war und korrigiert wurde: Test zurückbuchen
+            else if (oldStatus === 'erschienen' && newStatus !== 'erschienen') {
+                bestand += 1;
+                changed = true;
+            }
+
+            if (changed) {
+                settings.testBestand = bestand;
+                localStorage.setItem('appEinstellungen', JSON.stringify(settings)); // Triggt auch Cloud Upload
+            }
+        }
+
         updateDashboardStats();
         renderGuests();
         autoSaveGuests(); 
@@ -381,7 +419,6 @@ function saveEvent() {
         color: document.getElementById('evColor').value,
         ort: document.getElementById('evOrt').value,
         preis: document.getElementById('evPreis').value,
-        praef: document.getElementById('evPraef').value,
         
         gName: document.getElementById('evGirlName').value,
         gAge: document.getElementById('evGirlAge').value,
@@ -394,6 +431,7 @@ function saveEvent() {
         bilder: document.getElementById('evBilder').value,
         vorlieben: document.getElementById('evVorlieben').value,
         tabus: document.getElementById('evTabus').value,
+        praef: document.getElementById('evPraef').value,
         
         guests: currentGuests
     };

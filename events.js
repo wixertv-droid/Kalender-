@@ -5,7 +5,6 @@
 let currentEditEventId = null;
 let currentGuests = [];
 
-// --- 1. HAUPTANSICHT RENDERN ---
 function renderEvents() {
     const container = document.getElementById('eventListe');
     if (!container) return;
@@ -21,7 +20,6 @@ function renderEvents() {
     events.sort((a, b) => new Date(a.datum) - new Date(b.datum));
 
     events.forEach(e => {
-        // Exakte Status-Zählung für die Startseite
         const angemeldet = e.guests ? e.guests.filter(g => g.status === 'angemeldet').length : 0;
         const bestaetigt = e.guests ? e.guests.filter(g => g.status === 'bestaetigt').length : 0;
         const erschienen = e.guests ? e.guests.filter(g => g.status === 'erschienen').length : 0;
@@ -54,7 +52,6 @@ function renderEvents() {
     });
 }
 
-// --- 2. GÄSTE DASHBOARD ---
 function openEventDashboard(id) {
     currentEditEventId = id;
     const events = JSON.parse(localStorage.getItem('appEvents')) || [];
@@ -85,18 +82,15 @@ function updateDashboardStats() {
     const erschienen = currentGuests.filter(g => g.status === 'erschienen').length;
     const noshow = currentGuests.filter(g => g.status === 'noshow').length;
     
-    // Header Stats
     document.getElementById('dashStatTotal').innerText = `👥 ${total} Gesamt`;
     document.getElementById('dashStatErschienen').innerText = `✅ ${erschienen} Da`;
     document.getElementById('dashStatNoshow').innerText = `❌ ${noshow} No-Show`;
 
-    // Finanz-Berechnung
     const events = JSON.parse(localStorage.getItem('appEvents')) || [];
     const e = events.find(x => x.id === currentEditEventId);
     const preis = e && e.preis ? parseFloat(e.preis) : 0;
     
     const aktuellerUmsatz = erschienen * preis;
-    // Potenzial = Alle, die nicht abgesagt haben oder No-Show sind
     const potenzialUmsatz = (angemeldet + bestaetigt + erschienen) * preis; 
     
     const umsatzEl = document.getElementById('dashUmsatz');
@@ -104,7 +98,6 @@ function updateDashboardStats() {
     if (umsatzEl) umsatzEl.innerText = `${aktuellerUmsatz} €`;
     if (potEl) potEl.innerText = `Potenzial: ${potenzialUmsatz} €`;
 
-    // Mini-Balkendiagramm zeichnen
     const chartBox = document.getElementById('dashGuestChart');
     if (chartBox) {
         const max = total > 0 ? total : 1;
@@ -157,29 +150,47 @@ function openEventSetup(isNew = false) {
             document.getElementById('evColor').value = e.color || '#ff3300';
             document.getElementById('evOrt').value = e.ort || '';
             document.getElementById('evPreis').value = e.preis || '';
-            document.getElementById('evPraef').value = e.praef || 'AO';
-            document.getElementById('evTowels').value = e.towels || 'Werden gestellt';
-            document.getElementById('evBeschreibung').value = e.beschreibung || '';
+            
+            document.getElementById('evGirlName').value = e.gName || '';
+            document.getElementById('evGirlAge').value = e.gAge || '';
+            document.getElementById('evGirlHeight').value = e.gHeight || '';
+            document.getElementById('evGirlWeight').value = e.gWeight || '';
+            document.getElementById('evGirlType').value = e.gType || '';
+            
             document.getElementById('evVorlieben').value = e.vorlieben || '';
             document.getElementById('evTabus').value = e.tabus || '';
+            document.getElementById('evNS').value = e.ns || 'Nein';
+            document.getElementById('evVideo').value = e.video || 'Keine';
+            document.getElementById('evBilder').value = e.bilder || 'Ja';
+            document.getElementById('evPraef').value = e.praef || 'AO und safer Sex, beides möglich!';
+            
             document.getElementById('btnDelete').style.display = 'block';
         }
     } else {
         currentEditEventId = null;
         currentGuests = [];
-        document.getElementById('evName').value = '';
+        document.getElementById('evName').value = 'GB';
         const heute = new Date();
         document.getElementById('evDatum').value = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-        document.getElementById('evStart').value = '14:00';
-        document.getElementById('evEnde').value = '18:00';
+        document.getElementById('evStart').value = '11:00';
+        document.getElementById('evEnde').value = '14:00';
         document.getElementById('evColor').value = '#ff3300';
-        document.getElementById('evOrt').value = '';
-        document.getElementById('evPreis').value = '';
-        document.getElementById('evPraef').value = 'AO';
-        document.getElementById('evTowels').value = 'Werden gestellt';
-        document.getElementById('evBeschreibung').value = '';
-        document.getElementById('evVorlieben').value = '';
-        document.getElementById('evTabus').value = '';
+        document.getElementById('evOrt').value = 'Leipzig';
+        document.getElementById('evPreis').value = '80';
+        
+        document.getElementById('evGirlName').value = 'Susi';
+        document.getElementById('evGirlAge').value = '35';
+        document.getElementById('evGirlHeight').value = '1,65m';
+        document.getElementById('evGirlWeight').value = '64kg';
+        document.getElementById('evGirlType').value = 'Schlanke und naturgeile Dreilochstute';
+        
+        document.getElementById('evVorlieben').value = 'GV, anal, lecken, fingern, blasen, in Mund spritzen, schlucken, harter Sex, Körperbesamung';
+        document.getElementById('evTabus').value = 'Keine Schmerzen/Gewalt, kein KV';
+        document.getElementById('evNS').value = 'einzeln, passiv und aktiv in der Dusche möglich';
+        document.getElementById('evVideo').value = 'macht sie auch gerne NS-Videos, entweder einzeln oder wo sie von mehreren angepisst wird. Dies einfach vor Ort ansprechen. (Auch mit Maske möglich, ansonsten würden auch keine Gesichter gefilmt werden).';
+        document.getElementById('evBilder').value = 'Ja';
+        document.getElementById('evPraef').value = 'AO und safer Sex, beides möglich!';
+        
         document.getElementById('btnDelete').style.display = 'none';
     }
     
@@ -194,31 +205,59 @@ function closeEventSetup() {
     }
 }
 
-// --- PROMO GENERATOR ---
+// --- PROMO GENERATOR (Exakt nach der versauten Vorlage!) ---
 function generatePromo() {
-    const name = document.getElementById('evName').value || 'Heißes Event';
+    const name = document.getElementById('evName').value || 'GB';
     const datum = document.getElementById('evDatum').value;
     const start = document.getElementById('evStart').value;
     const ende = document.getElementById('evEnde').value;
-    const ort = document.getElementById('evOrt').value || 'Wird privat mitgeteilt';
-    const preis = document.getElementById('evPreis').value || '?';
-    const praef = document.getElementById('evPraef').value;
-    const towels = document.getElementById('evTowels').value;
-    const beschreibung = document.getElementById('evBeschreibung').value;
-    const vorlieben = document.getElementById('evVorlieben').value || '-';
-    const tabus = document.getElementById('evTabus').value || '-';
+    const ort = document.getElementById('evOrt').value || 'Leipzig';
+    
+    const gName = document.getElementById('evGirlName').value || 'Susi';
+    const gAge = document.getElementById('evGirlAge').value || '35';
+    const gHeight = document.getElementById('evGirlHeight').value || '1,65m';
+    const gWeight = document.getElementById('evGirlWeight').value || '64kg';
+    const gType = document.getElementById('evGirlType').value || 'Schlanke und naturgeile Dreilochstute';
+
+    const vorlieben = document.getElementById('evVorlieben').value || 'GV, anal, lecken, fingern, blasen, in Mund spritzen, schlucken, harter Sex, Körperbesamung';
+    const tabus = document.getElementById('evTabus').value || 'Keine Schmerzen/Gewalt, kein KV';
+    const preis = document.getElementById('evPreis').value || '80';
+    const praef = document.getElementById('evPraef').value || 'AO und safer Sex, beides möglich!';
+    
+    const nsOpt = document.getElementById('evNS').value;
+    const vidOpt = document.getElementById('evVideo').value;
+    const bilderOpt = document.getElementById('evBilder').value;
     
     let dateStr = "TBA";
+    let weekdayStr = "Tag";
     if (datum) {
         const dObj = new Date(datum);
-        dateStr = dObj.toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' });
+        const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+        weekdayStr = days[dObj.getDay()];
+        const dd = String(dObj.getDate()).padStart(2, '0');
+        const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+        dateStr = `${dd}.${mm}.`;
     }
 
-    let text = `🔥 *EXKLUSIVES EVENT: ${name}* 🔥\n\n📅 *Wann:* ${dateStr}\n⏰ *Uhrzeit:* ${start} - ${ende} Uhr\n📍 *Wo:* ${ort}\n💸 *Beitrag:* ${preis}€ p.P.\n💦 *Typ:* ${praef}\n🚿 *Handtücher:* ${towels}\n`;
+    let text = `🔥 *${name} am ${weekdayStr}, den ${dateStr} von ${start}-${ende} Uhr in ${ort}:* 🔥\n`;
+    text += `${gType}, ${gAge}-jährige, ${gHeight}, ${gWeight} (${gName}).\n`;
     
-    if (beschreibung) text += `\n📝 *Infos:*\n${beschreibung}\n`;
+    let nsText = nsOpt !== 'Nein' ? `, NS (${nsOpt})` : '';
+    text += `Gewollt: ${vorlieben}${nsText}.\n`;
     
-    text += `\n✅ *Programm / Vorlieben:*\n${vorlieben}\n\n🚫 *Tabus:*\n${tabus}\n\nBegrenzte Plätze! Melde dich jetzt verbindlich an. Ich freue mich auf dich! 😈`;
+    if (vidOpt !== 'Keine') {
+        text += `Optional ${vidOpt}\n`;
+    }
+    
+    text += `Tabus: ${tabus}.\n`;
+    text += `${praef}\n`;
+    text += `Kosten: ${preis} Euro\n`;
+    
+    if (bilderOpt === 'Ja') {
+        text += `Bilder zu ihr gibt es gerne bei Interesse auf Anfrage!\n`;
+    }
+    
+    text += `Bei Interesse/Teilnahme einfach mir persönlich schreiben! 📩`;
     
     document.getElementById('promoBox').innerText = text;
 }
@@ -343,10 +382,19 @@ function saveEvent() {
         ort: document.getElementById('evOrt').value,
         preis: document.getElementById('evPreis').value,
         praef: document.getElementById('evPraef').value,
-        towels: document.getElementById('evTowels').value,
-        beschreibung: document.getElementById('evBeschreibung').value,
+        
+        gName: document.getElementById('evGirlName').value,
+        gAge: document.getElementById('evGirlAge').value,
+        gHeight: document.getElementById('evGirlHeight').value,
+        gWeight: document.getElementById('evGirlWeight').value,
+        gType: document.getElementById('evGirlType').value,
+        
+        ns: document.getElementById('evNS').value,
+        video: document.getElementById('evVideo').value,
+        bilder: document.getElementById('evBilder').value,
         vorlieben: document.getElementById('evVorlieben').value,
         tabus: document.getElementById('evTabus').value,
+        
         guests: currentGuests
     };
 

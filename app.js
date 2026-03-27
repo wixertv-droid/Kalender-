@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.13 - EVENT WEEKLY RENDER FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.14 - WOCHENANSICHT MIT NAMEN)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -404,7 +404,6 @@ function saveAppointment() {
             kundeGefunden = kunden.find(k => k.id == parseInt(kundeIdStr));
         }
 
-        // Wir suchen NUR noch nach exaktem Namen, niemals mehr nach der Nummer!
         if (!kundeGefunden) {
             kundeGefunden = kunden.find(k => k.name.toLowerCase().trim() === name.toLowerCase().trim());
         }
@@ -428,8 +427,6 @@ function saveAppointment() {
             localStorage.setItem('appKunden', JSON.stringify(kunden));
         } else {
             finalKundeId = kundeGefunden.id;
-            // !!! HIER WURDE DER GEFÄHRLICHE CODE GELÖSCHT !!!
-            // Ab sofort wird das Profil des Kunden hier NIEMALS mehr überschrieben!
         }
 
         if (currentEditId) {
@@ -580,13 +577,13 @@ function updateLiveSystem() {
     }
 }
 
-// --- V6.13 FIX: WOCHENANSICHT ZEIGT NUN AUCH EVENTS AN! ---
+// --- V6.14 FIX: EVENTS & NAMEN IN DER WOCHENANSICHT ---
 function renderWeek() {
     const wochenContainer = document.querySelector('.wochen-container');
     if (!wochenContainer) return;
 
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-    const events = JSON.parse(localStorage.getItem('appEvents')) || []; // Hole Events
+    const events = JSON.parse(localStorage.getItem('appEvents')) || [];
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
     const settings = { ...DEFAULTS, ...storedSettings };
 
@@ -599,7 +596,6 @@ function renderWeek() {
 
     if(gesamtArbeitsMin <= 0) return;
 
-    // Formatiere Events um, damit sie gezeichnet werden können
     const formatiertEvents = events.map(e => ({
         ...e,
         isEvent: true,
@@ -608,7 +604,6 @@ function renderWeek() {
         kat: 'event'
     }));
 
-    // Kombiniere Termine und Events
     const combinedItems = [...termine, ...formatiertEvents];
 
     combinedItems.forEach(t => {
@@ -654,7 +649,6 @@ function renderWeek() {
                     if(isOutsideRight) timeText = `${timeText} >>`;
 
                     if (t.isEvent) {
-                        // Event-Darstellung in der Woche
                         const f = t.color || '#ff3300';
                         segment.className = `termin-segment`;
                         segment.style.background = `linear-gradient(90deg, rgba(255,51,0,0.6) 0%, rgba(10,0,0,0.8) 100%)`;
@@ -664,7 +658,7 @@ function renderWeek() {
                         
                         segment.innerHTML = `
                             <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; overflow: hidden; padding: 0 2px;">
-                                <span class="status-label" style="margin-bottom: 2px; color: #fff; font-weight: bold; font-size:0.6rem;">🔥 ${t.name}</span>
+                                <span class="status-label" style="margin-bottom: 2px; color: #fff; font-weight: bold; font-size:0.6rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%; text-align: center;">🔥 ${t.name}</span>
                                 <span style="font-size: 0.5rem; font-weight: bold; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
                             </div>
                         `;
@@ -674,14 +668,14 @@ function renderWeek() {
                         };
                         segment.style.pointerEvents = 'auto'; 
                     } else {
-                        // Termin-Darstellung in der Woche
                         const safeKat = t.kat || 'kat1';
                         segment.className = `termin-segment ${safeKat}`;
                         const katName = settings[safeKat + "_name"] || "Termin";
+                        const displayName = t.name ? t.name : 'Unbekannt';
                         
                         segment.innerHTML = `
                             <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
-                                <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
+                                <span class="status-label" style="margin-bottom: 2px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: 100%;">${displayName} <span style="opacity:0.7; font-size:0.8em;">(${katName})</span></span>
                                 <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
                             </div>
                         `;

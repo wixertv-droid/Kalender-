@@ -255,7 +255,7 @@ function generatePromo() {
     text += `Hallo ihr Lieben, hier ist eure ${gName}! 💋\n`;
     text += `Ich bin eine ${gType} (${gAge} Jahre${maßeStr}) und veranstalte am ${weekdayStr}, den ${dateStr} von ${start} bis ${ende} Uhr mein "${name}" in ${stadt} (Location: ${location}).\n\n`;
     
-    text += `Ich will eure gemeinsame Creampie-Schlampe sein. Nehmt mich ran, bis ich von euch allen überlaufe! 🔥💦\n\n`;
+    text += `Ich will eure gemeinsame Creampie "${name}" Schlampe sein. Nehmt mich ran, bis ich überlaufe! 🔥💦\n\n`;
     
     text += `💦 *Gewollt:* ${vorlieben}\n`;
     if (nsOpt !== 'Nein') {
@@ -274,7 +274,7 @@ function generatePromo() {
         text += `\nHeiße Bilder von mir schicke ich euch bei Interesse sehr gerne auf Anfrage! 😏\n`;
     }
     
-    text += `\nDie Plätze in meiner Mitte sind streng limitiert. Wenn du mich als deine Gangbang-Schlampe benutzen willst, melde dich sofort verbindlich. Ich kann es kaum erwarten, von euch allen genommen zu werden! 🔥🔞`;
+    text += `\nDie Plätze sind limitiert. Wenn du mich als deine Gangbang-Schlampe benutzen willst, melde dich verbindlich. Ich kann es kaum erwarten, von euch gefickt zu werden! 🔥🔞`;
     
     document.getElementById('promoBox').innerText = text;
 }

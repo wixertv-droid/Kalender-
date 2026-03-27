@@ -25,13 +25,13 @@
         .kunde-row { 
             position: relative;
             display: flex; 
-            flex-wrap: wrap; /* Wichtig für Handy! */
+            flex-wrap: wrap; 
             gap: 15px; 
             align-items: center; 
             background: rgba(10, 15, 20, 0.7); 
             border: 1px solid var(--glass-border); 
             padding: 15px; 
-            padding-right: 40px; /* Platz für das X reservieren! */
+            padding-right: 40px; 
             border-radius: 12px; 
             margin-bottom: 12px; 
             transition: 0.2s; 
@@ -44,7 +44,7 @@
             background: rgba(10, 15, 20, 0.7); 
             border: 1px solid var(--glass-border); 
             padding: 15px; 
-            padding-right: 35px; /* Platz für das X reservieren! */
+            padding-right: 35px; 
             border-radius: 12px; 
             margin-bottom: 15px; 
             display: flex; 
@@ -86,12 +86,14 @@
         .badge-clean.gold { border-color: var(--neon-gold); color: var(--neon-gold); background: rgba(229,176,92,0.1); }
         .badge-clean.violet { border-color: var(--neon-violet); color: var(--neon-violet); background: rgba(188,0,221,0.1); }
         .badge-clean.red { border-color: var(--neon-red); color: var(--neon-red); background: rgba(255,42,109,0.1); }
+        .badge-clean.cyan { border-color: var(--neon-cyan); color: var(--neon-cyan); background: rgba(5,217,232,0.1); text-decoration: none; cursor: pointer; transition: 0.2s; }
+        .badge-clean.cyan:hover { background: rgba(5,217,232,0.3); }
 
         .star-box { font-size: 0.75rem; color: #888; display: flex; gap: 15px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px; }
         
         .k-vorlieben { font-size: 0.85rem; color: #aaa; font-style: italic; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; line-height: 1.4; }
 
-        /* Absolutes X zum Löschen - jetzt mit Platz! */
+        /* Absolutes X zum Löschen */
         .btn-delete-kunde { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 5px; transition: 0.2s; z-index: 5; }
         .btn-delete-kunde:hover { color: var(--neon-red); }
 
@@ -233,7 +235,7 @@
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label>Profil-Link (URL)</label>
-                    <input type="url" id="kLink" class="cyber-input-full" placeholder="https://...">
+                    <input type="text" id="kLink" class="cyber-input-full" placeholder="https://...">
                 </div>
             </div>
 
@@ -352,7 +354,7 @@
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
 
             if (ansicht === 'liste') {
-                // LISTEN ANSICHT (Flexbox mit Wrap)
+                // LISTEN ANSICHT
                 container.style.display = 'block';
                 
                 kunden.forEach(k => {
@@ -373,6 +375,11 @@
                     if (k.groesse && k.groesse !== 'Unbekannt') badges += `<span class="badge-clean">📐 ${k.groesse}</span>`;
                     if (k.noshows && k.noshows > 0) badges += `<span class="badge-clean red">⚠️ ${k.noshows}x No-Show</span>`;
 
+                    // PROFIL LINK PANZER-SUCHE
+                    let displayLink = k.profilLink || k.profillink || k.link || '';
+                    if (displayLink && !displayLink.startsWith('http')) displayLink = 'https://' + displayLink;
+                    if (displayLink) badges += `<a href="${displayLink}" target="_blank" onclick="event.stopPropagation();" class="badge-clean cyan">🔗 Profil</a>`;
+
                     container.innerHTML += `
                         <div class="kunde-row" onclick="openKundeModal(${k.id})">
                             <button class="btn-delete-kunde" onclick="event.stopPropagation(); deleteKunde(${k.id})">✖</button>
@@ -392,7 +399,7 @@
                     `;
                 });
             } else {
-                // KARTEN ANSICHT (Aufgeräumte Flexbox)
+                // KARTEN ANSICHT
                 container.style.display = 'grid';
                 container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
                 container.style.gap = '15px';
@@ -414,6 +421,11 @@
                     if (k.praeferenz && k.praeferenz !== 'none') badges += `<span class="badge-clean violet">💦 ${k.praeferenz}</span>`;
                     if (k.groesse && k.groesse !== 'Unbekannt') badges += `<span class="badge-clean">📐 ${k.groesse}</span>`;
                     if (k.noshows && k.noshows > 0) badges += `<span class="badge-clean red">⚠️ ${k.noshows}x No-Show</span>`;
+
+                    // PROFIL LINK PANZER-SUCHE
+                    let displayLink = k.profilLink || k.profillink || k.link || '';
+                    if (displayLink && !displayLink.startsWith('http')) displayLink = 'https://' + displayLink;
+                    if (displayLink) badges += `<a href="${displayLink}" target="_blank" onclick="event.stopPropagation();" class="badge-clean cyan">🔗 Profil</a>`;
 
                     let vorliebenHtml = (k.vorlieben && k.vorlieben.trim() !== '') ? `<div class="k-vorlieben">${k.vorlieben}</div>` : '';
 
@@ -460,7 +472,8 @@
                     document.getElementById('kPlattform2').value = k.plattform2 || 'none';
                     document.getElementById('kKontakt2').value = k.kontakt2 || '';
                     
-                    document.getElementById('kLink').value = k.profillink || k.link || '';
+                    // BEIM LADEN: Prüft alle Schreibweisen!
+                    document.getElementById('kLink').value = k.profilLink || k.profillink || k.link || '';
                     
                     document.getElementById('kPreis').value = k.preis || '';
                     document.getElementById('kPraef').value = k.praeferenz || 'none';
@@ -500,7 +513,8 @@
             if(!name) { alert("Name fehlt!"); return; }
 
             let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-            
+            const linkUrl = document.getElementById('kLink').value.trim();
+
             const data = {
                 id: currentKundeId || Date.now(),
                 name: name,
@@ -509,7 +523,12 @@
                 kontakt: document.getElementById('kKontakt').value.trim(),
                 plattform2: document.getElementById('kPlattform2').value,
                 kontakt2: document.getElementById('kKontakt2').value.trim(),
-                profillink: document.getElementById('kLink').value.trim(),
+                
+                // BOMBENFEST: Speichert in alle Formate!
+                profillink: linkUrl,
+                profilLink: linkUrl,
+                link: linkUrl,
+                
                 preis: document.getElementById('kPreis').value,
                 praeferenz: document.getElementById('kPraef').value,
                 groesse: document.getElementById('kGroesse').value,

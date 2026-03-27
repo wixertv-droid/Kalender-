@@ -18,40 +18,42 @@
     <script src="app.js" defer></script>
 
     <style>
-        /* --- BESSERE STRUKTUR FÜR DIE KUNDEN-LISTEN --- */
+        /* --- BESSERE STRUKTUR FÜR DIE KUNDEN-LISTEN (TABLET/HANDY SAFE) --- */
         .kunden-container { padding: 15px; margin-bottom: 80px; }
         
-        /* Listen-Ansicht: Echtes Grid für perfekte Ausrichtung */
+        /* Listen-Ansicht: Flexbox mit Wrap, damit es am Handy nicht zerquetscht wird */
         .kunde-row { 
-            display: grid; 
-            grid-template-columns: 45px 1fr auto; 
+            position: relative;
+            display: flex; 
+            flex-wrap: wrap; /* Wichtig für Handy! */
             gap: 15px; 
             align-items: center; 
             background: rgba(10, 15, 20, 0.7); 
             border: 1px solid var(--glass-border); 
             padding: 15px; 
+            padding-right: 40px; /* Platz für das X reservieren! */
             border-radius: 12px; 
             margin-bottom: 12px; 
             transition: 0.2s; 
-            position: relative;
         }
         .kunde-row:hover { background: rgba(5, 217, 232, 0.05); border-color: var(--neon-cyan); }
         
-        /* Karten-Ansicht: Aufgeräumte Flexbox */
+        /* Karten-Ansicht: Aufgeräumt */
         .kunde-card { 
+            position: relative; 
             background: rgba(10, 15, 20, 0.7); 
             border: 1px solid var(--glass-border); 
             padding: 15px; 
+            padding-right: 35px; /* Platz für das X reservieren! */
             border-radius: 12px; 
             margin-bottom: 15px; 
-            position: relative; 
             display: flex; 
             flex-direction: column; 
-            gap: 10px;
+            gap: 12px;
         }
         .kunde-card:hover { border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(5,217,232,0.1); }
         
-        /* Avatar (geschrumpft und elegant) */
+        /* Avatar */
         .k-avatar { 
             width: 45px; height: 45px; 
             border-radius: 50%; 
@@ -61,48 +63,57 @@
             color: var(--neon-cyan); 
             background: rgba(5,217,232,0.1); 
             text-transform: uppercase;
+            flex-shrink: 0;
         }
         
         /* Info-Bereiche */
-        .k-info { display: flex; flex-direction: column; gap: 4px; }
-        .k-name-wrap { display: flex; align-items: center; gap: 10px; }
+        .k-details { flex-grow: 1; min-width: 200px; display: flex; flex-direction: column; gap: 5px; }
+        .k-name-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .k-name { font-size: 1.1rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px; }
-        .k-kontakt-box { font-size: 0.75rem; color: #aaa; background: rgba(0,0,0,0.4); padding: 6px 10px; border-radius: 6px; border-left: 2px solid #444; line-height: 1.4; }
-        .k-kontakt-line { display: flex; align-items: center; gap: 5px; }
-        .k-kontakt-line span { color: var(--neon-violet); font-weight: bold; width: 60px; }
+        
+        .k-kontakt-box { font-size: 0.8rem; color: #aaa; background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 8px; border-left: 2px solid #444; line-height: 1.5; }
+        .k-kontakt-line span { color: var(--neon-violet); font-weight: bold; }
 
-        /* Stats & Badges (Rechte Seite in Liste, Unten in Karte) */
-        .k-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-        .k-stats-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        /* Stats & Badges */
+        .k-stats { display: flex; flex-direction: column; gap: 8px; min-width: 200px; }
+        .k-stats-row { display: flex; gap: 8px; flex-wrap: wrap; }
         
         .badge-clean { 
-            font-size: 0.7rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; 
+            font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; 
             background: rgba(255,255,255,0.05); border: 1px solid #444; color: #ccc; 
-            display: flex; align-items: center; gap: 4px;
+            display: flex; align-items: center; gap: 4px; white-space: nowrap;
         }
         .badge-clean.gold { border-color: var(--neon-gold); color: var(--neon-gold); background: rgba(229,176,92,0.1); }
         .badge-clean.violet { border-color: var(--neon-violet); color: var(--neon-violet); background: rgba(188,0,221,0.1); }
         .badge-clean.red { border-color: var(--neon-red); color: var(--neon-red); background: rgba(255,42,109,0.1); }
 
-        .star-box { font-size: 0.75rem; color: #888; display: flex; gap: 10px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; }
+        .star-box { font-size: 0.75rem; color: #888; display: flex; gap: 15px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 6px; }
         
-        .k-vorlieben { font-size: 0.8rem; color: #aaa; font-style: italic; border-top: 1px dashed #333; padding-top: 8px; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .k-vorlieben { font-size: 0.85rem; color: #aaa; font-style: italic; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; line-height: 1.4; }
 
-        .btn-delete-kunde { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 5px; transition: 0.2s; }
+        /* Absolutes X zum Löschen - jetzt mit Platz! */
+        .btn-delete-kunde { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 5px; transition: 0.2s; z-index: 5; }
         .btn-delete-kunde:hover { color: var(--neon-red); }
 
-        /* --- MODAL DESIGN OPTIMIERUNG --- */
-        .step-indicator { display: flex; justify-content: center; gap: 20px; margin-bottom: 25px; }
-        .step-circle { 
-            width: 36px; height: 36px; border-radius: 50%; 
+        /* --- MODAL DESIGN: Die großen 1 und 2 für Bilder --- */
+        .img-upload-container { display: flex; justify-content: center; gap: 30px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #333; }
+        .img-upload-box { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 45%; }
+        .img-circle { 
+            width: 60px; height: 60px; border-radius: 50%; 
             display: flex; justify-content: center; align-items: center; 
-            font-weight: bold; font-size: 1rem; border: 2px solid #444; color: #666; 
-            transition: 0.3s; 
+            font-weight: bold; font-size: 1.5rem; border: 2px dashed var(--neon-cyan); 
+            color: var(--neon-cyan); background: rgba(5,217,232,0.05); 
         }
-        .step-circle.active { border-color: var(--neon-cyan); color: var(--neon-cyan); background: rgba(5,217,232,0.1); box-shadow: 0 0 15px rgba(5,217,232,0.3); }
         
-        .form-section { background: rgba(5, 217, 232, 0.02); border: 1px dashed rgba(5, 217, 232, 0.2); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-        .section-title { font-size: 0.7rem; text-transform: uppercase; color: var(--neon-cyan); letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; }
+        /* Form Sections */
+        .form-section { background: rgba(255, 255, 255, 0.02); border: 1px solid #222; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+        .section-title { font-size: 0.7rem; text-transform: uppercase; color: #666; letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; }
+
+        /* Desktop vs Mobile Alignment */
+        @media (min-width: 768px) {
+            .k-stats { align-items: flex-end; }
+            .k-stats-row { justify-content: flex-end; }
+        }
     </style>
 </head>
 <body>
@@ -166,135 +177,117 @@
 
     <div class="modal-overlay" id="kundeModal">
         <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
-            <div class="form-title" style="color: var(--neon-cyan); border-bottom-color: var(--neon-cyan);">Profil Bearbeiten</div>
+            <div class="form-title" style="color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); margin-bottom: 20px;">Profil Bearbeiten</div>
             
-            <div class="step-indicator">
-                <div class="step-circle active" id="step1-ind">1</div>
-                <div class="step-circle" id="step2-ind">2</div>
+            <div class="img-upload-container">
+                <div class="img-upload-box">
+                    <div class="img-circle">1</div>
+                    <input type="text" id="kBild1" class="cyber-input-full" placeholder="Bild URL 1" style="font-size: 0.75rem; text-align: center; padding: 6px;">
+                </div>
+                <div class="img-upload-box">
+                    <div class="img-circle">2</div>
+                    <input type="text" id="kBild2" class="cyber-input-full" placeholder="Bild URL 2" style="font-size: 0.75rem; text-align: center; padding: 6px;">
+                </div>
             </div>
 
-            <div id="step1">
-                <div class="form-section">
-                    <div class="section-title">Identität</div>
-                    <div style="display: flex; gap: 10px;">
-                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                            <label>Name / Alias</label>
-                            <input type="text" id="kName" class="cyber-input-full" placeholder="Pflichtfeld">
-                        </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label>Status</label>
-                            <select id="kStatus" class="cyber-select">
-                                <option value="none">Keiner</option>
-                                <option value="kat1">VIP</option>
-                                <option value="kat2">Stamm</option>
-                                <option value="kat3">Neu</option>
-                            </select>
-                        </div>
+            <div class="form-section">
+                <div class="section-title">Identität</div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                        <label>Name / Alias</label>
+                        <input type="text" id="kName" class="cyber-input-full" placeholder="Pflichtfeld">
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Status</label>
+                        <select id="kStatus" class="cyber-select">
+                            <option value="none">Keiner</option>
+                            <option value="kat1">VIP</option>
+                            <option value="kat2">Stamm</option>
+                            <option value="kat3">Neu</option>
+                        </select>
                     </div>
                 </div>
-
-                <div class="form-section">
-                    <div class="section-title">Kontakte</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label>Plattform 1</label>
-                            <select id="kPlattform" class="cyber-select"></select>
-                        </div>
-                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                            <label>Kontakt 1</label>
-                            <input type="text" id="kKontakt" class="cyber-input-full" placeholder="Nummer / Name">
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label>Plattform 2</label>
-                            <select id="kPlattform2" class="cyber-select"></select>
-                        </div>
-                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                            <label>Kontakt 2</label>
-                            <input type="text" id="kKontakt2" class="cyber-input-full" placeholder="Optional">
-                        </div>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label>Profil-Link (URL)</label>
-                        <input type="url" id="kLink" class="cyber-input-full" placeholder="https://...">
-                    </div>
-                </div>
-
-                <button class="btn-save" onclick="nextStep()" style="background: var(--neon-cyan); color: #000;">WEITER ZU DETAILS ➡️</button>
             </div>
 
-            <div id="step2" style="display: none;">
-                <div class="form-section">
-                    <div class="section-title">Konditionen</div>
-                    <div style="display: flex; gap: 10px;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label>Preis (€)</label>
-                            <input type="number" id="kPreis" class="cyber-input-full" placeholder="0">
-                        </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label>Präferenz</label>
-                            <select id="kPraef" class="cyber-select">
-                                <option value="none">Unbekannt</option>
-                                <option value="AO">AO (Alles ohne)</option>
-                                <option value="Save">Save (Verhütung)</option>
-                            </select>
-                        </div>
+            <div class="form-section">
+                <div class="section-title">Kontakte</div>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Platt. 1</label>
+                        <select id="kPlattform" class="cyber-select"></select>
+                    </div>
+                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                        <label>Kontakt 1</label>
+                        <input type="text" id="kKontakt" class="cyber-input-full" placeholder="Nummer / Name">
                     </div>
                 </div>
-
-                <div class="form-section">
-                    <div class="section-title">Bewertung & Physis</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label>Körperbau</label>
-                            <select id="kGroesse" class="cyber-select">
-                                <option value="Unbekannt">Unbekannt</option>
-                                <option value="Zierlich">Zierlich</option>
-                                <option value="Mittel">Mittel</option>
-                                <option value="Groß">Groß</option>
-                                <option value="Kurvig">Kurvig</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label>Vibe (1-5)</label>
-                            <input type="number" id="kVibe" class="cyber-input-full" min="1" max="5" placeholder="Sterne">
-                        </div>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Platt. 2</label>
+                        <select id="kPlattform2" class="cyber-select"></select>
                     </div>
-                    <div class="form-group" style="margin-bottom: 0; width: 50%;">
+                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                        <label>Kontakt 2</label>
+                        <input type="text" id="kKontakt2" class="cyber-input-full" placeholder="Optional">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Profil-Link (URL)</label>
+                    <input type="url" id="kLink" class="cyber-input-full" placeholder="https://...">
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="section-title">Konditionen & Werte</div>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Preis (€)</label>
+                        <input type="number" id="kPreis" class="cyber-input-full" placeholder="z.B. 150">
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Präferenz</label>
+                        <select id="kPraef" class="cyber-select">
+                            <option value="none">Unbekannt</option>
+                            <option value="AO">AO (Alles ohne)</option>
+                            <option value="Save">Save (Verhütung)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Körperbau</label>
+                        <select id="kGroesse" class="cyber-select">
+                            <option value="Unbekannt">Unbekannt</option>
+                            <option value="Zierlich">Zierlich</option>
+                            <option value="Mittel">Mittel</option>
+                            <option value="Groß">Groß</option>
+                            <option value="Kurvig">Kurvig</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Vibe (1-5)</label>
+                        <input type="number" id="kVibe" class="cyber-input-full" min="1" max="5" placeholder="Sterne">
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
                         <label>Performance (1-5)</label>
                         <input type="number" id="kPerf" class="cyber-input-full" min="1" max="5" placeholder="Sterne">
                     </div>
                 </div>
+            </div>
 
-                <div class="form-section">
-                    <div class="section-title">Akte & Medien</div>
-                    <div class="form-group" style="margin-bottom: 10px;">
-                        <label>Vorlieben / Tabus</label>
-                        <textarea id="kVorlieben" class="cyber-input-full" rows="2" placeholder="Was mag er/sie?"></textarea>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 10px;">
-                        <label>Allgemeine Notizen</label>
-                        <textarea id="kNotizen" class="cyber-input-full" rows="2" placeholder="Besonderheiten..."></textarea>
-                    </div>
-                    <div style="display: flex; gap: 10px;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label>Bild-URL 1</label>
-                            <input type="text" id="kBild1" class="cyber-input-full" placeholder="Link zum Bild">
-                        </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label>Bild-URL 2</label>
-                            <input type="text" id="kBild2" class="cyber-input-full" placeholder="Link zum Bild">
-                        </div>
-                    </div>
+            <div class="form-section" style="margin-bottom: 25px;">
+                <div class="section-title">Akte</div>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label>Vorlieben / Tabus</label>
+                    <textarea id="kVorlieben" class="cyber-input-full" rows="2" placeholder="Was mag er/sie?"></textarea>
                 </div>
-
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn-save" onclick="prevStep()" style="flex: 1; background: rgba(255,255,255,0.1); color: white;">⬅️ ZURÜCK</button>
-                    <button class="btn-save" onclick="saveKunde()" style="flex: 2;">SPEICHERN ✔️</button>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Allgemeine Notizen</label>
+                    <textarea id="kNotizen" class="cyber-input-full" rows="2" placeholder="Besonderheiten..."></textarea>
                 </div>
             </div>
 
+            <button class="btn-save" onclick="saveKunde()" style="width: 100%;">PROFIL SPEICHERN ✔️</button>
             <button onclick="closeKundeModal()" style="width:100%; background:none; border:none; color:#666; margin-top:15px; cursor:pointer; text-transform:uppercase; font-size:1rem; font-weight:bold;">Abbrechen</button>
         </div>
     </div>
@@ -359,7 +352,9 @@
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
 
             if (ansicht === 'liste') {
-                // LISTEN ANSICHT (Echtes Grid)
+                // LISTEN ANSICHT (Flexbox mit Wrap)
+                container.style.display = 'block';
+                
                 kunden.forEach(k => {
                     const statusName = k.status && k.status !== 'none' ? (settings[k.status+"_name"] || k.status) : '';
                     const statusColor = k.status && k.status !== 'none' ? (settings[k.status+"_farbe"] || '#fff') : '';
@@ -382,7 +377,7 @@
                         <div class="kunde-row" onclick="openKundeModal(${k.id})">
                             <button class="btn-delete-kunde" onclick="event.stopPropagation(); deleteKunde(${k.id})">✖</button>
                             <div class="k-avatar">${initials}</div>
-                            <div class="k-info">
+                            <div class="k-details">
                                 <div class="k-name-wrap"><span class="k-name">${k.name}</span> ${statusBadge}</div>
                                 ${kontaktHtml}
                             </div>
@@ -399,7 +394,7 @@
             } else {
                 // KARTEN ANSICHT (Aufgeräumte Flexbox)
                 container.style.display = 'grid';
-                container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
+                container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
                 container.style.gap = '15px';
 
                 kunden.forEach(k => {
@@ -423,21 +418,26 @@
                     let vorliebenHtml = (k.vorlieben && k.vorlieben.trim() !== '') ? `<div class="k-vorlieben">${k.vorlieben}</div>` : '';
 
                     container.innerHTML += `
-                        <div class="kunde-card" onclick="openKundeModal(${k.id})" style="margin-bottom:0;">
+                        <div class="kunde-card" onclick="openKundeModal(${k.id})">
                             <button class="btn-delete-kunde" onclick="event.stopPropagation(); deleteKunde(${k.id})">✖</button>
-                            <div class="k-name-wrap">
-                                <div class="k-avatar" style="width:35px; height:35px; font-size:0.9rem;">${initials}</div>
+                            
+                            <div class="k-name-wrap" style="margin-bottom: 5px;">
+                                <div class="k-avatar" style="width:38px; height:38px; font-size:0.9rem;">${initials}</div>
                                 <div style="display:flex; flex-direction:column; align-items:flex-start;">
-                                    <span class="k-name" style="font-size:1rem;">${k.name}</span>
+                                    <span class="k-name" style="font-size:1.1rem; line-height: 1.1;">${k.name}</span>
                                     ${statusBadge}
                                 </div>
                             </div>
+                            
                             ${kontaktHtml}
-                            <div class="k-stats-row" style="justify-content: flex-start;">${badges}</div>
+                            
+                            <div class="k-stats-row" style="justify-content: flex-start; margin-top: 5px;">${badges}</div>
+                            
                             <div class="star-box" style="justify-content: flex-start;">
                                 <span>V: ${getStarString(k.vibe)}</span>
                                 <span>P: ${getStarString(k.perf)}</span>
                             </div>
+                            
                             ${vorliebenHtml}
                         </div>
                     `;
@@ -448,10 +448,6 @@
         function openKundeModal(id = null) {
             loadDropdowns();
             currentKundeId = id;
-            document.getElementById('step1').style.display = 'block';
-            document.getElementById('step2').style.display = 'none';
-            document.getElementById('step1-ind').className = 'step-circle active';
-            document.getElementById('step2-ind').className = 'step-circle';
 
             if (id) {
                 const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
@@ -498,20 +494,6 @@
         }
 
         function closeKundeModal() { document.getElementById('kundeModal').style.display = 'none'; }
-        
-        function nextStep() {
-            if(!document.getElementById('kName').value.trim()) { alert("Name ist Pflichtfeld!"); return; }
-            document.getElementById('step1').style.display = 'none';
-            document.getElementById('step2').style.display = 'block';
-            document.getElementById('step1-ind').className = 'step-circle';
-            document.getElementById('step2-ind').className = 'step-circle active';
-        }
-        function prevStep() {
-            document.getElementById('step2').style.display = 'none';
-            document.getElementById('step1').style.display = 'block';
-            document.getElementById('step2-ind').className = 'step-circle';
-            document.getElementById('step1-ind').className = 'step-circle active';
-        }
 
         function saveKunde() {
             const name = document.getElementById('kName').value.trim();
@@ -542,7 +524,7 @@
             if (currentKundeId) {
                 const idx = kunden.findIndex(k => k.id === currentKundeId);
                 if (idx > -1) {
-                    data.noshows = kunden[idx].noshows || 0; // Noshows behalten
+                    data.noshows = kunden[idx].noshows || 0;
                     kunden[idx] = data;
                 }
             } else {

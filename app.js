@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.11 - SAFE MODE / STRICT DB)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.13 - EVENT WEEKLY RENDER FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -580,11 +580,13 @@ function updateLiveSystem() {
     }
 }
 
+// --- V6.13 FIX: WOCHENANSICHT ZEIGT NUN AUCH EVENTS AN! ---
 function renderWeek() {
     const wochenContainer = document.querySelector('.wochen-container');
     if (!wochenContainer) return;
 
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+    const events = JSON.parse(localStorage.getItem('appEvents')) || []; // Hole Events
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
     const settings = { ...DEFAULTS, ...storedSettings };
 
@@ -597,7 +599,19 @@ function renderWeek() {
 
     if(gesamtArbeitsMin <= 0) return;
 
-    termine.forEach(t => {
+    // Formatiere Events um, damit sie gezeichnet werden können
+    const formatiertEvents = events.map(e => ({
+        ...e,
+        isEvent: true,
+        start: e.start || "00:00",
+        ende: e.ende || "23:59",
+        kat: 'event'
+    }));
+
+    // Kombiniere Termine und Events
+    const combinedItems = [...termine, ...formatiertEvents];
+
+    combinedItems.forEach(t => {
         if (!t || !t.datum || !t.start || !t.ende || !t.start.includes(':') || !t.ende.includes(':')) return;
 
         const tagZeile = document.querySelector(`.tag-zeile[data-datum="${t.datum}"]`);
@@ -634,27 +648,51 @@ function renderWeek() {
                     const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
 
                     const segment = document.createElement('div');
-                    const safeKat = t.kat || 'kat1';
-                    segment.className = `termin-segment ${safeKat}`;
+                    
+                    let timeText = `${t.start} - ${t.ende}`;
+                    if(isOutsideLeft) timeText = `<< ${timeText}`;
+                    if(isOutsideRight) timeText = `${timeText} >>`;
+
+                    if (t.isEvent) {
+                        // Event-Darstellung in der Woche
+                        const f = t.color || '#ff3300';
+                        segment.className = `termin-segment`;
+                        segment.style.background = `linear-gradient(90deg, rgba(255,51,0,0.6) 0%, rgba(10,0,0,0.8) 100%)`;
+                        segment.style.borderLeft = `3px solid ${f}`;
+                        segment.style.boxShadow = `0 0 8px ${f}`;
+                        segment.style.zIndex = "5"; 
+                        
+                        segment.innerHTML = `
+                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; overflow: hidden; padding: 0 2px;">
+                                <span class="status-label" style="margin-bottom: 2px; color: #fff; font-weight: bold; font-size:0.6rem;">🔥 ${t.name}</span>
+                                <span style="font-size: 0.5rem; font-weight: bold; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
+                            </div>
+                        `;
+                        segment.onclick = (e) => {
+                            e.stopPropagation();
+                            window.location.href = 'events.html';
+                        };
+                        segment.style.pointerEvents = 'auto'; 
+                    } else {
+                        // Termin-Darstellung in der Woche
+                        const safeKat = t.kat || 'kat1';
+                        segment.className = `termin-segment ${safeKat}`;
+                        const katName = settings[safeKat + "_name"] || "Termin";
+                        
+                        segment.innerHTML = `
+                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
+                                <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
+                                <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
+                            </div>
+                        `;
+                    }
+
                     segment.style.left = linksPosition + '%';
                     segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
                     
                     if (isOutsideLeft || isOutsideRight) {
                         segment.style.opacity = '0.5';
                     }
-                    
-                    const katName = settings[safeKat + "_name"] || "Termin";
-                    
-                    let timeText = `${t.start} - ${t.ende}`;
-                    if(isOutsideLeft) timeText = `<< ${timeText}`;
-                    if(isOutsideRight) timeText = `${timeText} >>`;
-                    
-                    segment.innerHTML = `
-                        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
-                            <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
-                            <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
-                        </div>
-                    `;
                     
                     timeline.appendChild(segment);
                 } catch (e) {

@@ -283,6 +283,26 @@
             document.getElementById('lightbox').style.display = 'flex'; 
         }
 
+        // DIE PERFEKTE SUCH-FUNKTION (Sicher gegen unsichtbare Leerzeichen & alte Termine)
+        function safeFindKunde(t, kundenDB) {
+            let kunde = null;
+            // 1. Priorität: Suche hart nach der ID
+            if (t.kunde_id) {
+                kunde = kundenDB.find(k => String(k.id) === String(t.kunde_id));
+            }
+            // 2. Priorität: Sicherer Namens-Abgleich (ohne Leerzeichen)
+            if (!kunde && t.name) {
+                const searchName = String(t.name).toLowerCase().trim();
+                kunde = kundenDB.find(k => String(k.name).toLowerCase().trim() === searchName);
+            }
+            // 3. Letzter Ausweg: Handynummer, ABER nur wenn sie nicht leer ist!
+            if (!kunde && t.kontakt && t.kontakt.trim() !== '') {
+                const searchKontakt = String(t.kontakt).trim();
+                kunde = kundenDB.find(k => String(k.kontakt).trim() === searchKontakt);
+            }
+            return kunde;
+        }
+
         function sucheKundeFuerTermin() {
             const input = document.getElementById('terminName').value.toLowerCase();
             const vBox = document.getElementById('kundenVorschlaege');
@@ -331,18 +351,17 @@
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             
-            let kunde = null;
-            if (t.kunde_id) kunde = kunden.find(k => k.id == t.kunde_id);
-            if (!kunde) kunde = kunden.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
+            // Die neue Panzer-Suche nutzen!
+            let kunde = safeFindKunde(t, kunden);
 
             document.getElementById('detailName').innerText = t.name;
             document.getElementById('detailZeitKat').innerText = `${t.start} - ${t.ende} // ${settings[t.kat+"_name"] || 'Termin'}`;
             
             const livePlattform = (kunde && kunde.plattform) ? kunde.plattform : t.plattform;
             const liveKontakt = (kunde && kunde.kontakt) ? kunde.kontakt : t.kontakt;
-            document.getElementById('detailKontaktFull').innerText = (livePlattform && livePlattform !== 'none') ? `${livePlattform}: ${liveKontakt}` : 'Kein Kontakt hinterlegt';
+            document.getElementById('detailKontaktFull').innerText = (livePlattform && livePlattform !== 'none' && livePlattform !== "") ? `${livePlattform}: ${liveKontakt}` : (liveKontakt ? liveKontakt : 'Kein Kontakt hinterlegt');
             
-            document.getElementById('detailNotizen').innerHTML = (t.notizen || 'Keine Notizen vorhanden').replace(/\n/g, '<br>');
+            document.getElementById('detailNotizen').innerHTML = (t.notizen || 'Keine Termin-Notizen').replace(/\n/g, '<br>');
 
             let displayPreis = (kunde && kunde.preis) ? kunde.preis : t.preis;
             let displayPraeferenz = (kunde && kunde.praeferenz) ? kunde.praeferenz : (t.praeferenz || 'none');
@@ -398,9 +417,8 @@
             if(tIndex === -1) return;
             const t = termine[tIndex];
             
-            let kIndex = -1;
-            if (t.kunde_id) kIndex = kunden.findIndex(k => k.id == t.kunde_id);
-            if (kIndex === -1) kIndex = kunden.findIndex(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
+            let kunde = safeFindKunde(t, kunden);
+            let kIndex = kunde ? kunden.findIndex(k => k.id === kunde.id) : -1;
 
             if (status === 'done') {
                 const umsatz = document.getElementById('umsatzInput').value;
@@ -431,11 +449,10 @@
 
             localStorage.setItem('appTermine', JSON.stringify(termine));
             document.getElementById('abrechnungModal').style.display = 'none';
-            const urlParams = new URLSearchParams(window.location.search);
+            const urlParams = newSearchParams(window.location.search);
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
         }
 
-        // --- TIMELINE MATRIX RENDERER ---
         function renderTimeline(datum) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
@@ -546,16 +563,21 @@
                         block.style.borderLeftColor = f;
                         block.onclick = () => openDetailModal(t.id);
                         
-                        // Live Kunden-Daten abrufen
-                        let dbKunde = null;
-                        if (t.kunde_id) dbKunde = kundenDB.find(k => k.id == t.kunde_id);
-                        if (!dbKunde) dbKunde = kundenDB.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
+                        // Die Panzer-Suche auch hier!
+                        let dbKunde = safeFindKunde(t, kundenDB);
                         
                         let displayPreis = (dbKunde && dbKunde.preis) ? dbKunde.preis : t.preis;
                         let expectedPreis = displayPreis || ''; 
                         
                         let displayPraef = (dbKunde && dbKunde.praeferenz) ? dbKunde.praeferenz : (t.praeferenz || 'none');
-                        let displayKontakt = (dbKunde && dbKunde.kontakt) ? `${dbKunde.plattform}: ${dbKunde.kontakt}` : (t.kontakt ? `${t.plattform}: ${t.kontakt}` : '');
+                        
+                        // Kontakt schick formatieren
+                        const livePlattform = (dbKunde && dbKunde.plattform) ? dbKunde.plattform : t.plattform;
+                        const liveKontakt = (dbKunde && dbKunde.kontakt) ? dbKunde.kontakt : t.kontakt;
+                        let displayKontakt = "";
+                        if (liveKontakt) {
+                            displayKontakt = (livePlattform && livePlattform !== 'none' && livePlattform !== "") ? `${livePlattform}: ${liveKontakt}` : liveKontakt;
+                        }
                         
                         let statusHTML = '';
                         if (t.status === 'done') statusHTML = `<div class="status-done">💰 ${t.umsatz} €</div>`;
@@ -565,7 +587,6 @@
                         let deleteBtn = `<button onclick="event.stopPropagation(); deleteTermin(${t.id})" style="background: rgba(255, 0, 60, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.7rem;">✖ Löschen</button>`;
 
                         if (flexDir === 'row') {
-                            // Kurzer Termin (Kompakt aber mit Kontaktinfo)
                             let kontaktMini = displayKontakt ? `<span style="font-size: 0.7rem; color: #aaa; margin-left: 10px;">📱 ${displayKontakt}</span>` : '';
                             block.innerHTML = `
                                 <div class="cyber-node" style="border-color:${f};"></div>
@@ -580,7 +601,6 @@
                                 </div>
                             `;
                         } else {
-                            // Langer Termin (Ausführlich mit Preis, Praeferenz und Notiz)
                             let pBadge = displayPreis ? `<span style="background: rgba(229,176,92,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-gold); color: var(--neon-gold);">💰 ${displayPreis}€</span>` : '';
                             let praefBadge = (displayPraef && displayPraef !== 'none') ? `<span style="background: rgba(188,0,221,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-violet); color: var(--neon-violet);">💦 ${displayPraef}</span>` : '';
                             let kontaktRow = displayKontakt ? `<div style="font-size: 0.75rem; color: #ccc; margin-top: 5px;">📱 ${displayKontakt}</div>` : '';

@@ -274,7 +274,7 @@ function generatePromo() {
         text += `\nHeiße Bilder von mir schicke ich euch bei Interesse sehr gerne auf Anfrage! 😏\n`;
     }
     
-    text += `\nDie Plätze sind streng limitiert. Wenn du dabei sein und mich vernaschen willst, melde dich schnell verbindlich bei mir. Ich freue mich extrem auf dich! 🔥🔞`;
+    text += `\nDie Plätze in meiner Mitte sind streng limitiert. Wenn du mich als deine Gangbang-Schlampe benutzen willst, melde dich sofort verbindlich. Ich kann es kaum erwarten, von euch allen genommen zu werden! 🔥🔞`;
     
     document.getElementById('promoBox').innerText = text;
 }

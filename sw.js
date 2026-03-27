@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agenda-2050-v2'; // <--- Das v2 ist der Schlüssel!
+const CACHE_NAME = 'agenda-2050-v3'; // <--- Das v3 ist der Schlüssel!
 const ASSETS = [
   './',
   './index.html',

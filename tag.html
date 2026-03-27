@@ -169,6 +169,7 @@
             
             <div class="form-group" style="position: relative;">
                 <label class="input-label">Kunde / Bezeichnung</label>
+                <input type="hidden" id="terminKundeId"> 
                 <input type="text" id="terminName" class="cyber-input-full" placeholder="Name tippen..." onkeyup="sucheKundeFuerTermin()" autocomplete="off">
                 <div id="kundenVorschlaege" style="display: none;"></div>
             </div>
@@ -289,12 +290,18 @@
             document.getElementById('lightbox').style.display = 'flex'; 
         }
 
+        // --- V6.11 FIX: Auto-Fill jetzt MIT ID Tracking ---
         function sucheKundeFuerTermin() {
             const input = document.getElementById('terminName').value.toLowerCase();
             const vBox = document.getElementById('kundenVorschlaege');
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            
+            document.getElementById('terminKundeId').value = '';
+            
             if (input.length < 1) { vBox.style.display = 'none'; return; }
+            
             const treffer = kunden.filter(k => (k.name && k.name.toLowerCase().includes(input)) || (k.kontakt && k.kontakt.toLowerCase().includes(input)));
+            
             if (treffer.length > 0) {
                 vBox.innerHTML = '';
                 treffer.forEach(k => {
@@ -303,6 +310,7 @@
                     let warningHTML = (k.noshows && k.noshows > 0) ? `<span style="color: var(--neon-red); font-weight: bold; float: right; font-size: 0.8rem;">⚠️ ${k.noshows}x NO-SHOW</span>` : '';
                     d.innerHTML = `<strong>${k.name}</strong> ${warningHTML}<br><small style="color:#aaa;">${k.plattform !== 'none' ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</small>`;
                     d.onclick = () => {
+                        document.getElementById('terminKundeId').value = k.id;
                         document.getElementById('terminName').value = k.name;
                         document.getElementById('terminPlattform').value = k.plattform || 'none';
                         document.getElementById('terminKontakt').value = k.kontakt || '';
@@ -324,21 +332,30 @@
             return "<span style='color: var(--neon-gold); text-shadow: 0 0 8px var(--neon-gold);'>" + "★".repeat(num) + "</span><span style='color: #333; text-shadow: none;'>" + "★".repeat(5 - num) + "</span>";
         }
 
+        // --- V6.11 FIX: Detail-Ansicht nutzt ECHTE Kunden-Daten per ID ---
         function openDetailModal(id) {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             const t = termine.find(x => x.id === id);
             if(!t) return;
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-            let kunde = kunden.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
+            
+            let kunde = null;
+            if (t.kunde_id) kunde = kunden.find(k => k.id == t.kunde_id);
+            if (!kunde) kunde = kunden.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
 
             document.getElementById('detailName').innerText = t.name;
             document.getElementById('detailZeitKat').innerText = `${t.start} - ${t.ende} // ${settings[t.kat+"_name"] || 'Termin'}`;
-            document.getElementById('detailKontaktFull').innerText = (t.plattform && t.plattform !== 'none') ? `${t.plattform}: ${t.kontakt}` : 'Kein Kontakt hinterlegt';
+            
+            // Nimmt live die Nummer aus der Datenbank, wenn vorhanden!
+            const livePlattform = (kunde && kunde.plattform) ? kunde.plattform : t.plattform;
+            const liveKontakt = (kunde && kunde.kontakt) ? kunde.kontakt : t.kontakt;
+            document.getElementById('detailKontaktFull').innerText = (livePlattform && livePlattform !== 'none') ? `${livePlattform}: ${liveKontakt}` : 'Kein Kontakt hinterlegt';
+            
             document.getElementById('detailNotizen').innerHTML = (t.notizen || 'Keine Notizen vorhanden').replace(/\n/g, '<br>');
 
-            let displayPreis = t.preis || (kunde ? kunde.preis : '');
-            let displayPraeferenz = t.praeferenz || (kunde ? kunde.praeferenz : 'none');
+            let displayPreis = (kunde && kunde.preis) ? kunde.preis : t.preis;
+            let displayPraeferenz = (kunde && kunde.praeferenz) ? kunde.praeferenz : (t.praeferenz || 'none');
 
             const settingsBox = document.getElementById('detailTerminSettings');
             settingsBox.innerHTML = '';
@@ -383,6 +400,7 @@
             document.getElementById('abrechnungModal').style.display = 'flex';
         }
 
+        // --- V6.11 FIX: Abrechnung nutzt auch die ID ---
         function submitAbrechnung(status) {
             let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
@@ -390,7 +408,10 @@
             const tIndex = termine.findIndex(t => t.id === currentAbrechnungId);
             if(tIndex === -1) return;
             const t = termine[tIndex];
-            const kIndex = kunden.findIndex(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
+            
+            let kIndex = -1;
+            if (t.kunde_id) kIndex = kunden.findIndex(k => k.id == t.kunde_id);
+            if (kIndex === -1) kIndex = kunden.findIndex(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
 
             if (status === 'done') {
                 const umsatz = document.getElementById('umsatzInput').value;
@@ -399,7 +420,7 @@
                 termine[tIndex].status = 'done';
                 termine[tIndex].umsatz = umsatz;
 
-                let praeferenz = t.praeferenz || (kIndex > -1 ? kunden[kIndex].praeferenz : 'none');
+                let praeferenz = (kIndex > -1 && kunden[kIndex].praeferenz) ? kunden[kIndex].praeferenz : (t.praeferenz || 'none');
                 if (praeferenz === 'AO') {
                     let aktuellerBestand = settings.testBestand !== undefined ? parseInt(settings.testBestand) : 0;
                     if (aktuellerBestand > 0) {
@@ -425,9 +446,6 @@
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
         }
 
-        /* ==========================================================================
-           >>> J.A.R.V.I.S. TIMELINE RENDERER (ANIMIERT & STRUKTURIERT) <<<
-           ========================================================================== */
         function renderTimeline(datum) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
@@ -453,11 +471,9 @@
                 const endeMinTag = endeH * 60;
                 const gesamtMinuten = endeMinTag - startMinTag;
                 
-                // MATRIX-SKALIERUNG: 1 Minute = 2 Pixel (1 Stunde = 120px Abstand)
                 const PIXELS_PER_MIN = 2; 
                 matrix.style.height = (gesamtMinuten * PIXELS_PER_MIN + 100) + 'px';
 
-                // 1. DAS CYBER-GRID ZEICHNEN (Linien im Hintergrund)
                 for(let h = startH; h <= endeH; h++) {
                     const topPx = (h * 60 - startMinTag) * PIXELS_PER_MIN;
                     const displayH = String(h % 24).padStart(2, '0') + ':00';
@@ -474,7 +490,6 @@
                     matrix.appendChild(gridText);
                 }
 
-                // 2. LIVE-LASER (Aktuelle Uhrzeit als Scann-Linie)
                 if (datum === currentDate) {
                     const currentMins = now.getHours() * 60 + now.getMinutes();
                     if (currentMins >= startMinTag && currentMins <= endeMinTag) {
@@ -489,7 +504,6 @@
                     }
                 }
 
-                // 3. KARTEN AUF DAS RASTER LEGEN
                 combinedItems.forEach(t => {
                     let sMin = parseTimeStr(t.start, "00:00");
                     let eMin = parseTimeStr(t.ende, "23:59");
@@ -499,7 +513,7 @@
                     let anzeigeStart = Math.max(startMinTag, sMin);
                     let anzeigeEnde = Math.min(endeMinTag, eMin);
                     let dauer = anzeigeEnde - anzeigeStart;
-                    if (dauer < 30) dauer = 30; // Mindestklick-Bereich
+                    if (dauer < 30) dauer = 30; 
                     
                     const topPx = (anzeigeStart - startMinTag) * PIXELS_PER_MIN;
                     const heightPx = dauer * PIXELS_PER_MIN;
@@ -507,7 +521,6 @@
                     const block = document.createElement('div');
                     block.className = 'cyber-block';
                     
-                    // Bei sehr kurzen Terminen Inhalt nebeneinander, bei langen untereinander
                     const flexDir = heightPx < 80 ? 'row' : 'column';
                     
                     block.style.top = topPx + 'px';
@@ -518,7 +531,6 @@
                     
                     const isPast = (datum < currentDate) || (datum === currentDate && eMin <= (now.getHours()*60 + now.getMinutes()));
 
-                    // EVENT KARTEN
                     if (t.isEvent) {
                         const f = t.color || '#ff3300';
                         block.style.borderLeftColor = f;
@@ -539,14 +551,16 @@
                             </div>
                         `;
                     } 
-                    // NORMALE TERMINE
                     else {
                         const f = settings[t.kat+"_farbe"] || 'var(--neon-cyan)';
                         block.style.borderLeftColor = f;
                         block.onclick = () => openDetailModal(t.id);
                         
-                        let dbKunde = kundenDB.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
-                        let displayPreis = t.preis || (dbKunde ? dbKunde.preis : '');
+                        let dbKunde = null;
+                        if (t.kunde_id) dbKunde = kundenDB.find(k => k.id == t.kunde_id);
+                        if (!dbKunde) dbKunde = kundenDB.find(k => (t.kontakt && k.kontakt === t.kontakt) || k.name.toLowerCase() === t.name.toLowerCase());
+                        
+                        let displayPreis = (dbKunde && dbKunde.preis) ? dbKunde.preis : t.preis;
                         let expectedPreis = displayPreis || ''; 
                         
                         let statusHTML = '';
@@ -557,7 +571,6 @@
                         let deleteBtn = `<button onclick="event.stopPropagation(); deleteTermin(${t.id})" style="background: rgba(255, 0, 60, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.7rem;">✖ Löschen</button>`;
 
                         if (flexDir === 'row') {
-                            // Kurz-Termin Layout (Kompakt)
                             block.innerHTML = `
                                 <div class="cyber-node" style="border-color:${f};"></div>
                                 <div style="display:flex; align-items:center; gap: 15px;">
@@ -570,7 +583,6 @@
                                 </div>
                             `;
                         } else {
-                            // Lang-Termin Layout (Ausführlich)
                             let pBadge = displayPreis ? `<span class="badge-preis">💰 ${displayPreis}€</span>` : '';
                             block.innerHTML = `
                                 <div class="cyber-node" style="border-color:${f};"></div>
@@ -611,8 +623,6 @@
             if(document.getElementById('terminDatum')) document.getElementById('terminDatum').value = d;
             
             renderTimeline(d);
-
-            // Live-Laser jede Minute aktualisieren
             setInterval(() => { renderTimeline(d); }, 60000);
 
             setTimeout(() => {

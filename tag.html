@@ -1,736 +1,724 @@
-/* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.14 - WOCHENANSICHT MIT NAMEN)
-   ========================================================================== */
-
-const DEFAULTS = {
-    arbeitsStart: '08:00', arbeitsEnde: '22:00', wochenstart: 'MO',
-    kat1_name: 'VIP', kat1_farbe: '#e5b05c',
-    kat2_name: 'Stamm', kat2_farbe: '#ff2a6d',
-    kat3_name: 'Neu', kat3_farbe: '#05d9e8',
-    plat1: 'WhatsApp', plat2: 'Instagram', plat3: 'Telegram', plat4: 'Telefon',
-    testBestand: 0
-};
-
-let currentEditId = null; 
-
-/* ==========================================================================
-   >>> SUPABASE ANBINDUNG (ECHTE POSTGRES DATENBANK) <<<
-   ========================================================================== */
-const SUPABASE_URL = 'https://xdynlrghhnxbmcylafxg.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkeW5scmdoaG54Ym1jeWxhZnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDcxMzgsImV4cCI6MjA4OTkyMzEzOH0.Zre-Vv5MElN3q6-R804ZrhYxnvEwhB0b3f8_ohFoe3A';
-
-let isCloudConnected = false; 
-let isSyncingFromCloud = false;
-let isUploading = false;
-let syncTimeout = null;
-
-const originalSetItem = localStorage.setItem;
-
-localStorage.setItem = function(key, value) {
-    originalSetItem.call(localStorage, key, value);
-
-    if (isSyncingFromCloud) return; 
-
-    if (["appTermine", "appKunden", "appEinstellungen", "appPin", "appEvents"].includes(key)) {
-        clearTimeout(syncTimeout);
-        syncTimeout = setTimeout(async () => {
-            isUploading = true;
-            const newTimestamp = new Date().toISOString() + "-" + Math.random().toString(36).substring(2, 8);
-            
-            const payload = {
-                id: 1, 
-                termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
-                kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
-                einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
-                pin: localStorage.getItem('appPin') || "0000",
-                events: JSON.parse(localStorage.getItem('appEvents') || '[]'), 
-                last_update: newTimestamp
-            };
-
-            try {
-                await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
-                    method: 'PATCH', 
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                
-                originalSetItem.call(localStorage, 'lastCloudUpdate', newTimestamp);
-                console.log("☁️ Auto-Upload erfolgreich!");
-            } catch(e) { console.error("Cloud Upload Fehler:", e); }
-            finally {
-                isUploading = false;
-            }
-        }, 300); 
-    }
-};
-
-async function autoFetchCloud() {
-    if (isUploading) return; 
-    
-    try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*`, {
-            method: 'GET',
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`
-            }
-        });
-
-        if (!response.ok) return;
-        const data = await response.json();
-        
-        if(data && data.length > 0) {
-            const dbData = data[0];
-            const localUpdate = localStorage.getItem('lastCloudUpdate');
-            
-            if (!dbData.last_update || dbData.last_update === localUpdate) return;
-
-            isSyncingFromCloud = true;
-            
-            if (dbData.termine) originalSetItem.call(localStorage, 'appTermine', JSON.stringify(dbData.termine));
-            if (dbData.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(dbData.kunden));
-            if (dbData.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen));
-            if (dbData.pin) originalSetItem.call(localStorage, 'appPin', dbData.pin);
-            if (dbData.events) originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events)); 
-            
-            originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update);
-            
-            ladeUndWendeEinstellungenAn();
-            if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
-            if(typeof renderWeek === 'function') renderWeek();
-            if(typeof renderKunden === 'function') renderKunden();
-            if(typeof calculateStats === 'function') calculateStats();
-            if(typeof renderEvents === 'function') renderEvents(); 
-            if(typeof renderTimeline === 'function') {
-                const urlParams = new URLSearchParams(window.location.search);
-                renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
-            }
-            updateLiveSystem(); 
-            
-            isSyncingFromCloud = false;
-            console.log("☁️ Auto-Sync Update empfangen!");
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <script>
+        if (!sessionStorage.getItem('authKey')) {
+            window.location.replace('index.html');
         }
-    } catch(e) { console.log("Cloud Sync Hintergrundfehler:", e); }
-}
-
-async function initCloud() {
-    isCloudConnected = true;
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Agenda 2050 | Taktische Timeline</title>
     
-    await autoFetchCloud();
-    setInterval(autoFetchCloud, 10000); 
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff2a6d">
+    <link rel="apple-touch-icon" href="icon.png">
 
-    const hdCountdown = document.getElementById('header-countdown');
-    if(hdCountdown) {
-        hdCountdown.innerText = "SUPABASE CONNECTED";
-        hdCountdown.style.color = "var(--neon-green)";
-        hdCountdown.style.borderColor = "var(--neon-green)";
-        hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
-        
-        setTimeout(() => {
-            hdCountdown.innerText = "SYNCING..."; 
-            hdCountdown.style.color = "";
-            hdCountdown.style.borderColor = "";
-            hdCountdown.style.textShadow = "";
-            if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
-            if(typeof renderWeek === 'function') renderWeek(); 
-            updateLiveSystem(); 
-        }, 3000);
-    }
-}
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
 
-window.forceCloudUpload = async function() { alert("System speichert alles sofort!"); };
-window.forceCloudDownload = async function() { alert("Manueller Sync gestartet..."); await autoFetchCloud(); }
+    <style>
+        /* Lightbox */
+        #lightbox { display: none; position: fixed; z-index: 7000; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); justify-content: center; align-items: center; cursor: zoom-out; backdrop-filter: blur(10px); }
+        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 15px; box-shadow: 0 0 50px rgba(5, 217, 232, 0.5); border: 2px solid var(--neon-cyan); }
 
-
-/* ==========================================================================
-   >>> REST DER APP-LOGIK <<<
-   ========================================================================== */
-
-function parseTimeStr(timeStr, defaultStr) {
-    if (!timeStr || !timeStr.includes(':')) timeStr = defaultStr;
-    const parts = timeStr.split(':');
-    let h = parseInt(parts[0], 10);
-    let m = parseInt(parts[1], 10);
-    if (isNaN(h)) h = parseInt(defaultStr.split(':')[0], 10);
-    if (isNaN(m)) m = parseInt(defaultStr.split(':')[1], 10);
-    return h * 60 + m;
-}
-
-function getArbeitsZeiten(settingsObj) {
-    const settings = { ...DEFAULTS, ...settingsObj };
-    let startMin = parseTimeStr(settings.arbeitsStart, "08:00");
-    let endeMin = parseTimeStr(settings.arbeitsEnde, "22:00");
-    
-    if (settings.arbeitsEnde === "00:00" || endeMin === 0) endeMin = 1440;
-    if (endeMin <= startMin) endeMin = startMin + 60; 
-    return { startMin, endeMin, gesamtArbeitsMin: endeMin - startMin };
-}
-
-function ladeUndWendeEinstellungenAn() {
-    try {
-        const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
-        const settings = { ...DEFAULTS, ...storedSettings };
-
-        const root = document.documentElement;
-        root.style.setProperty('--color-kat1', settings.kat1_farbe);
-        root.style.setProperty('--color-kat2', settings.kat2_farbe);
-        root.style.setProperty('--color-kat3', settings.kat3_farbe);
-    } catch (e) {}
-}
-
-function generiereWochenAnsicht() {
-    const container = document.querySelector('.wochen-container');
-    if (!container) return; 
-
-    const urlParams = new URLSearchParams(window.location.search);
-    let startDatum = new Date();
-    if (urlParams.get('d')) startDatum = new Date(urlParams.get('d'));
-
-    let tag = startDatum.getDay();
-    let diff = startDatum.getDate() - tag + (tag === 0 ? -6 : 1);
-    let montag = new Date(startDatum.setDate(diff));
-
-    const wochentage = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-    const heute = new Date();
-    const heuteISO = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-
-    const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
-    const settings = { ...DEFAULTS, ...storedSettings }; 
-    
-    const zeiten = getArbeitsZeiten(settings);
-    const startMin = zeiten.startMin;
-    const endeMin = zeiten.endeMin;
-    
-    const viertel = zeiten.gesamtArbeitsMin / 4;
-    const q1Min = Math.floor(startMin + viertel);
-    const midMin = Math.floor(startMin + viertel * 2);
-    const q3Min = Math.floor(startMin + viertel * 3);
-    
-    const timeStr = (m) => {
-        let h = Math.floor(m / 60);
-        let min = m % 60;
-        if (h === 24) return `00:${String(min).padStart(2, '0')}`;
-        return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
-    };
-    
-    const skalaHTML = `<span>${settings.arbeitsStart}</span><span>${timeStr(q1Min)}</span><span>${timeStr(midMin)}</span><span>${timeStr(q3Min)}</span><span>${settings.arbeitsEnde}</span>`;
-
-    container.innerHTML = ''; 
-
-    for (let i = 0; i < 7; i++) {
-        let aktuellesDatum = new Date(montag);
-        aktuellesDatum.setDate(montag.getDate() + i);
-        
-        let isoDatum = new Date(aktuellesDatum.getTime() - (aktuellesDatum.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-        let tagZahl = String(aktuellesDatum.getDate()).padStart(2, '0');
-        let monatZahl = String(aktuellesDatum.getMonth() + 1).padStart(2, '0');
-        
-        let isHeute = (isoDatum === heuteISO) ? 'heute' : '';
-        let timelineId = (isoDatum === heuteISO) ? 'id="timeline-heute"' : '';
-
-        if (i === 0 && document.getElementById('header-monat')) {
-            const monate = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-            const cloudDot = isCloudConnected ? ' <span id="cloud-dot-indicator" style="color: var(--neon-green); font-size: 0.6em; vertical-align: super; text-shadow: 0 0 10px var(--neon-green);" title="Cloud Sync Aktiv">●</span>' : '';
-            document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
+        /* J.A.R.V.I.S. TIMELINE GRID */
+        .jarvis-timeline-wrapper {
+            position: relative;
+            margin-top: 20px;
+            padding-bottom: 100px;
+            width: 100%;
+        }
+        /* Die vertikale Haupt-Ader */
+        .jarvis-timeline-wrapper::before {
+            content: ''; position: absolute; top: 0; left: 65px;
+            width: 2px; height: 100%; background: rgba(5, 217, 232, 0.2);
+            box-shadow: 0 0 8px rgba(5, 217, 232, 0.4);
+            z-index: 1;
         }
 
-        container.innerHTML += `
-            <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;" onclick="window.location.href='tag.html?d=${isoDatum}'">
-                <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
-                <div class="timeline-horizontal" ${timelineId} style="background-image: repeating-linear-gradient(to right, transparent, transparent 24.8%, rgba(255,255,255,0.06) 25%); overflow: visible;"></div>
-                <div class="timeline-skala">${skalaHTML}</div>
+        .hour-grid-line {
+            position: absolute; left: 65px; right: 0; height: 1px;
+            background: linear-gradient(90deg, rgba(5,217,232,0.3) 0%, transparent 100%);
+            z-index: 1; pointer-events: none;
+        }
+        .hour-grid-text {
+            position: absolute; left: 10px; font-family: monospace; font-size: 0.9rem;
+            color: rgba(5, 217, 232, 0.7); letter-spacing: 1px; transform: translateY(-50%);
+            text-shadow: 0 0 5px rgba(5, 217, 232, 0.3); z-index: 2;
+        }
+
+        /* LIVE LASER (Aktuelle Zeit) */
+        .live-time-laser {
+            position: absolute; left: 60px; right: 0; height: 2px;
+            background: var(--neon-red); box-shadow: 0 0 15px var(--neon-red);
+            z-index: 20; pointer-events: none;
+            display: flex; align-items: center;
+        }
+        .live-time-laser::before {
+            content: '►'; position: absolute; left: -15px; color: var(--neon-red);
+            font-size: 1rem; animation: pulse-laser 1s infinite alternate;
+        }
+        .live-time-text {
+            position: absolute; left: -55px; top: -10px; background: var(--bg-deep);
+            color: white; border: 1px solid var(--neon-red); padding: 2px 5px;
+            font-size: 0.7rem; font-weight: bold; border-radius: 4px;
+            box-shadow: 0 0 10px var(--neon-red);
+        }
+        @keyframes pulse-laser { 0% { opacity: 0.5; transform: translateX(0); } 100% { opacity: 1; transform: translateX(3px); } }
+
+        /* J.A.R.V.I.S. EVENT / TERMIN KARTEN */
+        .cyber-block {
+            position: absolute; left: 75px; right: 10px;
+            background: rgba(10, 15, 20, 0.85);
+            border-left: 4px solid var(--neon-cyan);
+            border-radius: 0 12px 12px 0;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 5px 15px rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            z-index: 10; cursor: pointer; overflow: hidden;
+            display: flex; flex-direction: column;
+            animation: slide-in-cyber 0.4s ease-out forwards;
+            transition: transform 0.2s, filter 0.2s;
+        }
+        .cyber-block:hover { transform: scale(1.02); filter: brightness(1.2); z-index: 15; }
+        
+        /* Die Diamant-Knotenpunkte an der Zeitleiste */
+        .cyber-node {
+            position: absolute; left: -14px; top: -2px; width: 12px; height: 12px;
+            background: var(--bg-deep); border: 2px solid; transform: rotate(45deg);
+            z-index: 12;
+        }
+
+        @keyframes slide-in-cyber { from { transform: translateX(30px) skewX(-5deg); opacity: 0; } to { transform: translateX(0) skewX(0); opacity: 1; } }
+
+        /* Flex Layouts in der Karte */
+        .block-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
+        .block-title { font-size: 1.1rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px; }
+        .block-time { font-family: monospace; font-size: 0.85rem; color: #aaa; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; }
+        
+        /* Diverse Stats */
+        .status-done { color: var(--neon-green); font-weight: bold; font-size: 0.75rem; border: 1px solid var(--neon-green); padding: 3px 6px; border-radius: 4px; background: rgba(57, 255, 20, 0.1); }
+        .status-noshow { color: var(--neon-red); font-weight: bold; font-size: 0.75rem; border: 1px solid var(--neon-red); padding: 3px 6px; border-radius: 4px; background: rgba(255, 0, 60, 0.1); }
+        .btn-abrechnen { background: rgba(229, 176, 92, 0.1); border: 1px solid var(--neon-gold); color: var(--neon-gold); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 0.7rem; box-shadow: 0 0 10px rgba(229, 176, 92, 0.3); }
+        
+        #kundenVorschlaege { position: absolute; z-index: 1000; width: 100%; background: rgba(5, 15, 25, 0.95); border: 1px solid var(--neon-cyan); max-height: 250px; overflow-y: auto; border-radius: 0 0 15px 15px; box-shadow: 0 15px 40px rgba(0,0,0,0.9); }
+        .vorschlag-item { padding: 15px; cursor: pointer; border-bottom: 1px solid rgba(5, 217, 232, 0.1); color: var(--neon-cyan); transition: 0.2s; }
+        .vorschlag-item:hover { background: rgba(5, 217, 232, 0.15); }
+    </style>
+</head>
+<body>
+
+    <div class="loader-container" id="app-loader">
+        <div class="cyber-spinner"></div>
+        <div class="loader-text">INITIALIZING HUD...</div>
+    </div>
+
+    <div id="lightbox" onclick="this.style.display='none'">
+        <img id="lightboxImg" src="">
+    </div>
+
+    <div class="dashboard">
+        <div class="btn-cyber btn-settings" onclick="location.href='woche.html'">⬅️</div>
+        
+        <div style="text-align: center;">
+            <div class="titel-neon">Taktische Ansicht</div>
+            <div id="tag-datum-titel" class="datum-anzeige" style="color: var(--neon-cyan); font-family: monospace;">LADE...</div>
+        </div>
+
+        <div style="display: flex; gap: 15px;">
+            <div class="btn-cyber" onclick="location.href='kunden.html'" style="color: var(--neon-cyan); border-color: var(--glass-border);">👥</div>
+            <div class="btn-cyber btn-add" onclick="openModal()">➕</div>
+        </div>
+    </div>
+
+    <div id="timeline-matrix" class="jarvis-timeline-wrapper"></div>
+
+    <nav class="bottom-nav">
+        <a href="woche.html" class="nav-item active">
+            <div class="nav-icon" style="color: var(--neon-cyan);">🗂️</div>
+            <span>Woche</span>
+        </a>
+        <a href="kunden.html" class="nav-item">
+            <div class="nav-icon" style="color: var(--neon-pink);">👥</div>
+            <span>Kunden</span>
+        </a>
+        <a href="events.html" class="nav-item">
+            <div class="nav-icon" style="color: #ff3300;">🔥</div>
+            <span>Events</span>
+        </a>
+        <a href="stats.html" class="nav-item">
+            <div class="nav-icon" style="color: var(--neon-gold);">💰</div>
+            <span>Finance</span>
+        </a>
+        <a href="einstellungen.html" class="nav-item">
+            <div class="nav-icon" style="color: #fff;">⚙️</div>
+            <span>System</span>
+        </a>
+    </nav>
+
+    <div class="modal-overlay" id="terminModal">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <div class="form-title">System-Eintrag</div>
+            
+            <div class="form-group" style="position: relative;">
+                <label class="input-label">Kunde / Bezeichnung</label>
+                <input type="hidden" id="terminKundeId"> 
+                <input type="text" id="terminName" class="cyber-input-full" placeholder="Name tippen..." onkeyup="sucheKundeFuerTermin()" autocomplete="off">
+                <div id="kundenVorschlaege" style="display: none;"></div>
             </div>
-        `;
-    }
-}
 
-function openModal(editId = null) {
-    const modal = document.getElementById('terminModal');
-    if (!modal) return;
+            <div class="form-group">
+                <label class="input-label">Kategorie-Typ</label>
+                <select id="terminKategorie" class="cyber-select"></select>
+            </div>
 
-    currentEditId = editId;
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; background: rgba(5, 217, 232, 0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(5,217,232,0.3); margin-bottom: 15px;">
+                <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                    <label class="input-label" style="color: var(--neon-gold);">Preis (€)</label>
+                    <input type="number" id="terminPreis" class="cyber-input-full" placeholder="z.B. 150">
+                </div>
+                <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
+                    <label class="input-label" style="color: var(--neon-violet);">Präferenz</label>
+                    <select id="terminPraeferenz" class="cyber-select">
+                        <option value="none">Keine Angabe</option>
+                        <option value="AO">AO (Alles ohne)</option>
+                        <option value="Save">Save (Mit Schutz)</option>
+                    </select>
+                </div>
+            </div>
 
-    const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
-    const settings = { ...DEFAULTS, ...storedSettings };
-    
-    const catDropdown = document.getElementById('terminKategorie');
-    if (catDropdown) {
-        catDropdown.innerHTML = `
-            <option value="kat1">${settings.kat1_name}</option>
-            <option value="kat2">${settings.kat2_name}</option>
-            <option value="kat3">${settings.kat3_name}</option>
-        `;
-    }
+            <div class="form-group">
+                <label class="input-label">Datum</label>
+                <input type="date" id="terminDatum" class="cyber-input-full">
+            </div>
 
-    const platDropdown = document.getElementById('terminPlattform');
-    if (platDropdown) {
-        platDropdown.innerHTML = `
-            <option value="none">Keine Plattform</option>
-            <option value="${settings.plat1}">${settings.plat1}</option>
-            <option value="${settings.plat2}">${settings.plat2}</option>
-            <option value="${settings.plat3}">${settings.plat3}</option>
-            <option value="${settings.plat4}">${settings.plat4}</option>
-        `;
-    }
+            <div style="display:flex; gap:15px;">
+                <div class="form-group" style="flex:1;">
+                    <label class="input-label">Startzeit</label>
+                    <input type="time" id="terminStart" class="cyber-input-full">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label class="input-label">Endzeit</label>
+                    <input type="time" id="terminEnde" class="cyber-input-full">
+                </div>
+            </div>
 
-    if (editId) {
-        const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-        const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-        const t = termine.find(x => x.id === editId);
-        
-        if (t) {
-            let liveKunde = null;
-            if (t.kunde_id) {
-                liveKunde = kunden.find(k => k.id == t.kunde_id);
-            }
-            if (!liveKunde) {
-                liveKunde = kunden.find(k => k.name.toLowerCase().trim() === (t.name || '').toLowerCase().trim());
-            }
+            <div class="form-group">
+                <label class="input-label">Kontakt-Plattform</label>
+                <select id="terminPlattform" class="cyber-select" onchange="toggleKontaktFeld()"></select>
+            </div>
 
-            if(document.getElementById('terminKundeId')) {
-                document.getElementById('terminKundeId').value = liveKunde ? liveKunde.id : '';
-            }
+            <div class="form-group" id="kontaktContainer" style="display: none;">
+                <label class="input-label">Nummer / Username</label>
+                <input type="text" id="terminKontakt" class="cyber-input-full">
+            </div>
 
-            document.getElementById('terminName').value = t.name || '';
-            document.getElementById('terminDatum').value = t.datum || '';
-            document.getElementById('terminStart').value = t.start || '';
-            document.getElementById('terminEnde').value = t.ende || '';
-            document.getElementById('terminKategorie').value = t.kat || 'kat1';
+            <div class="form-group">
+                <label class="input-label">Notizen</label>
+                <textarea id="terminNotizen" class="cyber-input-full" rows="3"></textarea>
+            </div>
+
+            <button class="btn-save" onclick="saveAppointment()">SPEICHERN</button>
+            <button onclick="closeModal()" style="width:100%; background:none; border:none; color:#666; margin-top:15px; cursor:pointer; text-transform:uppercase; font-size:1.1rem; letter-spacing:2px; font-weight:bold;">Abbrechen</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+            <div class="form-title" style="color: var(--neon-cyan);">Protokoll Details</div>
             
-            document.getElementById('terminPlattform').value = (liveKunde && liveKunde.plattform) ? liveKunde.plattform : (t.plattform || 'none');
-            document.getElementById('terminKontakt').value = (liveKunde && liveKunde.kontakt) ? liveKunde.kontakt : (t.kontakt || '');
+            <div id="detailKundenBilder" style="display: flex; gap: 15px; margin-bottom: 25px; justify-content: center;"></div>
             
-            document.getElementById('terminNotizen').value = t.notizen || '';
+            <div style="background: rgba(0,0,0,0.4); padding: 30px; border-radius: 20px; border-left: 4px solid var(--neon-cyan); margin-bottom: 25px;">
+                <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Kunde / Bezeichnung</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div id="detailName" style="font-size: 1.8rem; font-weight: 900; color: white;">-</div>
+                </div>
+                
+                <div id="detailTerminSettings" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;"></div>
+                
+                <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Zeit & Typ</div>
+                <div id="detailZeitKat" style="font-size: 1.2rem; color: var(--neon-gold); font-weight: bold; margin-bottom: 15px;">-</div>
+                
+                <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Kontakt</div>
+                <div id="detailKontaktFull" style="font-size: 1.1rem; color: white; margin-bottom: 5px;">-</div>
+                <div id="detailLinkBtn" style="margin-bottom: 15px;"></div> <div id="dbExtensionsContainer" style="display: none; flex-direction: column; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed rgba(5,217,232,0.2);">
+                    <div style="font-size: 0.85rem; color: var(--neon-violet); text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Datenbank Akte</div>
+                    <div class="kunden-stats-row" id="detailStatsRow" style="margin-bottom: 0;"></div>
+                    <div id="detailVorlieben" style="font-size: 1rem; color: #ccc; line-height: 1.6; background: rgba(188, 0, 221, 0.1); padding: 15px; border-radius: 12px; border-left: 2px solid var(--neon-violet);"></div>
+                    <div id="detailKundenAllgNotizen" style="font-size: 1rem; color: #ccc; line-height: 1.6; background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 12px; border-left: 2px solid #aaa;"></div>
+                </div>
+
+                <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-top: 20px;">Termin-Notizen</div>
+                <div id="detailNotizen" style="font-size: 1.1rem; color: #ccc; line-height: 1.6; background: rgba(5, 217, 232, 0.05); padding: 15px; border-radius: 12px; margin-top: 5px;">-</div>
+            </div>
             
-            if(document.getElementById('terminPreis')) {
-                document.getElementById('terminPreis').value = (liveKunde && liveKunde.preis) ? liveKunde.preis : (t.preis || '');
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-edit-termin" style="flex: 1; padding: 18px; border-radius: 12px; background: rgba(5, 217, 232, 0.1); color: var(--neon-cyan); border: 1px solid var(--neon-cyan); font-weight: bold; cursor: pointer; font-size: 1.1rem; transition: 0.3s;">Bearbeiten</button>
+                <button onclick="closeDetailModal()" style="flex: 1; padding: 18px; border-radius: 12px; background: rgba(255,255,255,0.05); color: white; font-weight: bold; cursor: pointer; border: 1px solid transparent; font-size: 1.1rem; transition: 0.3s;">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="abrechnungModal">
+        <div class="modal-content" style="text-align: center;">
+            <div class="form-title" style="color: var(--neon-gold); text-shadow: 0 0 15px rgba(229, 176, 92, 0.5);">PROTOKOLL ABSCHLUSS</div>
+            <p style="color: #aaa; margin-bottom: 30px;">Der Termin mit <strong id="abrechnungName" style="color: white;"></strong> ist vorbei. Wie ist der Status?</p>
+            
+            <div style="background: rgba(57, 255, 20, 0.05); padding: 20px; border-radius: 15px; border: 1px dashed var(--neon-green); margin-bottom: 20px;">
+                <div style="color: var(--neon-green); font-weight: bold; margin-bottom: 10px; text-transform: uppercase;">✔️ Kunde war da</div>
+                <input type="number" id="umsatzInput" class="cyber-input-full" placeholder="Umsatz eintragen (€)" style="margin-bottom: 10px; text-align: center; font-size: 1.5rem;">
+                <button onclick="submitAbrechnung('done')" style="width: 100%; padding: 15px; border-radius: 10px; background: var(--neon-green); color: black; font-weight: bold; border: none; cursor: pointer;">UMSATZ SPEICHERN</button>
+            </div>
+
+            <div style="background: rgba(255, 0, 60, 0.05); padding: 20px; border-radius: 15px; border: 1px dashed var(--neon-red);">
+                <div style="color: var(--neon-red); font-weight: bold; margin-bottom: 10px; text-transform: uppercase;">❌ Nicht erschienen</div>
+                <button onclick="submitAbrechnung('noshow')" style="width: 100%; padding: 15px; border-radius: 10px; background: var(--neon-red); color: white; font-weight: bold; border: none; cursor: pointer;">NO-SHOW EINTRAGEN</button>
+            </div>
+
+            <button onclick="document.getElementById('abrechnungModal').style.display='none'" style="width: 100%; background: none; border: none; color: #666; margin-top: 20px; cursor: pointer; text-transform: uppercase;">Später erledigen</button>
+        </div>
+    </div>
+
+    <script>
+        let currentAbrechnungId = null;
+
+        function openLightbox(src) { 
+            document.getElementById('lightboxImg').src = src; 
+            document.getElementById('lightbox').style.display = 'flex'; 
+        }
+
+        function safeFindKunde(t, kundenDB) {
+            let kunde = null;
+            if (t.kunde_id) { kunde = kundenDB.find(k => String(k.id) === String(t.kunde_id)); }
+            if (!kunde && t.name) {
+                const searchName = String(t.name).toLowerCase().trim();
+                kunde = kundenDB.find(k => String(k.name).toLowerCase().trim() === searchName);
             }
-            if(document.getElementById('terminPraeferenz')) {
-                document.getElementById('terminPraeferenz').value = (liveKunde && liveKunde.praeferenz) ? liveKunde.praeferenz : (t.praeferenz || 'none');
+            if (!kunde && t.kontakt && t.kontakt.trim() !== '') {
+                const searchKontakt = String(t.kontakt).trim();
+                kunde = kundenDB.find(k => String(k.kontakt).trim() === searchKontakt);
             }
-        }
-    } else {
-        if(document.getElementById('terminKundeId')) document.getElementById('terminKundeId').value = '';
-        document.getElementById('terminName').value = '';
-        document.getElementById('terminKontakt').value = '';
-        document.getElementById('terminNotizen').value = '';
-        document.getElementById('terminStart').value = '';
-        document.getElementById('terminEnde').value = '';
-        
-        if(document.getElementById('terminPreis')) document.getElementById('terminPreis').value = '';
-        if(document.getElementById('terminPraeferenz')) document.getElementById('terminPraeferenz').value = 'none';
-    }
-
-    const kontaktContainer = document.getElementById('kontaktContainer');
-    if (kontaktContainer) {
-        const pValue = document.getElementById('terminPlattform').value;
-        kontaktContainer.style.display = (pValue !== 'none') ? 'block' : 'none';
-    }
-
-    modal.style.display = 'flex';
-}
-
-function closeModal() {
-    const modal = document.getElementById('terminModal');
-    if (modal) modal.style.display = 'none';
-    const vBox = document.getElementById('kundenVorschlaege');
-    if (vBox) vBox.style.display = 'none';
-    currentEditId = null;
-}
-
-function toggleKontaktFeld() {
-    const platSelect = document.getElementById('terminPlattform');
-    const container = document.getElementById('kontaktContainer');
-    if (platSelect && container) {
-        container.style.display = (platSelect.value !== 'none') ? 'block' : 'none';
-    }
-}
-
-// --- V6.11 SAFE MODE: KEIN ÜBERSCHREIBEN DER DATENBANK MEHR ---
-function saveAppointment() {
-    try {
-        const name = document.getElementById('terminName').value;
-        const datum = document.getElementById('terminDatum').value;
-        const start = document.getElementById('terminStart').value;
-        const ende = document.getElementById('terminEnde').value;
-        const kat = document.getElementById('terminKategorie').value;
-        const plattform = document.getElementById('terminPlattform').value;
-        const kontakt = document.getElementById('terminKontakt').value;
-        const notizen = document.getElementById('terminNotizen').value;
-        
-        const kundeIdInput = document.getElementById('terminKundeId');
-        const kundeIdStr = kundeIdInput ? kundeIdInput.value : '';
-        
-        const preisInput = document.getElementById('terminPreis');
-        const praefInput = document.getElementById('terminPraeferenz');
-        const preis = preisInput ? preisInput.value : '';
-        const praeferenz = praefInput ? praefInput.value : 'none';
-
-        if (!name || !datum || !start || !ende) {
-            alert("Bitte alle Pflichtfelder ausfüllen.");
-            return;
+            return kunde;
         }
 
-        let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-        
-        let nStartMin = parseTimeStr(start, "00:00");
-        let nEndeMin = parseTimeStr(ende, "23:59");
-        if (ende === "00:00" || nEndeMin === 0) nEndeMin = 1440; 
-        
-        const overlap = termine.find(t => {
-            if (t.datum === datum && t.id !== currentEditId) {
-                let eStartMin = parseTimeStr(t.start, "00:00");
-                let eEndeMin = parseTimeStr(t.ende, "23:59");
-                if (t.ende === "00:00" || eEndeMin === 0) eEndeMin = 1440; 
-                return (nStartMin < eEndeMin && nEndeMin > eStartMin);
+        function sucheKundeFuerTermin() {
+            const input = document.getElementById('terminName').value.toLowerCase();
+            const vBox = document.getElementById('kundenVorschlaege');
+            const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            
+            document.getElementById('terminKundeId').value = '';
+            
+            if (input.length < 1) { vBox.style.display = 'none'; return; }
+            
+            const treffer = kunden.filter(k => (k.name && k.name.toLowerCase().includes(input)) || (k.kontakt && k.kontakt.toLowerCase().includes(input)));
+            
+            if (treffer.length > 0) {
+                vBox.innerHTML = '';
+                treffer.forEach(k => {
+                    const d = document.createElement('div');
+                    d.className = 'vorschlag-item';
+                    let warningHTML = (k.noshows && k.noshows > 0) ? `<span style="color: var(--neon-red); font-weight: bold; float: right; font-size: 0.8rem;">⚠️ ${k.noshows}x NO-SHOW</span>` : '';
+                    d.innerHTML = `<strong>${k.name}</strong> ${warningHTML}<br><small style="color:#aaa;">${k.plattform !== 'none' ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</small>`;
+                    d.onclick = () => {
+                        document.getElementById('terminKundeId').value = k.id;
+                        document.getElementById('terminName').value = k.name;
+                        document.getElementById('terminPlattform').value = k.plattform || 'none';
+                        document.getElementById('terminKontakt').value = k.kontakt || '';
+                        document.getElementById('terminPreis').value = k.preis || '';
+                        document.getElementById('terminPraeferenz').value = k.praeferenz || 'none';
+                        if(typeof toggleKontaktFeld === 'function') toggleKontaktFeld();
+                        vBox.style.display = 'none';
+                        if(k.noshows && k.noshows > 0) alert(`ACHTUNG: Dieser Kunde ist in der Vergangenheit bereits ${k.noshows}x nicht erschienen!`);
+                    };
+                    vBox.appendChild(d);
+                });
+                vBox.style.display = 'block';
+            } else { vBox.style.display = 'none'; }
+        }
+
+        function getStarString(count) {
+            let num = parseInt(count) || 0;
+            if (num === 0) return "<span style='color: #444;'>★★★★★</span>";
+            return "<span style='color: var(--neon-gold); text-shadow: 0 0 8px var(--neon-gold);'>" + "★".repeat(num) + "</span><span style='color: #333; text-shadow: none;'>" + "★".repeat(5 - num) + "</span>";
+        }
+
+        function openDetailModal(id) {
+            const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+            const t = termine.find(x => x.id === id);
+            if(!t) return;
+            const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+            const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            
+            let kunde = safeFindKunde(t, kunden);
+
+            document.getElementById('detailName').innerText = t.name;
+            document.getElementById('detailZeitKat').innerText = `${t.start} - ${t.ende} // ${settings[t.kat+"_name"] || 'Termin'}`;
+            
+            const livePlattform = (kunde && kunde.plattform) ? kunde.plattform : t.plattform;
+            const liveKontakt = (kunde && kunde.kontakt) ? kunde.kontakt : t.kontakt;
+            document.getElementById('detailKontaktFull').innerText = (livePlattform && livePlattform !== 'none' && livePlattform !== "") ? `${livePlattform}: ${liveKontakt}` : (liveKontakt ? liveKontakt : 'Kein Kontakt hinterlegt');
+            
+            // Profil Link Button
+            const linkBtnDiv = document.getElementById('detailLinkBtn');
+            if (kunde && kunde.link && kunde.link.trim() !== '') {
+                let linkUrl = kunde.link;
+                if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) { linkUrl = 'https://' + linkUrl; }
+                linkBtnDiv.innerHTML = `<a href="${linkUrl}" target="_blank" style="display: inline-block; padding: 8px 16px; background: rgba(5,217,232,0.15); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 0 10px rgba(5,217,232,0.3);"><span style="margin-right: 5px;">🔗</span> Profil öffnen</a>`;
+            } else { linkBtnDiv.innerHTML = ''; }
+
+            document.getElementById('detailNotizen').innerHTML = (t.notizen || 'Keine Termin-Notizen').replace(/\n/g, '<br>');
+
+            let displayPreis = (kunde && kunde.preis) ? kunde.preis : t.preis;
+            let displayPraeferenz = (kunde && kunde.praeferenz) ? kunde.praeferenz : (t.praeferenz || 'none');
+
+            const settingsBox = document.getElementById('detailTerminSettings');
+            settingsBox.innerHTML = '';
+            if (displayPreis) settingsBox.innerHTML += `<div class="stat-badge badge-preis" style="font-size: 1.1rem; padding: 5px 12px; margin-bottom: 5px;">💰 ${displayPreis} €</div>`;
+            if (displayPraeferenz && displayPraeferenz !== 'none') {
+                let pClass = displayPraeferenz === 'AO' ? 'badge-ao' : 'badge-save';
+                settingsBox.innerHTML += `<div class="stat-badge ${pClass}" style="font-size: 1.1rem; padding: 5px 12px; margin-bottom: 5px;">${displayPraeferenz}</div>`;
             }
-            return false;
-        });
 
-        if (overlap) {
-            alert(`⚠️ DOPPELBUCHUNG VERHINDERT!\n\nDu hast zur selben Zeit bereits den Termin "${overlap.name}" (${overlap.start} - ${overlap.ende} Uhr).\nBitte ändere die Zeit.`);
-            return; 
-        }
+            const dbContainer = document.getElementById('dbExtensionsContainer');
+            const statsRow = document.getElementById('detailStatsRow');
+            const vorliebenDiv = document.getElementById('detailVorlieben');
+            const allgNotizenDiv = document.getElementById('detailKundenAllgNotizen');
 
-        let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-        let kundeGefunden = null;
+            if (kunde) {
+                dbContainer.style.display = 'flex';
+                const groesse = kunde.groesse && kunde.groesse !== "Unbekannt" ? kunde.groesse : "?";
+                let noshowHTML = (kunde.noshows && kunde.noshows > 0) ? `<div class="stat-badge" style="border-color:var(--neon-red); color:var(--neon-red);">⚠️ ${kunde.noshows}x No-Show</div>` : '';
+                statsRow.innerHTML = `<div class="stat-badge">📐 ${groesse}</div><div class="stat-badge">Vibe <span class="stars">${getStarString(kunde.vibe)}</span></div><div class="stat-badge">Perf <span class="stars">${getStarString(kunde.perf)}</span></div>${noshowHTML}`;
+                
+                if (kunde.vorlieben && kunde.vorlieben.trim() !== '') {
+                    vorliebenDiv.style.display = 'block';
+                    vorliebenDiv.innerHTML = `<strong>Vorlieben / Tabus:</strong><br>${kunde.vorlieben.replace(/\n/g, '<br>')}`;
+                } else { vorliebenDiv.style.display = 'none'; }
 
-        if (kundeIdStr) {
-            kundeGefunden = kunden.find(k => k.id == parseInt(kundeIdStr));
-        }
+                if (kunde.notizen && kunde.notizen !== 'Automatisch durch Termin erstellt.' && kunde.notizen.trim() !== '') {
+                    allgNotizenDiv.style.display = 'block';
+                    allgNotizenDiv.innerHTML = `<strong>Kunden-Akte Notizen:</strong><br>${kunde.notizen.replace(/\n/g, '<br>')}`;
+                } else { allgNotizenDiv.style.display = 'none'; }
 
-        if (!kundeGefunden) {
-            kundeGefunden = kunden.find(k => k.name.toLowerCase().trim() === name.toLowerCase().trim());
-        }
+            } else { dbContainer.style.display = 'none'; }
 
-        let finalKundeId;
-
-        if (!kundeGefunden) {
-            finalKundeId = Date.now() + 1;
-            const neuerKunde = {
-                id: finalKundeId, 
-                name: name.trim(),
-                plattform: plattform !== 'none' ? plattform : '',
-                kontakt: kontakt.trim(),
-                preis: preis,
-                praeferenz: praeferenz,
-                link: '', status: 'none',
-                notizen: 'Automatisch durch Termin erstellt.',
-                bild1: '', bild2: ''
-            };
-            kunden.push(neuerKunde);
-            localStorage.setItem('appKunden', JSON.stringify(kunden));
-        } else {
-            finalKundeId = kundeGefunden.id;
-        }
-
-        if (currentEditId) {
-            const index = termine.findIndex(t => t.id === currentEditId);
-            if(index > -1) {
-                termine[index].kunde_id = finalKundeId; 
-                termine[index].name = name.trim();
-                termine[index].datum = datum;
-                termine[index].start = start;
-                termine[index].ende = ende;
-                termine[index].kat = kat;
-                termine[index].plattform = plattform;
-                termine[index].kontakt = kontakt;
-                termine[index].notizen = notizen;
-                termine[index].preis = preis;
-                termine[index].praeferenz = praeferenz;
+            const b = document.getElementById('detailKundenBilder'); 
+            b.innerHTML = '';
+            if (kunde) {
+                if (kunde.bild1) b.innerHTML += `<div style="width:120px; height:120px; border-radius:50%; border:3px solid var(--neon-cyan); background-image:url(${kunde.bild1}); background-size:cover; background-position:center; cursor:pointer; box-shadow: 0 0 15px var(--neon-cyan);" onclick="openLightbox('${kunde.bild1}')"></div>`;
+                if (kunde.bild2) b.innerHTML += `<div style="width:120px; height:120px; border-radius:50%; border:3px solid var(--neon-cyan); background-image:url(${kunde.bild2}); background-size:cover; background-position:center; cursor:pointer; box-shadow: 0 0 15px var(--neon-cyan);" onclick="openLightbox('${kunde.bild2}')"></div>`;
             }
-            currentEditId = null; 
-        } else {
-            const neuerTermin = {
-                id: Date.now(),
-                kunde_id: finalKundeId, 
-                name: name.trim(),
-                datum: datum,
-                start: start,
-                ende: ende,
-                kat: kat,
-                plattform: plattform,
-                kontakt: kontakt,
-                notizen: notizen,
-                preis: preis,
-                praeferenz: praeferenz
-            };
-            termine.push(neuerTermin);
+            document.getElementById('btn-edit-termin').onclick = function() { closeDetailModal(); openModal(id); };
+            document.getElementById('detailModal').style.display = 'flex';
         }
 
-        localStorage.setItem('appTermine', JSON.stringify(termine));
-        closeModal();
-        
-        if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
-        if(typeof renderWeek === 'function') renderWeek();
-        
-        if(typeof renderTimeline === 'function') {
+        function closeDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
+
+        function openAbrechnung(event, id, name, expectedPreis) {
+            event.stopPropagation();
+            currentAbrechnungId = id;
+            document.getElementById('abrechnungName').innerText = name;
+            document.getElementById('umsatzInput').value = expectedPreis || '';
+            document.getElementById('abrechnungModal').style.display = 'flex';
+        }
+
+        function submitAbrechnung(status) {
+            let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+            let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            let settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+            const tIndex = termine.findIndex(t => t.id === currentAbrechnungId);
+            if(tIndex === -1) return;
+            const t = termine[tIndex];
+            
+            let kunde = safeFindKunde(t, kunden);
+            let kIndex = kunde ? kunden.findIndex(k => k.id === kunde.id) : -1;
+
+            if (status === 'done') {
+                const umsatz = document.getElementById('umsatzInput').value;
+                if (!umsatz) { alert("Bitte einen Umsatzbetrag eintragen."); return; }
+                
+                termine[tIndex].status = 'done';
+                termine[tIndex].umsatz = umsatz;
+
+                let praeferenz = (kIndex > -1 && kunden[kIndex].praeferenz) ? kunden[kIndex].praeferenz : (t.praeferenz || 'none');
+                if (praeferenz === 'AO') {
+                    let aktuellerBestand = settings.testBestand !== undefined ? parseInt(settings.testBestand) : 0;
+                    if (aktuellerBestand > 0) {
+                        settings.testBestand = aktuellerBestand - 1;
+                        localStorage.setItem('appEinstellungen', JSON.stringify(settings));
+                        if (settings.testBestand === 0) alert("✔️ Umsatz gespeichert!\n\n🚨 WARNUNG: Das war dein letzter Test! Dein Lagerbestand ist jetzt bei 0.");
+                        else if (settings.testBestand <= 3) alert(`✔️ Umsatz gespeichert!\n\n⚠️ ACHTUNG: Du hast jetzt nur noch ${settings.testBestand} Test(s) zur Verfügung!`);
+                        else alert(`✔️ Umsatz gespeichert! Ein Test wurde abgezogen. (Noch ${settings.testBestand} übrig)`);
+                    } else alert("✔️ Umsatz gespeichert.\n\n❌ ACHTUNG: Der Kunde hatte 'AO', aber dein Test-Inventar steht bereits auf 0!");
+                }
+            } else if (status === 'noshow') {
+                termine[tIndex].status = 'noshow';
+                if (kIndex > -1) {
+                    kunden[kIndex].noshows = (kunden[kIndex].noshows || 0) + 1;
+                    localStorage.setItem('appKunden', JSON.stringify(kunden));
+                    alert("⚠️ Strike eingetragen! Der Kunde wurde verwarnt.");
+                }
+            }
+
+            localStorage.setItem('appTermine', JSON.stringify(termine));
+            document.getElementById('abrechnungModal').style.display = 'none';
             const urlParams = new URLSearchParams(window.location.search);
-            let d = urlParams.get('d');
-            if(!d) {
-                const heute = new Date();
-                d = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-            }
-            renderTimeline(d);
+            renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0], false);
         }
 
-        updateLiveSystem();
-        
-    } catch (e) { console.error("Fehler beim Speichern:", e); }
-}
-
-function updateLiveSystem() {
-    const containerHeute = document.getElementById('timeline-heute');
-    if (containerHeute) {
-        const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
-        const settings = { ...DEFAULTS, ...storedSettings };
-        
-        const zeiten = getArbeitsZeiten(settings);
-        const startMin = zeiten.startMin;
-        const endeMin = zeiten.endeMin;
-        const gesamtArbeitsMin = zeiten.gesamtArbeitsMin;
-
-        const jetzt = new Date();
-        const aktuelleMinuten = jetzt.getHours() * 60 + jetzt.getMinutes();
-        
-        const hStr = String(jetzt.getHours()).padStart(2, '0');
-        const mStr = String(jetzt.getMinutes()).padStart(2, '0');
-        const uhrzeit = `${hStr}:${mStr}`;
-        
-        let linie = document.getElementById('rote-linie');
-        
-        let anzeigeMinuten = aktuelleMinuten;
-        let feierabendText = "";
-        
-        if (aktuelleMinuten < startMin) {
-            anzeigeMinuten = startMin;
-            feierabendText = " (Vorher)";
-        } else if (aktuelleMinuten > endeMin) {
-            anzeigeMinuten = endeMin;
-            feierabendText = " (Feierabend)";
-        }
-        
-        const prozentPosition = ((anzeigeMinuten - startMin) / gesamtArbeitsMin) * 100;
-        
-        if (!linie) {
-            linie = document.createElement('div');
-            linie.id = 'rote-linie';
-            linie.className = 'jetzt-linie-horizontal';
-            containerHeute.appendChild(linie);
-        }
-        
-        linie.innerHTML = `<div style="position: absolute; top: -26px; left: -16px; background: var(--bg-deep, #0a0a0d); color: white; font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--neon-pink, #ff2a6d); box-shadow: 0 0 10px rgba(255, 42, 109, 0.6); z-index: 50; white-space: nowrap;">${uhrzeit}${feierabendText}</div>`;
-        linie.style.left = prozentPosition + '%';
-        linie.style.display = 'block';
-        
-        if (feierabendText !== "") {
-            linie.style.opacity = '0.6';
-        } else {
-            linie.style.opacity = '1';
-        }
-    }
-
-    const countdownElement = document.getElementById('header-countdown');
-    if (countdownElement && countdownElement.innerText !== "SUPABASE CONNECTED") {
-        const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-        const jetzt = new Date();
-        const jetztTime = jetzt.getTime();
-        
-        const heuteKalenderTime = new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate()).getTime();
-
-        let zukuenftigeTermine = termine
-            .filter(t => t && t.datum && t.start && typeof t.start === 'string' && t.start.includes(':'))
-            .map(t => {
-                const parts = t.datum.split('-'); 
-                const timeParts = t.start.split(':'); 
+        // TIMELINE RENDERING (Inkl. Auto-Scroll Logik)
+        function renderTimeline(datum, isInitialRender = false) {
+            try {
+                const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+                const events = JSON.parse(localStorage.getItem('appEvents')) || [];
+                const kundenDB = JSON.parse(localStorage.getItem('appKunden')) || [];
+                const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { arbeitsStart: '08:00', arbeitsEnde: '22:00' };
+                const matrix = document.getElementById('timeline-matrix');
+                if(!matrix) return;
+                matrix.innerHTML = '';
                 
-                const tDate = new Date(parts[0], parts[1] - 1, parts[2], timeParts[0], timeParts[1]);
-                const kalenderTag = new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+                const tagesTermine = termine.filter(t => t.datum === datum);
+                const tagesEvents = events.filter(e => e.datum === datum).map(e => ({...e, isEvent: true, start: e.start || "00:00", ende: e.ende || "23:59"}));
+                let combinedItems = [...tagesTermine, ...tagesEvents];
+
+                const now = new Date();
+                const currentDate = now.toISOString().split('T')[0];
                 
-                return { ...t, timestamp: tDate.getTime(), kalenderTag: kalenderTag };
-            })
-            .filter(t => t.timestamp > jetztTime)
-            .sort((a, b) => a.timestamp - b.timestamp);
+                let startH = parseInt(settings.arbeitsStart.split(':')[0]) || 8;
+                let endeH = parseInt(settings.arbeitsEnde.split(':')[0]) || 22;
+                if (endeH <= startH) endeH += 24; 
+                
+                const startMinTag = startH * 60;
+                const endeMinTag = endeH * 60;
+                const gesamtMinuten = endeMinTag - startMinTag;
+                
+                const PIXELS_PER_MIN = 2; 
+                matrix.style.height = (gesamtMinuten * PIXELS_PER_MIN + 100) + 'px';
 
-        if (zukuenftigeTermine.length > 0) {
-            const naechster = zukuenftigeTermine[0];
-            const diffTage = Math.round((naechster.kalenderTag - heuteKalenderTime) / (1000 * 60 * 60 * 24));
-
-            if (diffTage === 0) {
-                const diffMs = naechster.timestamp - jetztTime;
-                const diffStunden = Math.floor(diffMs / (1000 * 60 * 60));
-                const diffMinuten = Math.floor((diffMs / 1000 / 60) % 60);
-                countdownElement.innerText = `HEUTE: ${diffStunden > 0 ? diffStunden + 'H ' : ''}${diffMinuten}M`;
-            } else if (diffTage === 1) {
-                countdownElement.innerText = `MORGEN ${naechster.start} UHR`;
-            } else {
-                countdownElement.innerText = `IN ${diffTage} TAGEN`;
-            }
-        } else {
-            countdownElement.innerText = "KEINE TERMINE";
-        }
-    }
-}
-
-// --- V6.14 FIX: EVENTS & NAMEN IN DER WOCHENANSICHT ---
-function renderWeek() {
-    const wochenContainer = document.querySelector('.wochen-container');
-    if (!wochenContainer) return;
-
-    const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-    const events = JSON.parse(localStorage.getItem('appEvents')) || [];
-    const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
-    const settings = { ...DEFAULTS, ...storedSettings };
-
-    const zeiten = getArbeitsZeiten(settings);
-    const startMin = zeiten.startMin;
-    const endeMin = zeiten.endeMin;
-    const gesamtArbeitsMin = zeiten.gesamtArbeitsMin;
-
-    document.querySelectorAll('.termin-segment').forEach(el => el.remove());
-
-    if(gesamtArbeitsMin <= 0) return;
-
-    const formatiertEvents = events.map(e => ({
-        ...e,
-        isEvent: true,
-        start: e.start || "00:00",
-        ende: e.ende || "23:59",
-        kat: 'event'
-    }));
-
-    const combinedItems = [...termine, ...formatiertEvents];
-
-    combinedItems.forEach(t => {
-        if (!t || !t.datum || !t.start || !t.ende || !t.start.includes(':') || !t.ende.includes(':')) return;
-
-        const tagZeile = document.querySelector(`.tag-zeile[data-datum="${t.datum}"]`);
-        if (tagZeile) {
-            const timeline = tagZeile.querySelector('.timeline-horizontal');
-            if (timeline) {
-                try {
-                    let tStartMin = parseTimeStr(t.start, "00:00");
-                    let tEndeMin = parseTimeStr(t.ende, "23:59");
-                    if (t.ende === "00:00" || tEndeMin === 0) tEndeMin = 1440; 
-
-                    let anzeigeStart = tStartMin;
-                    let anzeigeEnde = tEndeMin;
-                    let isOutsideLeft = false;
-                    let isOutsideRight = false;
-
-                    if (tEndeMin <= startMin) {
-                        anzeigeStart = startMin;
-                        anzeigeEnde = startMin + (gesamtArbeitsMin * 0.05); 
-                        isOutsideLeft = true;
-                    } else if (tStartMin >= endeMin) {
-                        anzeigeStart = endeMin - (gesamtArbeitsMin * 0.05);
-                        anzeigeEnde = endeMin;
-                        isOutsideRight = true;
-                    } else {
-                        if (anzeigeStart < startMin) { anzeigeStart = startMin; isOutsideLeft = true; }
-                        if (anzeigeEnde > endeMin) { anzeigeEnde = endeMin; isOutsideRight = true; }
-                    }
-
-                    let anzeigeDauer = anzeigeEnde - anzeigeStart;
-                    if (anzeigeDauer < (gesamtArbeitsMin * 0.03)) anzeigeDauer = gesamtArbeitsMin * 0.03;
-
-                    const linksPosition = ((anzeigeStart - startMin) / gesamtArbeitsMin) * 100;
-                    const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
-
-                    const segment = document.createElement('div');
+                for(let h = startH; h <= endeH; h++) {
+                    const topPx = (h * 60 - startMinTag) * PIXELS_PER_MIN;
+                    const displayH = String(h % 24).padStart(2, '0') + ':00';
                     
-                    let timeText = `${t.start} - ${t.ende}`;
-                    if(isOutsideLeft) timeText = `<< ${timeText}`;
-                    if(isOutsideRight) timeText = `${timeText} >>`;
+                    const gridLine = document.createElement('div');
+                    gridLine.className = 'hour-grid-line';
+                    gridLine.style.top = topPx + 'px';
+                    matrix.appendChild(gridLine);
+
+                    const gridText = document.createElement('div');
+                    gridText.className = 'hour-grid-text';
+                    gridText.style.top = topPx + 'px';
+                    gridText.innerText = displayH;
+                    matrix.appendChild(gridText);
+                }
+
+                if (datum === currentDate) {
+                    const currentMins = now.getHours() * 60 + now.getMinutes();
+                    if (currentMins >= startMinTag && currentMins <= endeMinTag) {
+                        const topPx = (currentMins - startMinTag) * PIXELS_PER_MIN;
+                        const displayNow = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+                        
+                        const laser = document.createElement('div');
+                        laser.className = 'live-time-laser';
+                        laser.style.top = topPx + 'px';
+                        laser.innerHTML = `<div class="live-time-text">${displayNow}</div>`;
+                        matrix.appendChild(laser);
+                    }
+                }
+
+                combinedItems.forEach(t => {
+                    let sMin = parseTimeStr(t.start, "00:00");
+                    let eMin = parseTimeStr(t.ende, "23:59");
+                    if (t.ende === "00:00") eMin = 1440;
+                    if (eMin <= sMin) eMin += 1440;
+                    
+                    let anzeigeStart = Math.max(startMinTag, sMin);
+                    let anzeigeEnde = Math.min(endeMinTag, eMin);
+                    let dauer = anzeigeEnde - anzeigeStart;
+                    if (dauer < 30) dauer = 30; 
+                    
+                    const topPx = (anzeigeStart - startMinTag) * PIXELS_PER_MIN;
+                    const heightPx = dauer * PIXELS_PER_MIN;
+
+                    const block = document.createElement('div');
+                    block.className = 'cyber-block';
+                    
+                    const flexDir = heightPx < 80 ? 'row' : 'column';
+                    
+                    block.style.top = topPx + 'px';
+                    block.style.height = heightPx + 'px';
+                    block.style.padding = heightPx < 80 ? '10px 15px' : '15px';
+                    block.style.justifyContent = heightPx < 80 ? 'space-between' : 'flex-start';
+                    block.style.alignItems = heightPx < 80 ? 'center' : 'stretch';
+                    
+                    const isPast = (datum < currentDate) || (datum === currentDate && eMin <= (now.getHours()*60 + now.getMinutes()));
 
                     if (t.isEvent) {
                         const f = t.color || '#ff3300';
-                        segment.className = `termin-segment`;
-                        segment.style.background = `linear-gradient(90deg, rgba(255,51,0,0.6) 0%, rgba(10,0,0,0.8) 100%)`;
-                        segment.style.borderLeft = `3px solid ${f}`;
-                        segment.style.boxShadow = `0 0 8px ${f}`;
-                        segment.style.zIndex = "5"; 
+                        block.style.borderLeftColor = f;
+                        block.style.background = `linear-gradient(90deg, rgba(255, 51, 0, 0.15) 0%, rgba(10, 15, 20, 0.8) 40%)`;
+                        block.onclick = () => location.href = 'events.html';
                         
-                        segment.innerHTML = `
-                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; overflow: hidden; padding: 0 2px;">
-                                <span class="status-label" style="margin-bottom: 2px; color: #fff; font-weight: bold; font-size:0.6rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%; text-align: center;">🔥 ${t.name}</span>
-                                <span style="font-size: 0.5rem; font-weight: bold; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
+                        block.innerHTML = `
+                            <div class="cyber-node" style="border-color:${f};"></div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
+                                <div style="display:flex; align-items:center;">
+                                    <div style="font-size: 1.5rem; margin-right: 10px; text-shadow: 0 0 10px ${f};">🔥</div>
+                                    <div>
+                                        <div class="block-title" style="color: ${f};">${t.name}</div>
+                                        <div class="block-time">${t.start} - ${t.ende}</div>
+                                    </div>
+                                </div>
+                                <div class="stat-badge" style="border-color:${f}; color:${f};">EVENT</div>
                             </div>
                         `;
-                        segment.onclick = (e) => {
-                            e.stopPropagation();
-                            window.location.href = 'events.html';
-                        };
-                        segment.style.pointerEvents = 'auto'; 
-                    } else {
-                        const safeKat = t.kat || 'kat1';
-                        segment.className = `termin-segment ${safeKat}`;
-                        const katName = settings[safeKat + "_name"] || "Termin";
-                        const displayName = t.name ? t.name : 'Unbekannt';
+                    } 
+                    else {
+                        const f = settings[t.kat+"_farbe"] || 'var(--neon-cyan)';
+                        block.style.borderLeftColor = f;
+                        block.onclick = () => openDetailModal(t.id);
                         
-                        segment.innerHTML = `
-                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
-                                <span class="status-label" style="margin-bottom: 2px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: 100%;">${displayName} <span style="opacity:0.7; font-size:0.8em;">(${katName})</span></span>
-                                <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
-                            </div>
-                        `;
-                    }
+                        let dbKunde = safeFindKunde(t, kundenDB);
+                        
+                        let displayPreis = (dbKunde && dbKunde.preis) ? dbKunde.preis : t.preis;
+                        let expectedPreis = displayPreis || ''; 
+                        let displayPraef = (dbKunde && dbKunde.praeferenz) ? dbKunde.praeferenz : (t.praeferenz || 'none');
+                        
+                        let displayLink = (dbKunde && dbKunde.link && dbKunde.link.trim() !== '') ? dbKunde.link : '';
+                        if (displayLink && !displayLink.startsWith('http')) displayLink = 'https://' + displayLink;
+                        
+                        let displayGroesse = (dbKunde && dbKunde.groesse && dbKunde.groesse !== "Unbekannt") ? dbKunde.groesse : '';
+                        let displayVibe = (dbKunde && dbKunde.vibe) ? parseInt(dbKunde.vibe) : 0;
+                        
+                        const livePlattform = (dbKunde && dbKunde.plattform) ? dbKunde.plattform : t.plattform;
+                        const liveKontakt = (dbKunde && dbKunde.kontakt) ? dbKunde.kontakt : t.kontakt;
+                        let displayKontakt = "";
+                        if (liveKontakt) { displayKontakt = (livePlattform && livePlattform !== 'none' && livePlattform !== "") ? `${livePlattform}: ${liveKontakt}` : liveKontakt; }
+                        
+                        let statusHTML = '';
+                        if (t.status === 'done') statusHTML = `<div class="status-done">💰 ${t.umsatz} €</div>`;
+                        else if (t.status === 'noshow') statusHTML = `<div class="status-noshow">❌ NO SHOW</div>`;
+                        else if (isPast && !t.status) statusHTML = `<button class="btn-abrechnen" onclick="openAbrechnung(event, ${t.id}, '${t.name.replace(/'/g, "\\'")}', '${expectedPreis}')">💸 Abrechnen</button>`;
 
-                    segment.style.left = linksPosition + '%';
-                    segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
-                    
-                    if (isOutsideLeft || isOutsideRight) {
-                        segment.style.opacity = '0.5';
+                        let deleteBtn = `<button onclick="event.stopPropagation(); deleteTermin(${t.id})" style="background: rgba(255, 0, 60, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.7rem;">✖ Löschen</button>`;
+
+                        if (flexDir === 'row') {
+                            let kontaktMini = displayKontakt ? `<span style="font-size: 0.7rem; color: #aaa; margin-left: 10px;">📱 ${displayKontakt}</span>` : '';
+                            let miniInfo = '';
+                            if(displayPreis) miniInfo += ` 💰${displayPreis}`;
+                            if(displayPraef && displayPraef !== 'none') miniInfo += ` 💦${displayPraef}`;
+                            if(displayVibe > 0) miniInfo += ` ⭐${displayVibe}`;
+                            
+                            block.innerHTML = `
+                                <div class="cyber-node" style="border-color:${f};"></div>
+                                <div style="display:flex; align-items:center; gap: 10px; flex-grow: 1; overflow: hidden; white-space: nowrap;">
+                                    <span class="block-time">${t.start} - ${t.ende}</span>
+                                    <span class="block-title">${t.name} <span style="font-size:0.7rem; color:var(--neon-gold); font-weight:normal;">${miniInfo}</span></span>
+                                    ${kontaktMini}
+                                </div>
+                                <div style="display:flex; gap: 10px; align-items:center; flex-shrink: 0;">
+                                    ${statusHTML}
+                                    ${deleteBtn}
+                                </div>
+                            `;
+                        } else {
+                            let pBadge = displayPreis ? `<span style="background: rgba(229,176,92,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-gold); color: var(--neon-gold);">💰 ${displayPreis}€</span>` : '';
+                            let praefBadge = (displayPraef && displayPraef !== 'none') ? `<span style="background: rgba(188,0,221,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-violet); color: var(--neon-violet);">💦 ${displayPraef}</span>` : '';
+                            let linkBadge = displayLink ? `<a href="${displayLink}" target="_blank" onclick="event.stopPropagation();" style="background: rgba(5,217,232,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); text-decoration: none;">🔗 Profil</a>` : '';
+                            
+                            let groesseTxt = displayGroesse ? `<span style="color: #aaa;">📐 ${displayGroesse}</span>` : '';
+                            let vibeTxt = displayVibe > 0 ? `<span style="color: var(--neon-gold);">⭐ ${displayVibe}/5</span>` : '';
+                            let extraInfos = (groesseTxt || vibeTxt) ? `<div style="font-size: 0.75rem; margin-top: 5px; display:flex; gap:10px;">${groesseTxt} ${vibeTxt}</div>` : '';
+                            
+                            let kontaktRow = displayKontakt ? `<div style="font-size: 0.75rem; color: #ccc; margin-top: 5px;">📱 ${displayKontakt}</div>` : '';
+                            let notizRow = t.notizen ? `<div style="font-size: 0.7rem; color: #888; margin-top: 5px; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">📝 ${t.notizen}</div>` : '';
+
+                            block.innerHTML = `
+                                <div class="cyber-node" style="border-color:${f};"></div>
+                                <div class="block-header">
+                                    <div class="block-title">${t.name}</div>
+                                    <div class="block-time">${t.start} - ${t.ende}</div>
+                                </div>
+                                ${kontaktRow}
+                                <div style="font-size: 0.85rem; margin-top: 6px; display:flex; gap:8px; flex-wrap: wrap; align-items:center;">
+                                    ${pBadge}
+                                    ${praefBadge}
+                                    ${linkBadge}
+                                </div>
+                                ${extraInfos}
+                                ${notizRow}
+                                <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);">
+                                    ${deleteBtn}
+                                    ${statusHTML}
+                                </div>
+                            `;
+                        }
                     }
-                    
-                    timeline.appendChild(segment);
-                } catch (e) {
-                    console.error("Fehler beim Malen des Blocks:", e);
+                    matrix.appendChild(block);
+                });
+
+                // --- INTELLIGENTES AUTO-SCROLLING (Nur beim Laden der Seite) ---
+                if (isInitialRender) {
+                    setTimeout(() => {
+                        const matrixRect = matrix.getBoundingClientRect();
+                        const matrixTop = window.scrollY + matrixRect.top; // Absolute Position der Timeline ermitteln
+
+                        if (datum === currentDate) {
+                            // Wenn Heute: Scrolle zur aktuellen Uhrzeit (Laser)
+                            const currentMins = now.getHours() * 60 + now.getMinutes();
+                            if (currentMins >= startMinTag) {
+                                const targetY = (currentMins - startMinTag) * PIXELS_PER_MIN;
+                                window.scrollTo({ top: matrixTop + targetY - 150, behavior: 'smooth' });
+                            }
+                        } else {
+                            // Wenn anderer Tag:
+                            if (combinedItems.length > 0) {
+                                // Scrolle zum allerersten Termin
+                                let earliestMin = 1440;
+                                combinedItems.forEach(item => {
+                                    let sMin = parseTimeStr(item.start, "00:00");
+                                    if (sMin < earliestMin) earliestMin = sMin;
+                                });
+                                const targetY = Math.max(0, (earliestMin - startMinTag) * PIXELS_PER_MIN);
+                                window.scrollTo({ top: matrixTop + targetY - 150, behavior: 'smooth' });
+                            } else {
+                                // Nichts drin: Bleibe ganz oben
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                        }
+                    }, 300); // 300ms warten, damit das Rendern komplett abgeschlossen ist
                 }
-            }
-        }
-    });
-}
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (!sessionStorage.getItem('authKey')) {
-        window.location.href = 'index.html';
-        return; 
-    }
-
-    ladeUndWendeEinstellungenAn();
-    generiereWochenAnsicht(); 
-    renderWeek();             
-    updateLiveSystem();
-    
-    initCloud();
-
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {
-            reg.update();
-        }).catch(err => console.log('SW Fehler:', err));
-    }
-
-    setTimeout(() => {
-        const loader = document.getElementById('app-loader');
-        if (loader) {
-            loader.style.opacity = '0';
-            setTimeout(() => loader.remove(), 500);
+            } catch(e) { console.log("Matrix Render Fehler", e); }
         }
 
-        const heuteZeile = document.querySelector('.tag-zeile.heute');
-        if (heuteZeile) {
-            heuteZeile.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            heuteZeile.style.transition = "background-color 0.8s ease-out";
-            heuteZeile.style.backgroundColor = "rgba(5, 217, 232, 0.15)";
+        function deleteTermin(id) {
+            if(!confirm("Diesen Termin wirklich löschen?")) return;
+            let t = JSON.parse(localStorage.getItem('appTermine')) || [];
+            localStorage.setItem('appTermine', JSON.stringify(t.filter(x => x.id !== id)));
+            const urlParams = new URLSearchParams(window.location.search);
+            renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0], false); 
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const d = urlParams.get('d') || new Date().toISOString().split('T')[0];
+            const teile = d.split('-');
+            
+            if(document.getElementById('tag-datum-titel')) document.getElementById('tag-datum-titel').innerText = `${teile[2]}.${teile[1]}.${teile[0]}`;
+            if(document.getElementById('terminDatum')) document.getElementById('terminDatum').value = d;
+            
+            // True übergeben, damit das Auto-Scrolling NUR beim Start auslöst
+            renderTimeline(d, true);
+            
+            // False übergeben, damit es beim Reload im Hintergrund nicht plötzlich wegscrollt!
+            setInterval(() => { renderTimeline(d, false); }, 60000);
+
             setTimeout(() => {
-                heuteZeile.style.backgroundColor = "transparent";
-            }, 1200);
-        }
-    }, 600); 
-});
+                const loader = document.getElementById('app-loader');
+                if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
+            }, 600);
+        });
+    </script>
+</body>
+</html>

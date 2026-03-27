@@ -33,8 +33,6 @@ function renderEvents() {
             dateStr = dObj.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         }
 
-        const anzeigeOrt = e.stadt || e.ort || 'TBA';
-
         container.innerHTML += `
             <div class="event-card" style="border-left-color: ${e.color || '#ff3300'}; opacity: ${opacity};" onclick="openEventDashboard(${e.id})">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -48,7 +46,7 @@ function renderEvents() {
                 </div>
 
                 <div style="color: #aaa; font-size: 0.85rem; margin-top: 5px;">📅 ${dateStr} | ⏰ ${e.start} - ${e.ende} Uhr</div>
-                <div style="color: #888; font-size: 0.8rem; margin-top: 5px;">📍 ${anzeigeOrt} | 💦 ${e.praef}</div>
+                <div style="color: #888; font-size: 0.8rem; margin-top: 5px;">📍 ${e.stadt || e.ort || 'TBA'} | 💦 ${e.praef}</div>
             </div>
         `;
     });
@@ -137,7 +135,7 @@ function updateDashboardStats() {
     }
 }
 
-// --- 3. EVENT SETUP & BEARBEITEN ---
+// --- 3. EVENT SETUP & BEARBEITEN (Feste Vorgaben entfernt!) ---
 function openEventSetup(isNew = false) {
     document.getElementById('promoBox').innerText = "Klicke auf Generieren...";
     
@@ -150,7 +148,7 @@ function openEventSetup(isNew = false) {
             document.getElementById('evStart').value = e.start || '';
             document.getElementById('evEnde').value = e.ende || '';
             document.getElementById('evColor').value = e.color || '#ff3300';
-            document.getElementById('evStadt').value = e.stadt || e.ort || '';
+            document.getElementById('evStadt').value = e.stadt || '';
             document.getElementById('evLocation').value = e.location || '';
             document.getElementById('evPreis').value = e.preis || '';
             
@@ -172,26 +170,28 @@ function openEventSetup(isNew = false) {
     } else {
         currentEditEventId = null;
         currentGuests = [];
-        document.getElementById('evName').value = 'GB';
+        
+        // FELDER SIND JETZT LEER
+        document.getElementById('evName').value = '';
         const heute = new Date();
         document.getElementById('evDatum').value = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-        document.getElementById('evStart').value = '11:00';
-        document.getElementById('evEnde').value = '14:00';
+        document.getElementById('evStart').value = '';
+        document.getElementById('evEnde').value = '';
         document.getElementById('evColor').value = '#ff3300';
-        document.getElementById('evStadt').value = 'Leipzig';
-        document.getElementById('evLocation').value = 'Hotel / Privat';
-        document.getElementById('evPreis').value = '80';
+        document.getElementById('evStadt').value = '';
+        document.getElementById('evLocation').value = '';
+        document.getElementById('evPreis').value = '';
         
-        document.getElementById('evGirlName').value = 'Susi';
-        document.getElementById('evGirlAge').value = '35';
-        document.getElementById('evGirlHeight').value = '165';
-        document.getElementById('evGirlWeight').value = '64';
-        document.getElementById('evGirlType').value = 'Schlanke und naturgeile Dreilochstute';
+        document.getElementById('evGirlName').value = '';
+        document.getElementById('evGirlAge').value = '';
+        document.getElementById('evGirlHeight').value = '';
+        document.getElementById('evGirlWeight').value = '';
+        document.getElementById('evGirlType').value = '';
         
-        document.getElementById('evVorlieben').value = 'GV, anal, lecken, fingern, blasen, in Mund spritzen, schlucken, harter Sex, Körperbesamung';
-        document.getElementById('evTabus').value = 'Keine Schmerzen/Gewalt, kein KV';
-        document.getElementById('evNS').value = 'einzeln, passiv und aktiv in der Dusche möglich';
-        document.getElementById('evVideo').value = 'macht sie auch gerne NS-Videos, entweder einzeln oder wo sie von mehreren angepisst wird. Dies einfach vor Ort ansprechen. (Auch mit Maske möglich, ansonsten würden auch keine Gesichter gefilmt werden).';
+        document.getElementById('evVorlieben').value = '';
+        document.getElementById('evTabus').value = '';
+        document.getElementById('evNS').value = 'Nein';
+        document.getElementById('evVideo').value = 'Keine';
         document.getElementById('evBilder').value = 'Ja';
         document.getElementById('evPraef').value = 'AO';
         
@@ -209,24 +209,24 @@ function closeEventSetup() {
     }
 }
 
-// --- PROMO GENERATOR (Verbessert, heiß und grammatikalisch perfekt) ---
+// --- PROMO GENERATOR ---
 function generatePromo() {
     const name = document.getElementById('evName').value || 'Event';
     const datum = document.getElementById('evDatum').value;
-    const start = document.getElementById('evStart').value;
-    const ende = document.getElementById('evEnde').value;
-    const stadt = document.getElementById('evStadt').value || 'Leipzig';
+    const start = document.getElementById('evStart').value || '??:??';
+    const ende = document.getElementById('evEnde').value || '??:??';
+    const stadt = document.getElementById('evStadt').value || 'geheimen Location';
     const location = document.getElementById('evLocation').value || 'wird privat mitgeteilt';
     
-    const gName = document.getElementById('evGirlName').value || 'Susi';
-    const gAge = document.getElementById('evGirlAge').value || '35';
-    const gHeight = document.getElementById('evGirlHeight').value || '165';
-    const gWeight = document.getElementById('evGirlWeight').value || '64';
-    const gType = document.getElementById('evGirlType').value || 'schlanke und naturgeile Dreilochstute';
+    const gName = document.getElementById('evGirlName').value || 'Traumfrau';
+    const gAge = document.getElementById('evGirlAge').value || 'junge';
+    const gHeight = document.getElementById('evGirlHeight').value || '';
+    const gWeight = document.getElementById('evGirlWeight').value || '';
+    const gType = document.getElementById('evGirlType').value || 'süße Maus';
 
     const vorlieben = document.getElementById('evVorlieben').value || 'Alles was Spaß macht';
     const tabus = document.getElementById('evTabus').value || 'Keine Schmerzen/Gewalt';
-    const preis = document.getElementById('evPreis').value || '80';
+    const preis = document.getElementById('evPreis').value || '?';
     const praef = document.getElementById('evPraef').value || 'AO';
     const towels = document.getElementById('evTowels').value || 'Werden gestellt';
     
@@ -245,16 +245,18 @@ function generatePromo() {
         dateStr = `${dd}.${mm}.`;
     }
 
-    // Titel
+    let maße = [];
+    if(gHeight) maße.push(`${gHeight} cm`);
+    if(gWeight) maße.push(`${gWeight} kg`);
+    let maßeStr = maße.length > 0 ? `, ${maße.join(', ')}` : '';
+
     let text = `🔥 *${name.toUpperCase()} IN ${stadt.toUpperCase()}* 🔥\n\n`;
     
-    // Begrüßung & Info
     text += `Hallo ihr Lieben, hier ist eure ${gName}! 💋\n`;
-    text += `Ich bin eine ${gType} (${gAge} Jahre, ${gHeight} cm, ${gWeight} kg) und veranstalte am ${weekdayStr}, den ${dateStr} von ${start} bis ${ende} Uhr mein Event "${name}" in ${stadt} (Location: ${location}).\n\n`;
+    text += `Ich bin eine ${gType} (${gAge} Jahre${maßeStr}) und veranstalte am ${weekdayStr}, den ${dateStr} von ${start} bis ${ende} Uhr mein Event "${name}" in ${stadt} (Location: ${location}).\n\n`;
     
     text += `Ich bin schon richtig feucht und kann es kaum erwarten, es mit euch extrem versaut krachen zu lassen! 😈💦\n\n`;
     
-    // Details
     text += `💦 *Gewollt:* ${vorlieben}\n`;
     if (nsOpt !== 'Nein') {
         text += `🚿 *Natursekt:* ${nsOpt}\n`;
@@ -268,7 +270,6 @@ function generatePromo() {
     text += `💸 *Kosten:* ${preis} € p.P.\n`;
     text += `🧖‍♀️ *Handtücher:* ${towels}\n`;
     
-    // Abschluss
     if (bilderOpt === 'Ja') {
         text += `\nHeiße Bilder von mir schicke ich euch bei Interesse sehr gerne auf Anfrage! 😏\n`;
     }
@@ -284,7 +285,7 @@ function copyPromo() {
     navigator.clipboard.writeText(text).then(() => alert("✅ Promo-Text kopiert!"));
 }
 
-// --- GÄSTE LOGIK (Live Save & Test Abbuchung) ---
+// --- GÄSTE LOGIK ---
 function autoSaveGuests() {
     if (!currentEditEventId) return;
     let events = JSON.parse(localStorage.getItem('appEvents')) || [];
@@ -348,11 +349,7 @@ function addGuest() {
     const input = document.getElementById('newGuestName');
     if(!input.value.trim()) return;
     
-    currentGuests.push({
-        id: Date.now().toString(),
-        name: input.value.trim(),
-        status: 'angemeldet' 
-    });
+    currentGuests.push({ id: Date.now().toString(), name: input.value.trim(), status: 'angemeldet' });
     
     input.value = '';
     updateDashboardStats();
@@ -366,7 +363,7 @@ function changeGuestStatus(id, newStatus) {
         const oldStatus = guest.status;
         guest.status = newStatus;
         
-        // --- INVENTAR ABBUCHUNG (Nur wenn AO im Dropdown gewählt ist) ---
+        // --- INVENTAR ABBUCHUNG ---
         const events = JSON.parse(localStorage.getItem('appEvents')) || [];
         const ev = events.find(x => x.id === currentEditEventId);
         const isAO = ev && ev.praef && ev.praef.toLowerCase().includes('ao');
@@ -376,13 +373,10 @@ function changeGuestStatus(id, newStatus) {
             let bestand = parseInt(settings.testBestand) || 0;
             let changed = false;
 
-            // Abziehen
             if (oldStatus !== 'erschienen' && newStatus === 'erschienen') {
                 bestand = Math.max(0, bestand - 1);
                 changed = true;
-            } 
-            // Zurückbuchen
-            else if (oldStatus === 'erschienen' && newStatus !== 'erschienen') {
+            } else if (oldStatus === 'erschienen' && newStatus !== 'erschienen') {
                 bestand += 1;
                 changed = true;
             }
@@ -409,13 +403,44 @@ function removeGuest(id) {
 }
 
 // --- EVENT SPEICHERN & LÖSCHEN ---
+function parseTimeStr(timeStr, defaultStr) {
+    if (!timeStr || !timeStr.includes(':')) timeStr = defaultStr;
+    const parts = timeStr.split(':');
+    let h = parseInt(parts[0], 10);
+    let m = parseInt(parts[1], 10);
+    return h * 60 + m;
+}
+
 function saveEvent() {
     const name = document.getElementById('evName').value;
     const datum = document.getElementById('evDatum').value;
+    const start = document.getElementById('evStart').value;
+    const ende = document.getElementById('evEnde').value;
     
-    if(!name || !datum) {
-        alert("Name und Datum sind Pflichtfelder!");
+    if(!name || !datum || !start || !ende) {
+        alert("Name, Datum und Uhrzeiten sind Pflichtfelder!");
         return;
+    }
+
+    // DOPPELBUCHUNGSSCHUTZ: Prüfen, ob da schon ein normaler Termin liegt!
+    let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+    let nStartMin = parseTimeStr(start, "00:00");
+    let nEndeMin = parseTimeStr(ende, "23:59");
+    if (ende === "00:00" || nEndeMin === 0) nEndeMin = 1440;
+    
+    const overlap = termine.find(t => {
+        if (t.datum === datum) {
+            let eStartMin = parseTimeStr(t.start, "00:00");
+            let eEndeMin = parseTimeStr(t.ende, "23:59");
+            if (t.ende === "00:00" || eEndeMin === 0) eEndeMin = 1440; 
+            return (nStartMin < eEndeMin && nEndeMin > eStartMin);
+        }
+        return false;
+    });
+
+    if (overlap) {
+        alert(`⚠️ DOPPELBUCHUNG VERHINDERT!\n\nDu hast am ${datum} zur selben Zeit bereits den Kunden-Termin "${overlap.name}" (${overlap.start} - ${overlap.ende} Uhr).\nBitte ändere die Zeit für das Event.`);
+        return; 
     }
 
     let events = JSON.parse(localStorage.getItem('appEvents')) || [];
@@ -424,8 +449,8 @@ function saveEvent() {
         id: currentEditEventId || Date.now(),
         name: name,
         datum: datum,
-        start: document.getElementById('evStart').value,
-        ende: document.getElementById('evEnde').value,
+        start: start,
+        ende: ende,
         color: document.getElementById('evColor').value,
         stadt: document.getElementById('evStadt').value,
         location: document.getElementById('evLocation').value,

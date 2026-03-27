@@ -32,18 +32,32 @@
         
         <div class="settings-card">
             <div class="setting-title">Sicherheits-Protokoll (PIN)</div>
-            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Ändere den Zugangscode für die App (Standard: 0000).</p>
-            <div style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Ändere den 4-stelligen Zugangscode für die App.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="form-group">
                     <label class="input-label">Aktuelle PIN</label>
-                    <input type="password" id="oldPin" class="cyber-input-full" placeholder="****" inputmode="numeric">
+                    <input type="password" id="oldPin" class="cyber-input-full" placeholder="****" inputmode="numeric" maxlength="4">
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label class="input-label">Neue PIN</label>
-                    <input type="password" id="newPin" class="cyber-input-full" placeholder="4 Ziffern" inputmode="numeric">
+                
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="input-label">Neue PIN</label>
+                        <input type="password" id="newPin" class="cyber-input-full" placeholder="****" inputmode="numeric" maxlength="4">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="input-label">Bestätigen</label>
+                        <input type="password" id="confirmPin" class="cyber-input-full" placeholder="****" inputmode="numeric" maxlength="4">
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: -5px;">
+                    <input type="checkbox" id="showPin" onchange="togglePinVisibility()" style="accent-color: var(--neon-cyan); width: 18px; height: 18px;">
+                    <label for="showPin" style="color: #aaa; font-size: 0.85rem; cursor: pointer;">PIN anzeigen</label>
                 </div>
             </div>
-            <button onclick="changeSystemPin(this)" class="btn-save" style="margin-top: 10px; padding: 15px; font-size: 1rem;">PIN Aktualisieren</button>
+
+            <button onclick="changeSystemPin(this)" class="btn-save" style="margin-top: 15px; padding: 15px; font-size: 1rem;">PIN Aktualisieren</button>
         </div>
 
         <div class="settings-card" style="border-left: 4px solid var(--neon-green);">
@@ -190,27 +204,54 @@
             }, 400);
         });
 
-        // Korrigierte PIN-Speicherung: Nutzt unseren Auto-Sync aus der app.js
+        // PIN SICHTBARKEIT UMSCHALTEN
+        function togglePinVisibility() {
+            const type = document.getElementById('showPin').checked ? 'text' : 'password';
+            document.getElementById('oldPin').type = type;
+            document.getElementById('newPin').type = type;
+            document.getElementById('confirmPin').type = type;
+        }
+
+        // KORRIGIERTE PIN-SPEICHERUNG MIT BESTÄTIGUNG
         function changeSystemPin(btnElement) {
             const oldInput = document.getElementById('oldPin').value;
             const newInput = document.getElementById('newPin').value;
+            const confirmInput = document.getElementById('confirmPin').value;
             const currentPin = localStorage.getItem('appPin') || "0000";
 
             if (oldInput !== currentPin) {
                 alert("❌ Die aktuelle PIN ist falsch!");
                 return;
             }
-            if (newInput.length !== 4) {
-                alert("⚠️ Die neue PIN muss genau 4 Ziffern lang sein!");
+            if (newInput.length !== 4 || isNaN(newInput)) {
+                alert("⚠️ Die neue PIN muss genau 4 Ziffern lang sein (nur Zahlen erlaubt)!");
+                return;
+            }
+            if (newInput !== confirmInput) {
+                alert("❌ Die neuen PINs stimmen nicht überein!");
                 return;
             }
 
             // Speichert lokal -> app.js fängt es ab und sendet es sofort an Supabase!
             localStorage.setItem('appPin', newInput);
             
-            alert("✅ System-PIN wurde erfolgreich in der Cloud aktualisiert!");
-            document.getElementById('oldPin').value = '';
-            document.getElementById('newPin').value = '';
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "SPEICHERT IN CLOUD...";
+            btnElement.style.background = "var(--neon-green)";
+            btnElement.style.color = "#000";
+
+            setTimeout(() => {
+                alert("✅ System-PIN wurde erfolgreich aktualisiert!");
+                document.getElementById('oldPin').value = '';
+                document.getElementById('newPin').value = '';
+                document.getElementById('confirmPin').value = '';
+                document.getElementById('showPin').checked = false;
+                togglePinVisibility();
+                
+                btnElement.innerText = originalText;
+                btnElement.style.background = "";
+                btnElement.style.color = "";
+            }, 800);
         }
 
         function saveSystemSettings() {

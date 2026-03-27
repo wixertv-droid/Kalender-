@@ -97,7 +97,7 @@
         .btn-delete-kunde { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #666; font-size: 1.2rem; cursor: pointer; padding: 5px; transition: 0.2s; z-index: 5; }
         .btn-delete-kunde:hover { color: var(--neon-red); }
 
-        /* --- MODAL DESIGN: Die großen 1 und 2 für Bilder --- */
+        /* --- MODAL DESIGN --- */
         .img-upload-container { display: flex; justify-content: center; gap: 30px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #333; }
         .img-upload-box { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 45%; }
         .img-circle { 
@@ -107,9 +107,13 @@
             color: var(--neon-cyan); background: rgba(5,217,232,0.05); 
         }
         
-        /* Form Sections */
         .form-section { background: rgba(255, 255, 255, 0.02); border: 1px solid #222; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
         .section-title { font-size: 0.7rem; text-transform: uppercase; color: #666; letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; }
+
+        /* KLICKBARE STERNE */
+        .interactive-stars { display: flex; gap: 5px; font-size: 1.8rem; cursor: pointer; color: #444; margin-top: 5px; user-select: none; }
+        .interactive-stars span { transition: color 0.2s, text-shadow 0.2s; }
+        .interactive-stars span.active { color: var(--neon-gold); text-shadow: 0 0 8px var(--neon-gold); }
 
         /* Desktop vs Mobile Alignment */
         @media (min-width: 768px) {
@@ -241,7 +245,7 @@
 
             <div class="form-section">
                 <div class="section-title">Konditionen & Werte</div>
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
                         <label>Preis (€)</label>
                         <input type="number" id="kPreis" class="cyber-input-full" placeholder="z.B. 150">
@@ -265,14 +269,20 @@
                         </select>
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 20px;">
                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
                         <label>Vibe (1-5)</label>
-                        <input type="number" id="kVibe" class="cyber-input-full" min="1" max="5" placeholder="Sterne">
+                        <div class="interactive-stars" data-target="kVibe" id="star-kVibe">
+                            <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+                        </div>
+                        <input type="hidden" id="kVibe" value="0">
                     </div>
                     <div class="form-group" style="flex: 1; margin-bottom: 0;">
                         <label>Performance (1-5)</label>
-                        <input type="number" id="kPerf" class="cyber-input-full" min="1" max="5" placeholder="Sterne">
+                        <div class="interactive-stars" data-target="kPerf" id="star-kPerf">
+                            <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+                        </div>
+                        <input type="hidden" id="kPerf" value="0">
                     </div>
                 </div>
             </div>
@@ -329,6 +339,39 @@
             return "<span style='color: var(--neon-gold); text-shadow: 0 0 8px var(--neon-gold);'>" + "★".repeat(num) + "</span><span style='color: #444;'>" + "★".repeat(5 - num) + "</span>";
         }
 
+        // --- STERN BEWERTUNG LOGIK ---
+        function initStarRatings() {
+            document.querySelectorAll('.interactive-stars').forEach(container => {
+                const targetId = container.getAttribute('data-target');
+                const hiddenInput = document.getElementById(targetId);
+                const stars = container.querySelectorAll('span');
+
+                stars.forEach(star => {
+                    star.onclick = () => {
+                        const val = parseInt(star.getAttribute('data-val'));
+                        // Klickt man den aktiven Stern nochmal an, wird es auf 0 gesetzt
+                        if (hiddenInput.value == val) {
+                            hiddenInput.value = 0;
+                            updateStarVisuals(container, 0);
+                        } else {
+                            hiddenInput.value = val;
+                            updateStarVisuals(container, val);
+                        }
+                    };
+                });
+            });
+        }
+
+        function updateStarVisuals(container, val) {
+            container.querySelectorAll('span').forEach(s => {
+                if (parseInt(s.getAttribute('data-val')) <= val) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        }
+
         function renderKunden() {
             const container = document.getElementById('kundenListe');
             if(!container) return;
@@ -354,7 +397,6 @@
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
 
             if (ansicht === 'liste') {
-                // LISTEN ANSICHT
                 container.style.display = 'block';
                 
                 kunden.forEach(k => {
@@ -375,7 +417,6 @@
                     if (k.groesse && k.groesse !== 'Unbekannt') badges += `<span class="badge-clean">📐 ${k.groesse}</span>`;
                     if (k.noshows && k.noshows > 0) badges += `<span class="badge-clean red">⚠️ ${k.noshows}x No-Show</span>`;
 
-                    // PROFIL LINK PANZER-SUCHE
                     let displayLink = k.profilLink || k.profillink || k.link || '';
                     if (displayLink && !displayLink.startsWith('http')) displayLink = 'https://' + displayLink;
                     if (displayLink) badges += `<a href="${displayLink}" target="_blank" onclick="event.stopPropagation();" class="badge-clean cyan">🔗 Profil</a>`;
@@ -399,7 +440,6 @@
                     `;
                 });
             } else {
-                // KARTEN ANSICHT
                 container.style.display = 'grid';
                 container.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
                 container.style.gap = '15px';
@@ -422,7 +462,6 @@
                     if (k.groesse && k.groesse !== 'Unbekannt') badges += `<span class="badge-clean">📐 ${k.groesse}</span>`;
                     if (k.noshows && k.noshows > 0) badges += `<span class="badge-clean red">⚠️ ${k.noshows}x No-Show</span>`;
 
-                    // PROFIL LINK PANZER-SUCHE
                     let displayLink = k.profilLink || k.profillink || k.link || '';
                     if (displayLink && !displayLink.startsWith('http')) displayLink = 'https://' + displayLink;
                     if (displayLink) badges += `<a href="${displayLink}" target="_blank" onclick="event.stopPropagation();" class="badge-clean cyan">🔗 Profil</a>`;
@@ -472,14 +511,18 @@
                     document.getElementById('kPlattform2').value = k.plattform2 || 'none';
                     document.getElementById('kKontakt2').value = k.kontakt2 || '';
                     
-                    // BEIM LADEN: Prüft alle Schreibweisen!
                     document.getElementById('kLink').value = k.profilLink || k.profillink || k.link || '';
-                    
                     document.getElementById('kPreis').value = k.preis || '';
                     document.getElementById('kPraef').value = k.praeferenz || 'none';
                     document.getElementById('kGroesse').value = k.groesse || 'Unbekannt';
-                    document.getElementById('kVibe').value = k.vibe || '';
-                    document.getElementById('kPerf').value = k.perf || '';
+                    
+                    // STERNE AKTUALISIEREN
+                    document.getElementById('kVibe').value = k.vibe || 0;
+                    updateStarVisuals(document.getElementById('star-kVibe'), k.vibe || 0);
+                    
+                    document.getElementById('kPerf').value = k.perf || 0;
+                    updateStarVisuals(document.getElementById('star-kPerf'), k.perf || 0);
+                    
                     document.getElementById('kVorlieben').value = k.vorlieben || '';
                     document.getElementById('kNotizen').value = k.notizen || '';
                     document.getElementById('kBild1').value = k.bild1 || '';
@@ -496,8 +539,14 @@
                 document.getElementById('kPreis').value = '';
                 document.getElementById('kPraef').value = 'none';
                 document.getElementById('kGroesse').value = 'Unbekannt';
-                document.getElementById('kVibe').value = '';
-                document.getElementById('kPerf').value = '';
+                
+                // STERNE RESETTEN
+                document.getElementById('kVibe').value = 0;
+                updateStarVisuals(document.getElementById('star-kVibe'), 0);
+                
+                document.getElementById('kPerf').value = 0;
+                updateStarVisuals(document.getElementById('star-kPerf'), 0);
+                
                 document.getElementById('kVorlieben').value = '';
                 document.getElementById('kNotizen').value = '';
                 document.getElementById('kBild1').value = '';
@@ -524,7 +573,6 @@
                 plattform2: document.getElementById('kPlattform2').value,
                 kontakt2: document.getElementById('kKontakt2').value.trim(),
                 
-                // BOMBENFEST: Speichert in alle Formate!
                 profillink: linkUrl,
                 profilLink: linkUrl,
                 link: linkUrl,
@@ -565,6 +613,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            initStarRatings(); // Initialisiert die Sterne
             document.getElementById('btnAnsicht').innerHTML = ansicht === 'liste' ? '📄 Liste' : '🗂️ Karten';
             renderKunden();
             setTimeout(() => {

@@ -185,11 +185,14 @@
     </div>
 
     <script>
-                // --- AUTO-FILL FUNKTION ---
+            // --- AUTO-FILL FUNKTION MIT ID-TRACKING ---
         function sucheKundeFuerTermin() {
             const input = document.getElementById('terminName').value.toLowerCase();
             const vBox = document.getElementById('kundenVorschlaege');
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            
+            // Wenn man tippt, löschen wir sicherheitshalber die alte ID
+            document.getElementById('terminKundeId').value = '';
             
             if (input.length < 1) { vBox.style.display = 'none'; return; }
             
@@ -202,11 +205,12 @@
                     d.className = 'vorschlag-item';
                     d.innerHTML = `<strong>${k.name}</strong><br><small>${k.plattform || ''}</small>`;
                     d.onclick = () => {
+                        // BINGO: Hier binden wir das Termin-Fenster fest an die eindeutige Kunden-ID!
+                        document.getElementById('terminKundeId').value = k.id;
+                        
                         document.getElementById('terminName').value = k.name;
                         document.getElementById('terminPlattform').value = k.plattform || 'none';
                         document.getElementById('terminKontakt').value = k.kontakt || '';
-                        
-                        // HIER WURDE DIE NOTIZ-ZEILE GELÖSCHT! (Termin-Notizen bleiben jetzt sauber)
                         
                         document.getElementById('terminPreis').value = k.preis || '';
                         document.getElementById('terminPraeferenz').value = k.praeferenz || 'none';
@@ -219,7 +223,6 @@
                 vBox.style.display = 'block';
             } else { vBox.style.display = 'none'; }
         }
-
 
         // --- NEU: NAVIGATIONS-LOGIK (+/- 7 Tage) ---
         function changeWeek(days) {

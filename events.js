@@ -253,9 +253,9 @@ function generatePromo() {
     let text = `🔥 *${name.toUpperCase()} IN ${stadt.toUpperCase()}* 🔥\n\n`;
     
     text += `Hallo ihr Lieben, hier ist eure ${gName}! 💋\n`;
-    text += `Ich bin eine ${gType} (${gAge} Jahre${maßeStr}) und veranstalte am ${weekdayStr}, den ${dateStr} von ${start} bis ${ende} Uhr mein Event "${name}" in ${stadt} (Location: ${location}).\n\n`;
+    text += `Ich bin eine ${gType} (${gAge} Jahre${maßeStr}) und veranstalte am ${weekdayStr}, den ${dateStr} von ${start} bis ${ende} Uhr mein "${name}" in ${stadt} (Location: ${location}).\n\n`;
     
-    text += `Ich bin schon richtig feucht und kann es kaum erwarten, es mit euch extrem versaut krachen zu lassen! 😈💦\n\n`;
+    text += `Ich will eure gemeinsame Creampie-Schlampe sein. Nehmt mich nacheinander ran, bis ich von euch allen überlaufe! 🔥💦\n\n`;
     
     text += `💦 *Gewollt:* ${vorlieben}\n`;
     if (nsOpt !== 'Nein') {

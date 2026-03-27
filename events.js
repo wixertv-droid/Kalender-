@@ -21,14 +21,14 @@ function renderEvents() {
     events.sort((a, b) => new Date(a.datum) - new Date(b.datum));
 
     events.forEach(e => {
-        // Deine bevorzugte Original-Optik
-        const confirmed = e.guests ? e.guests.filter(g => g.status === 'bestaetigt' || g.status === 'erschienen').length : 0;
+        // Exakte Status-Zählung für die Startseite
+        const angemeldet = e.guests ? e.guests.filter(g => g.status === 'angemeldet').length : 0;
+        const bestaetigt = e.guests ? e.guests.filter(g => g.status === 'bestaetigt').length : 0;
+        const erschienen = e.guests ? e.guests.filter(g => g.status === 'erschienen').length : 0;
         
-        // Vergangene Events leicht abdunkeln
         const isPast = new Date(e.datum) < new Date(new Date().setHours(0,0,0,0));
         const opacity = isPast ? '0.6' : '1';
         
-        // Wenn das Datum formatiert werden soll
         let dateStr = "TBA";
         if(e.datum) {
             const dObj = new Date(e.datum);
@@ -38,9 +38,15 @@ function renderEvents() {
         container.innerHTML += `
             <div class="event-card" style="border-left-color: ${e.color || '#ff3300'}; opacity: ${opacity};" onclick="openEventDashboard(${e.id})">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div style="font-size: 1.2rem; font-weight: bold; color: ${e.color || '#ff3300'}">${e.name}</div>
-                    <div class="stat-badge" style="border-color: ${e.color || '#ff3300'}; color: ${e.color || '#ff3300'};">${confirmed} Zusagen</div>
+                    <div style="font-size: 1.2rem; font-weight: bold; color: ${e.color || '#ff3300'}; margin-bottom: 8px;">${e.name}</div>
                 </div>
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <div class="stat-badge" style="border-color: #aaa; color: #aaa;">📝 ${angemeldet} Angemeldet</div>
+                    <div class="stat-badge" style="border-color: var(--neon-cyan); color: var(--neon-cyan);">👍 ${bestaetigt} Bestätigt</div>
+                    <div class="stat-badge" style="border-color: var(--neon-green); color: var(--neon-green);">✅ ${erschienen} Da</div>
+                </div>
+
                 <div style="color: #aaa; font-size: 0.85rem; margin-top: 5px;">📅 ${dateStr} | ⏰ ${e.start} - ${e.ende} Uhr</div>
                 <div style="color: #888; font-size: 0.8rem; margin-top: 5px;">📍 ${e.ort || 'TBA'} | 💦 ${e.praef}</div>
             </div>
@@ -74,12 +80,66 @@ function closeEventDashboard() {
 
 function updateDashboardStats() {
     const total = currentGuests.length;
+    const angemeldet = currentGuests.filter(g => g.status === 'angemeldet').length;
+    const bestaetigt = currentGuests.filter(g => g.status === 'bestaetigt').length;
     const erschienen = currentGuests.filter(g => g.status === 'erschienen').length;
     const noshow = currentGuests.filter(g => g.status === 'noshow').length;
     
-    document.getElementById('dashStatTotal').innerText = `👥 ${total} Anmeldungen`;
+    // Header Stats
+    document.getElementById('dashStatTotal').innerText = `👥 ${total} Gesamt`;
     document.getElementById('dashStatErschienen').innerText = `✅ ${erschienen} Da`;
     document.getElementById('dashStatNoshow').innerText = `❌ ${noshow} No-Show`;
+
+    // Finanz-Berechnung
+    const events = JSON.parse(localStorage.getItem('appEvents')) || [];
+    const e = events.find(x => x.id === currentEditEventId);
+    const preis = e && e.preis ? parseFloat(e.preis) : 0;
+    
+    const aktuellerUmsatz = erschienen * preis;
+    // Potenzial = Alle, die nicht abgesagt haben oder No-Show sind
+    const potenzialUmsatz = (angemeldet + bestaetigt + erschienen) * preis; 
+    
+    const umsatzEl = document.getElementById('dashUmsatz');
+    const potEl = document.getElementById('dashPotUmsatz');
+    if (umsatzEl) umsatzEl.innerText = `${aktuellerUmsatz} €`;
+    if (potEl) potEl.innerText = `Potenzial: ${potenzialUmsatz} €`;
+
+    // Mini-Balkendiagramm zeichnen
+    const chartBox = document.getElementById('dashGuestChart');
+    if (chartBox) {
+        const max = total > 0 ? total : 1;
+        const pctAngemeldet = (angemeldet / max) * 100;
+        const pctBestaetigt = (bestaetigt / max) * 100;
+        const pctErschienen = (erschienen / max) * 100;
+        const pctNoshow = (noshow / max) * 100;
+
+        chartBox.innerHTML = `
+            <div style="margin-bottom: 10px;">
+                <div style="display:flex; justify-content: space-between; font-size: 0.75rem; color: #aaa; margin-bottom: 4px;"><span>Angemeldet (${angemeldet})</span></div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                    <div style="width: ${pctAngemeldet}%; height: 100%; background: #aaa; transition: width 0.8s cubic-bezier(0.1, 0.8, 0.2, 1);"></div>
+                </div>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <div style="display:flex; justify-content: space-between; font-size: 0.75rem; color: var(--neon-cyan); margin-bottom: 4px;"><span>Bestätigt (${bestaetigt})</span></div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                    <div style="width: ${pctBestaetigt}%; height: 100%; background: var(--neon-cyan); box-shadow: 0 0 8px var(--neon-cyan); transition: width 0.8s cubic-bezier(0.1, 0.8, 0.2, 1);"></div>
+                </div>
+            </div>
+            <div style="margin-bottom: 10px;">
+                <div style="display:flex; justify-content: space-between; font-size: 0.75rem; color: var(--neon-green); margin-bottom: 4px;"><span>Erschienen (${erschienen})</span></div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                    <div style="width: ${pctErschienen}%; height: 100%; background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); transition: width 0.8s cubic-bezier(0.1, 0.8, 0.2, 1);"></div>
+                </div>
+            </div>
+            <div style="margin-bottom: 5px;">
+                <div style="display:flex; justify-content: space-between; font-size: 0.75rem; color: var(--neon-red); margin-bottom: 4px;"><span>No-Show (${noshow})</span></div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                    <div style="width: ${pctNoshow}%; height: 100%; background: var(--neon-red); box-shadow: 0 0 8px var(--neon-red); transition: width 0.8s cubic-bezier(0.1, 0.8, 0.2, 1);"></div>
+                </div>
+            </div>
+        `;
+    }
 }
 
 // --- 3. EVENT SETUP & BEARBEITEN ---
@@ -87,7 +147,6 @@ function openEventSetup(isNew = false) {
     document.getElementById('promoBox').innerText = "Klicke auf Generieren...";
     
     if (!isNew && currentEditEventId) {
-        // Bestehendes Event bearbeiten
         const events = JSON.parse(localStorage.getItem('appEvents')) || [];
         const e = events.find(x => x.id === currentEditEventId);
         if(e) {
@@ -106,7 +165,6 @@ function openEventSetup(isNew = false) {
             document.getElementById('btnDelete').style.display = 'block';
         }
     } else {
-        // Neues Event anlegen
         currentEditEventId = null;
         currentGuests = [];
         document.getElementById('evName').value = '';
@@ -132,7 +190,7 @@ function openEventSetup(isNew = false) {
 function closeEventSetup() { 
     document.getElementById('eventSetupModal').style.display = 'none'; 
     if(currentEditEventId) {
-        document.getElementById('eventDashboardModal').style.display = 'flex'; // Zurück zum Dashboard
+        document.getElementById('eventDashboardModal').style.display = 'flex';
     }
 }
 

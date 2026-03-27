@@ -30,7 +30,7 @@
         .border-violet { border-left: 4px solid var(--neon-violet); }
         .border-gold { border-left: 4px solid var(--neon-gold); }
         .border-green { border-left: 4px solid var(--neon-green); }
-        .border-blue { border-left: 4px solid #00f0ff; } /* NEU: Für Inventar */
+        .border-blue { border-left: 4px solid #00f0ff; }
 
         .label { font-size: 0.75rem; color: #aaa; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
         .label-highlight { color: var(--neon-cyan); }
@@ -68,9 +68,7 @@
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { to { opacity: 1; } }
 
-        /* ========================================= */
-
-        /* Progress Bars (Data Stream - Result) */
+        /* Progress Bars */
         .progress-container { margin-top: 15px; }
         .progress-row { display: flex; align-items: center; margin-bottom: 10px; font-size: 0.85rem; color: #ccc; }
         .progress-name { width: 60px; text-transform: uppercase; font-weight: bold; }
@@ -112,13 +110,11 @@
     </div>
 
     <div class="dashboard">
-        <div class="btn-cyber" onclick="location.href='woche.html'">⬅️</div>
-        <div class="header-info">
+        <div style="width: 44px;"></div> <div class="header-info">
             <div class="titel-neon">FINANCE_CORE</div>
             <div class="datum-anzeige" id="sys-status" style="color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan);">SYSTEM ONLINE</div>
         </div>
-        <div></div>
-    </div>
+        <div style="width: 44px;"></div> </div>
 
     <div class="stats-container" id="main-container">
         
@@ -241,6 +237,25 @@
         </div>
 
     </div>
+
+    <nav class="bottom-nav">
+        <a href="woche.html" class="nav-item">
+            <div class="nav-icon" style="color: var(--neon-cyan);">🗂️</div>
+            <span>Woche</span>
+        </a>
+        <a href="kunden.html" class="nav-item">
+            <div class="nav-icon" style="color: var(--neon-pink);">👥</div>
+            <span>Kunden</span>
+        </a>
+        <a href="stats.html" class="nav-item active">
+            <div class="nav-icon" style="color: var(--neon-gold);">💰</div>
+            <span>Finance</span>
+        </a>
+        <a href="einstellungen.html" class="nav-item">
+            <div class="nav-icon" style="color: #fff;">⚙️</div>
+            <span>System</span>
+        </a>
+    </nav>
 
     <script>
         // GLOBAL DATA OBJECT
@@ -389,7 +404,6 @@
             const obj = document.getElementById(id);
             let start = 0;
             const duration = 1200;
-            // Wenn der Wert 0 ist, direkt setzen und abbrechen
             if (endValue <= 0) {
                 obj.innerText = "0" + suffix;
                 return;
@@ -400,7 +414,6 @@
             function update() {
                 start += increment;
                 if (start >= endValue) {
-                    // Für Inventar (ganze Zahlen)
                     if(suffix === "") {
                         obj.innerText = Math.round(endValue);
                     } else {
@@ -488,7 +501,6 @@
                     revealCard('month', 1200, () => animateValue('val-month', calculatedValues.revM));
                     revealCard('forecast', 1500, () => animateValue('val-forecast', calculatedValues.revFuture));
                     
-                    // NEU: Inventar laden
                     revealCard('inventory', 1600, () => { 
                         animateValue('val-inventory', calculatedValues.testBestand, ""); 
                         const statusText = document.getElementById('inv-status');

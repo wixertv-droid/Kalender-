@@ -69,7 +69,6 @@
 
             <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 15px;">
                 <div style="color: var(--neon-gold); font-weight: bold; text-transform: uppercase; margin-bottom: 10px;">Event Auswertung</div>
-                
                 <div style="background: rgba(229, 176, 92, 0.05); border: 1px dashed rgba(229, 176, 92, 0.3); border-radius: 12px; padding: 15px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
                         <div>
@@ -78,7 +77,6 @@
                         </div>
                         <div id="dashUmsatz" style="font-size: 2.2rem; font-weight: bold; color: var(--neon-gold); font-family: monospace; text-shadow: 0 0 15px rgba(229,176,92,0.4); line-height: 1;">0 €</div>
                     </div>
-                    
                     <div id="dashGuestChart"></div>
                 </div>
             </div>
@@ -93,7 +91,7 @@
             <div class="form-title" style="color: #ff3300; border-bottom-color: #ff3300;">Event Setup</div>
             
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 2;"><label>Event Name</label><input type="text" id="evName" class="cyber-input-full" placeholder="z.B. GangBang Deluxe"></div>
+                <div class="form-group" style="flex: 2;"><label>Event Art (z.B. GB)</label><input type="text" id="evName" class="cyber-input-full" placeholder="z.B. GB"></div>
                 <div class="form-group" style="flex: 1;"><label>Datum</label><input type="date" id="evDatum" class="cyber-input-full"></div>
             </div>
 
@@ -104,29 +102,60 @@
             </div>
 
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 2;"><label>Ort / Location</label><textarea id="evOrt" class="cyber-input-full" rows="2" placeholder="Zimmer / Hotel / Adresse..."></textarea></div>
-                <div class="form-group" style="flex: 1;"><label>Preis p.P. (€)</label><input type="number" id="evPreis" class="cyber-input-full" placeholder="z.B. 150"></div>
+                <div class="form-group" style="flex: 2;"><label>Stadt / Location</label><input type="text" id="evOrt" class="cyber-input-full" placeholder="z.B. Leipzig"></div>
+                <div class="form-group" style="flex: 1;"><label>Preis p.P. (€)</label><input type="number" id="evPreis" class="cyber-input-full" placeholder="z.B. 80"></div>
             </div>
 
-            <div style="display: flex; gap: 15px; flex-wrap: wrap; background: rgba(255,51,0,0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(255,51,0,0.3); margin-bottom: 15px;">
-                <div class="form-group" style="flex: 1; margin-bottom:0;"><label>Präferenz</label>
-                    <select id="evPraef" class="cyber-select">
-                        <option value="AO">AO (Alles ohne)</option>
-                        <option value="Safe">Safe</option>
-                        <option value="Beides">Beides möglich</option>
-                    </select>
+            <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
+                <div style="color: var(--neon-cyan); font-weight: bold; text-transform: uppercase; margin-bottom: 10px;">Die Darstellerin</div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 2;"><label>Name</label><input type="text" id="evGirlName" class="cyber-input-full" placeholder="z.B. Susi"></div>
+                    <div class="form-group" style="flex: 1;"><label>Alter</label><input type="number" id="evGirlAge" class="cyber-input-full" placeholder="35"></div>
                 </div>
-                <div class="form-group" style="flex: 1; margin-bottom:0;"><label>Handtücher</label>
-                    <select id="evTowels" class="cyber-select">
-                        <option value="Werden gestellt">Werden gestellt</option>
-                        <option value="Bitte mitbringen">Bitte mitbringen</option>
-                    </select>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1;"><label>Größe</label><input type="text" id="evGirlHeight" class="cyber-input-full" placeholder="1,65m"></div>
+                    <div class="form-group" style="flex: 1;"><label>Gewicht</label><input type="text" id="evGirlWeight" class="cyber-input-full" placeholder="64kg"></div>
+                </div>
+                <div class="form-group">
+                    <label>Typ / Beschreibung</label>
+                    <input type="text" id="evGirlType" class="cyber-input-full" placeholder="z.B. Schlanke und naturgeile Dreilochstute">
                 </div>
             </div>
 
-            <div class="form-group"><label>Event Beschreibung</label><textarea id="evBeschreibung" class="cyber-input-full" rows="3" placeholder="Allgemeine Infos für die Promo..."></textarea></div>
-            <div class="form-group"><label>Vorlieben / Programm</label><input type="text" id="evVorlieben" class="cyber-input-full" placeholder="Was passiert?"></div>
-            <div class="form-group"><label>Tabus</label><input type="text" id="evTabus" class="cyber-input-full" placeholder="Was ist streng verboten?"></div>
+            <div style="margin-top: 10px; border-top: 1px solid #333; padding-top: 15px;">
+                <div style="color: var(--neon-gold); font-weight: bold; text-transform: uppercase; margin-bottom: 10px;">Details & Specials</div>
+                
+                <div class="form-group"><label>Gewollt (Vorlieben)</label><input type="text" id="evVorlieben" class="cyber-input-full" placeholder="GV, anal, lecken, blasen..."></div>
+                <div class="form-group"><label>Tabus</label><input type="text" id="evTabus" class="cyber-input-full" placeholder="z.B. Keine Schmerzen/Gewalt, kein KV"></div>
+
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                    <div class="form-group" style="flex: 1;"><label>Natursekt (NS)</label>
+                        <select id="evNS" class="cyber-select">
+                            <option value="Nein">Nein</option>
+                            <option value="einzeln, passiv und aktiv in der Dusche möglich">Dusche (Aktiv/Passiv)</option>
+                            <option value="Ja (Alles möglich)">Ja (Alles möglich)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;"><label>Präferenz</label>
+                        <input type="text" id="evPraef" class="cyber-input-full" placeholder="z.B. AO und safer Sex, beides möglich!">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <div class="form-group" style="flex: 1;"><label>Videos (Optional)</label>
+                        <select id="evVideo" class="cyber-select">
+                            <option value="Keine">Keine</option>
+                            <option value="macht sie auch gerne NS-Videos, entweder einzeln oder wo sie von mehreren angepisst wird. Dies einfach vor Ort ansprechen. (Auch mit Maske möglich, ansonsten würden auch keine Gesichter gefilmt werden).">Optional vor Ort ansprechen (auch mit Maske)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;"><label>Bilder verfügbar?</label>
+                        <select id="evBilder" class="cyber-select">
+                            <option value="Ja">Ja (auf Anfrage)</option>
+                            <option value="Nein">Nein</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
             <div style="margin-top: 25px; border-top: 1px solid #333; padding-top: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">

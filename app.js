@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.9 - EVENT TIMELINE FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V7.0 - RELATIONAL DB FIX)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -260,6 +260,7 @@ function openModal(editId = null) {
     if (!modal) return;
 
     currentEditId = editId;
+    window.selectedKundeId = null;
 
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
     const settings = { ...DEFAULTS, ...storedSettings };
@@ -288,6 +289,7 @@ function openModal(editId = null) {
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         const t = termine.find(x => x.id === editId);
         if (t) {
+            window.selectedKundeId = t.kundeId || null;
             document.getElementById('terminName').value = t.name || '';
             document.getElementById('terminDatum').value = t.datum || '';
             document.getElementById('terminStart').value = t.start || '';
@@ -326,6 +328,7 @@ function closeModal() {
     const vBox = document.getElementById('kundenVorschlaege');
     if (vBox) vBox.style.display = 'none';
     currentEditId = null;
+    window.selectedKundeId = null;
 }
 
 function toggleKontaktFeld() {
@@ -336,6 +339,7 @@ function toggleKontaktFeld() {
     }
 }
 
+// NEU: SAUBERE DATENBANK VERKNÜPFUNG ÜBER KUNDE-ID
 function saveAppointment() {
     try {
         const name = document.getElementById('terminName').value;
@@ -372,7 +376,6 @@ function saveAppointment() {
             return false;
         });
 
-        // NEU: Doppelbuchungsschutz prüft auch Events!
         const events = JSON.parse(localStorage.getItem('appEvents')) || [];
         const overlapEvent = events.find(e => {
             if (e.datum === datum) {
@@ -392,11 +395,17 @@ function saveAppointment() {
 
         let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
         let kundeGefunden = false;
+        let kId = window.selectedKundeId || null;
 
-        if (kontakt && kontakt.trim() !== '') {
-            kundeGefunden = kunden.find(k => k.kontakt.trim() === kontakt.trim());
-        } else {
-            kundeGefunden = kunden.find(k => k.name.toLowerCase() === name.toLowerCase().trim());
+        // WICHTIG: Erst nach ID suchen, dann nach Kontakt, dann nach exaktem Namen
+        if (kId) {
+            kundeGefunden = kunden.find(k => k.id === kId);
+        } 
+        if (!kundeGefunden && kontakt && kontakt.trim() !== '') {
+            kundeGefunden = kunden.find(k => k.kontakt && k.kontakt.trim() === kontakt.trim());
+        } 
+        if (!kundeGefunden) {
+            kundeGefunden = kunden.find(k => k.name && k.name.toLowerCase() === name.toLowerCase().trim());
         }
 
         if (!kundeGefunden) {
@@ -413,25 +422,13 @@ function saveAppointment() {
             };
             kunden.push(neuerKunde);
             localStorage.setItem('appKunden', JSON.stringify(kunden));
-        } else {
-            let kIndex = kunden.findIndex(k => k.id === kundeGefunden.id);
-            let updated = false;
-            if (preis && (!kunden[kIndex].preis || kunden[kIndex].preis === '')) {
-                kunden[kIndex].preis = preis;
-                updated = true;
-            }
-            if (praeferenz !== 'none' && (!kunden[kIndex].praeferenz || kunden[kIndex].praeferenz === 'none')) {
-                kunden[kIndex].praeferenz = praeferenz;
-                updated = true;
-            }
-            if (updated) {
-                localStorage.setItem('appKunden', JSON.stringify(kunden));
-            }
-        }
+            kundeGefunden = neuerKunde;
+        } 
 
         if (currentEditId) {
             const index = termine.findIndex(t => t.id === currentEditId);
             if(index > -1) {
+                termine[index].kundeId = kundeGefunden.id;
                 termine[index].name = name.trim();
                 termine[index].datum = datum;
                 termine[index].start = start;
@@ -447,6 +444,7 @@ function saveAppointment() {
         } else {
             const neuerTermin = {
                 id: Date.now(),
+                kundeId: kundeGefunden.id,
                 name: name.trim(),
                 datum: datum,
                 start: start,
@@ -536,7 +534,6 @@ function updateLiveSystem() {
     const countdownElement = document.getElementById('header-countdown');
     if (countdownElement && countdownElement.innerText !== "SUPABASE CONNECTED") {
         
-        // NEU: Der Countdown erkennt jetzt normale Termine UND Events
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         const events = JSON.parse(localStorage.getItem('appEvents')) || [];
         const allItems = [...termine, ...events];
@@ -584,7 +581,6 @@ function renderWeek() {
     const wochenContainer = document.querySelector('.wochen-container');
     if (!wochenContainer) return;
 
-    // NEU: Zieht sich jetzt Termine UND Events auf die Leiste!
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
     const events = JSON.parse(localStorage.getItem('appEvents')) || [];
     const allItems = [...termine, ...events.map(e => ({...e, isEvent: true}))];
@@ -644,7 +640,6 @@ function renderWeek() {
                     segment.style.left = linksPosition + '%';
                     segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
                     
-                    // NEU: Wenn es ein Event ist, machen wir es rot und feuermäßig!
                     if (t.isEvent) {
                         segment.style.background = `rgba(255, 51, 0, 0.2)`;
                         segment.style.borderLeft = `3px solid ${t.color || '#ff3300'}`;

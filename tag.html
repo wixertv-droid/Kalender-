@@ -29,7 +29,6 @@
             padding-bottom: 100px;
             width: 100%;
         }
-        /* Die vertikale Haupt-Ader */
         .jarvis-timeline-wrapper::before {
             content: ''; position: absolute; top: 0; left: 65px;
             width: 2px; height: 100%; background: rgba(5, 217, 232, 0.2);
@@ -48,7 +47,7 @@
             text-shadow: 0 0 5px rgba(5, 217, 232, 0.3); z-index: 2;
         }
 
-        /* LIVE LASER (Aktuelle Zeit) */
+        /* LIVE LASER */
         .live-time-laser {
             position: absolute; left: 60px; right: 0; height: 2px;
             background: var(--neon-red); box-shadow: 0 0 15px var(--neon-red);
@@ -82,7 +81,6 @@
         }
         .cyber-block:hover { transform: scale(1.02); filter: brightness(1.2); z-index: 15; }
         
-        /* Die Diamant-Knotenpunkte an der Zeitleiste */
         .cyber-node {
             position: absolute; left: -14px; top: -2px; width: 12px; height: 12px;
             background: var(--bg-deep); border: 2px solid; transform: rotate(45deg);
@@ -91,12 +89,10 @@
 
         @keyframes slide-in-cyber { from { transform: translateX(30px) skewX(-5deg); opacity: 0; } to { transform: translateX(0) skewX(0); opacity: 1; } }
 
-        /* Flex Layouts in der Karte */
         .block-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
         .block-title { font-size: 1.1rem; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1px; }
         .block-time { font-family: monospace; font-size: 0.85rem; color: #aaa; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; }
         
-        /* Diverse Stats */
         .status-done { color: var(--neon-green); font-weight: bold; font-size: 0.75rem; border: 1px solid var(--neon-green); padding: 3px 6px; border-radius: 4px; background: rgba(57, 255, 20, 0.1); }
         .status-noshow { color: var(--neon-red); font-weight: bold; font-size: 0.75rem; border: 1px solid var(--neon-red); padding: 3px 6px; border-radius: 4px; background: rgba(255, 0, 60, 0.1); }
         .btn-abrechnen { background: rgba(229, 176, 92, 0.1); border: 1px solid var(--neon-gold); color: var(--neon-gold); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 0.7rem; box-shadow: 0 0 10px rgba(229, 176, 92, 0.3); }
@@ -241,8 +237,10 @@
                 <div id="detailZeitKat" style="font-size: 1.2rem; color: var(--neon-gold); font-weight: bold; margin-bottom: 15px;">-</div>
                 
                 <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Kontakt</div>
-                <div id="detailKontaktFull" style="font-size: 1.1rem; color: white; margin-bottom: 5px;">-</div>
-                <div id="detailLinkBtn" style="margin-bottom: 15px;"></div> <div id="dbExtensionsContainer" style="display: none; flex-direction: column; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed rgba(5,217,232,0.2);">
+                <div id="detailKontaktFull" style="font-size: 1.1rem; color: white; margin-bottom: 5px; line-height: 1.5;">-</div>
+                <div id="detailLinkBtn" style="margin-bottom: 15px;"></div>
+
+                <div id="dbExtensionsContainer" style="display: none; flex-direction: column; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed rgba(5,217,232,0.2);">
                     <div style="font-size: 0.85rem; color: var(--neon-violet); text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Datenbank Akte</div>
                     <div class="kunden-stats-row" id="detailStatsRow" style="margin-bottom: 0;"></div>
                     <div id="detailVorlieben" style="font-size: 1rem; color: #ccc; line-height: 1.6; background: rgba(188, 0, 221, 0.1); padding: 15px; border-radius: 12px; border-left: 2px solid var(--neon-violet);"></div>
@@ -308,7 +306,6 @@
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             
             document.getElementById('terminKundeId').value = '';
-            
             if (input.length < 1) { vBox.style.display = 'none'; return; }
             
             const treffer = kunden.filter(k => (k.name && k.name.toLowerCase().includes(input)) || (k.kontakt && k.kontakt.toLowerCase().includes(input)));
@@ -355,14 +352,30 @@
             document.getElementById('detailName').innerText = t.name;
             document.getElementById('detailZeitKat').innerText = `${t.start} - ${t.ende} // ${settings[t.kat+"_name"] || 'Termin'}`;
             
-            const livePlattform = (kunde && kunde.plattform) ? kunde.plattform : t.plattform;
-            const liveKontakt = (kunde && kunde.kontakt) ? kunde.kontakt : t.kontakt;
-            document.getElementById('detailKontaktFull').innerText = (livePlattform && livePlattform !== 'none' && livePlattform !== "") ? `${livePlattform}: ${liveKontakt}` : (liveKontakt ? liveKontakt : 'Kein Kontakt hinterlegt');
+            // KONTAKT 1 & 2 LADEN
+            let p1 = (kunde && kunde.plattform) ? kunde.plattform : t.plattform;
+            let k1 = (kunde && kunde.kontakt) ? kunde.kontakt : t.kontakt;
+            let p2 = (kunde && kunde.plattform2) ? kunde.plattform2 : null;
+            let k2 = (kunde && kunde.kontakt2) ? kunde.kontakt2 : null;
             
-            // Profil Link Button
+            let kontaktText = "";
+            if (k1 && k1.trim() !== '') {
+                kontaktText += (p1 && p1 !== 'none') ? `<strong>${p1}:</strong> ${k1}` : k1;
+            }
+            if (k2 && k2.trim() !== '') {
+                if (kontaktText !== "") kontaktText += "<br>";
+                kontaktText += (p2 && p2 !== 'none') ? `<strong>${p2}:</strong> ${k2}` : k2;
+            }
+            if (kontaktText === "") kontaktText = "Kein Kontakt hinterlegt";
+            
+            document.getElementById('detailKontaktFull').innerHTML = kontaktText;
+            
+            // PROFIL LINK LADEN (Beide Felder prüfen: profillink oder link)
             const linkBtnDiv = document.getElementById('detailLinkBtn');
-            if (kunde && kunde.link && kunde.link.trim() !== '') {
-                let linkUrl = kunde.link;
+            let linkData = (kunde && kunde.profillink) ? kunde.profillink : ((kunde && kunde.link) ? kunde.link : '');
+            
+            if (linkData && linkData.trim() !== '') {
+                let linkUrl = linkData;
                 if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) { linkUrl = 'https://' + linkUrl; }
                 linkBtnDiv.innerHTML = `<a href="${linkUrl}" target="_blank" style="display: inline-block; padding: 8px 16px; background: rgba(5,217,232,0.15); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 0.9rem; box-shadow: 0 0 10px rgba(5,217,232,0.3);"><span style="margin-right: 5px;">🔗</span> Profil öffnen</a>`;
             } else { linkBtnDiv.innerHTML = ''; }
@@ -467,7 +480,7 @@
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0], false);
         }
 
-        // TIMELINE RENDERING (Inkl. Auto-Scroll Logik)
+        // TIMELINE RENDERING
         function renderTimeline(datum, isInitialRender = false) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
@@ -584,16 +597,22 @@
                         let expectedPreis = displayPreis || ''; 
                         let displayPraef = (dbKunde && dbKunde.praeferenz) ? dbKunde.praeferenz : (t.praeferenz || 'none');
                         
-                        let displayLink = (dbKunde && dbKunde.link && dbKunde.link.trim() !== '') ? dbKunde.link : '';
+                        let displayLink = (dbKunde && dbKunde.profillink) ? dbKunde.profillink : ((dbKunde && dbKunde.link) ? dbKunde.link : '');
                         if (displayLink && !displayLink.startsWith('http')) displayLink = 'https://' + displayLink;
                         
                         let displayGroesse = (dbKunde && dbKunde.groesse && dbKunde.groesse !== "Unbekannt") ? dbKunde.groesse : '';
                         let displayVibe = (dbKunde && dbKunde.vibe) ? parseInt(dbKunde.vibe) : 0;
                         
-                        const livePlattform = (dbKunde && dbKunde.plattform) ? dbKunde.plattform : t.plattform;
-                        const liveKontakt = (dbKunde && dbKunde.kontakt) ? dbKunde.kontakt : t.kontakt;
-                        let displayKontakt = "";
-                        if (liveKontakt) { displayKontakt = (livePlattform && livePlattform !== 'none' && livePlattform !== "") ? `${livePlattform}: ${liveKontakt}` : liveKontakt; }
+                        // BEIDE KONTAKTE LADEN FÜR DIE ÜBERSICHT
+                        const p1 = (dbKunde && dbKunde.plattform) ? dbKunde.plattform : t.plattform;
+                        const k1 = (dbKunde && dbKunde.kontakt) ? dbKunde.kontakt : t.kontakt;
+                        const p2 = (dbKunde && dbKunde.plattform2) ? dbKunde.plattform2 : null;
+                        const k2 = (dbKunde && dbKunde.kontakt2) ? dbKunde.kontakt2 : null;
+                        
+                        let kontaktArr = [];
+                        if (k1 && k1.trim() !== '') kontaktArr.push((p1 && p1 !== 'none') ? `${p1}: ${k1}` : k1);
+                        if (k2 && k2.trim() !== '') kontaktArr.push((p2 && p2 !== 'none') ? `${p2}: ${k2}` : k2);
+                        let displayKontakt = kontaktArr.join(' | ');
                         
                         let statusHTML = '';
                         if (t.status === 'done') statusHTML = `<div class="status-done">💰 ${t.umsatz} €</div>`;
@@ -603,7 +622,7 @@
                         let deleteBtn = `<button onclick="event.stopPropagation(); deleteTermin(${t.id})" style="background: rgba(255, 0, 60, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.7rem;">✖ Löschen</button>`;
 
                         if (flexDir === 'row') {
-                            let kontaktMini = displayKontakt ? `<span style="font-size: 0.7rem; color: #aaa; margin-left: 10px;">📱 ${displayKontakt}</span>` : '';
+                            let kontaktMini = displayKontakt ? `<span style="font-size: 0.7rem; color: #aaa; margin-left: 10px;">📱 ${kontaktArr[0]} ${kontaktArr.length > 1 ? '(+1)' : ''}</span>` : '';
                             let miniInfo = '';
                             if(displayPreis) miniInfo += ` 💰${displayPreis}`;
                             if(displayPraef && displayPraef !== 'none') miniInfo += ` 💦${displayPraef}`;
@@ -657,23 +676,20 @@
                     matrix.appendChild(block);
                 });
 
-                // --- INTELLIGENTES AUTO-SCROLLING (Nur beim Laden der Seite) ---
+                // --- INTELLIGENTES AUTO-SCROLLING ---
                 if (isInitialRender) {
                     setTimeout(() => {
                         const matrixRect = matrix.getBoundingClientRect();
-                        const matrixTop = window.scrollY + matrixRect.top; // Absolute Position der Timeline ermitteln
+                        const matrixTop = window.scrollY + matrixRect.top; 
 
                         if (datum === currentDate) {
-                            // Wenn Heute: Scrolle zur aktuellen Uhrzeit (Laser)
                             const currentMins = now.getHours() * 60 + now.getMinutes();
                             if (currentMins >= startMinTag) {
                                 const targetY = (currentMins - startMinTag) * PIXELS_PER_MIN;
                                 window.scrollTo({ top: matrixTop + targetY - 150, behavior: 'smooth' });
                             }
                         } else {
-                            // Wenn anderer Tag:
                             if (combinedItems.length > 0) {
-                                // Scrolle zum allerersten Termin
                                 let earliestMin = 1440;
                                 combinedItems.forEach(item => {
                                     let sMin = parseTimeStr(item.start, "00:00");
@@ -682,11 +698,10 @@
                                 const targetY = Math.max(0, (earliestMin - startMinTag) * PIXELS_PER_MIN);
                                 window.scrollTo({ top: matrixTop + targetY - 150, behavior: 'smooth' });
                             } else {
-                                // Nichts drin: Bleibe ganz oben
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                             }
                         }
-                    }, 300); // 300ms warten, damit das Rendern komplett abgeschlossen ist
+                    }, 300); 
                 }
 
             } catch(e) { console.log("Matrix Render Fehler", e); }
@@ -708,10 +723,7 @@
             if(document.getElementById('tag-datum-titel')) document.getElementById('tag-datum-titel').innerText = `${teile[2]}.${teile[1]}.${teile[0]}`;
             if(document.getElementById('terminDatum')) document.getElementById('terminDatum').value = d;
             
-            // True übergeben, damit das Auto-Scrolling NUR beim Start auslöst
             renderTimeline(d, true);
-            
-            // False übergeben, damit es beim Reload im Hintergrund nicht plötzlich wegscrollt!
             setInterval(() => { renderTimeline(d, false); }, 60000);
 
             setTimeout(() => {

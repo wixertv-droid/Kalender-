@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.10 - ID-BASIERTER KUNDEN-SYNC)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.11 - SAFE MODE / STRICT DB)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -249,7 +249,6 @@ function generiereWochenAnsicht() {
     }
 }
 
-// --- V6.10 FIX: ID-BASIERTE KUNDEN-ZUORDNUNG ---
 function openModal(editId = null) {
     const modal = document.getElementById('terminModal');
     if (!modal) return;
@@ -286,18 +285,13 @@ function openModal(editId = null) {
         
         if (t) {
             let liveKunde = null;
-            
-            // PRIMÄRE SUCHE: Suche über die eindeutige ID (sicher)
             if (t.kunde_id) {
                 liveKunde = kunden.find(k => k.id == t.kunde_id);
             }
-            
-            // FALLBACK (Für sehr alte Termine vor diesem Update): Suche über den Namen
             if (!liveKunde) {
                 liveKunde = kunden.find(k => k.name.toLowerCase().trim() === (t.name || '').toLowerCase().trim());
             }
 
-            // Befülle das versteckte ID-Feld
             if(document.getElementById('terminKundeId')) {
                 document.getElementById('terminKundeId').value = liveKunde ? liveKunde.id : '';
             }
@@ -308,11 +302,9 @@ function openModal(editId = null) {
             document.getElementById('terminEnde').value = t.ende || '';
             document.getElementById('terminKategorie').value = t.kat || 'kat1';
             
-            // Wenn der Kunde live gefunden wurde, nutze seine aktuelle Nummer!
             document.getElementById('terminPlattform').value = (liveKunde && liveKunde.plattform) ? liveKunde.plattform : (t.plattform || 'none');
             document.getElementById('terminKontakt').value = (liveKunde && liveKunde.kontakt) ? liveKunde.kontakt : (t.kontakt || '');
             
-            // Die Notiz bleibt immer strikt Termin-bezogen
             document.getElementById('terminNotizen').value = t.notizen || '';
             
             if(document.getElementById('terminPreis')) {
@@ -359,7 +351,7 @@ function toggleKontaktFeld() {
     }
 }
 
-// --- V6.10 FIX: SPEICHERT DIE ID ZUM TERMIN ---
+// --- V6.11 SAFE MODE: KEIN ÜBERSCHREIBEN DER DATENBANK MEHR ---
 function saveAppointment() {
     try {
         const name = document.getElementById('terminName').value;
@@ -371,7 +363,6 @@ function saveAppointment() {
         const kontakt = document.getElementById('terminKontakt').value;
         const notizen = document.getElementById('terminNotizen').value;
         
-        // Verstecktes ID-Feld auslesen
         const kundeIdInput = document.getElementById('terminKundeId');
         const kundeIdStr = kundeIdInput ? kundeIdInput.value : '';
         
@@ -409,23 +400,17 @@ function saveAppointment() {
         let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
         let kundeGefunden = null;
 
-        // 1. Priorität: Hat das Autocomplete eine ID hinterlassen?
         if (kundeIdStr) {
             kundeGefunden = kunden.find(k => k.id == parseInt(kundeIdStr));
         }
 
-        // 2. Fallback: Suche nach Nummer oder Name, falls manuell abgetippt wurde
+        // Wir suchen NUR noch nach exaktem Namen, niemals mehr nach der Nummer!
         if (!kundeGefunden) {
-            if (kontakt && kontakt.trim() !== '') {
-                kundeGefunden = kunden.find(k => k.kontakt.trim() === kontakt.trim());
-            } else {
-                kundeGefunden = kunden.find(k => k.name.toLowerCase().trim() === name.toLowerCase().trim());
-            }
+            kundeGefunden = kunden.find(k => k.name.toLowerCase().trim() === name.toLowerCase().trim());
         }
 
         let finalKundeId;
 
-        // Kundenprofil erstellen oder aktualisieren
         if (!kundeGefunden) {
             finalKundeId = Date.now() + 1;
             const neuerKunde = {
@@ -443,34 +428,14 @@ function saveAppointment() {
             localStorage.setItem('appKunden', JSON.stringify(kunden));
         } else {
             finalKundeId = kundeGefunden.id;
-            let kIndex = kunden.findIndex(k => k.id === finalKundeId);
-            let updated = false;
-            
-            // Profil-Update
-            if (kontakt.trim() !== '' && kunden[kIndex].kontakt !== kontakt.trim()) {
-                kunden[kIndex].kontakt = kontakt.trim();
-                if(plattform !== 'none') kunden[kIndex].plattform = plattform;
-                updated = true;
-            }
-            if (preis && kunden[kIndex].preis !== preis) {
-                kunden[kIndex].preis = preis;
-                updated = true;
-            }
-            if (praeferenz !== 'none' && kunden[kIndex].praeferenz !== praeferenz) {
-                kunden[kIndex].praeferenz = praeferenz;
-                updated = true;
-            }
-            
-            if (updated) {
-                localStorage.setItem('appKunden', JSON.stringify(kunden));
-            }
+            // !!! HIER WURDE DER GEFÄHRLICHE CODE GELÖSCHT !!!
+            // Ab sofort wird das Profil des Kunden hier NIEMALS mehr überschrieben!
         }
 
-        // Termin speichern und finalKundeId mitgeben!
         if (currentEditId) {
             const index = termine.findIndex(t => t.id === currentEditId);
             if(index > -1) {
-                termine[index].kunde_id = finalKundeId; // NEU
+                termine[index].kunde_id = finalKundeId; 
                 termine[index].name = name.trim();
                 termine[index].datum = datum;
                 termine[index].start = start;
@@ -486,7 +451,7 @@ function saveAppointment() {
         } else {
             const neuerTermin = {
                 id: Date.now(),
-                kunde_id: finalKundeId, // NEU
+                kunde_id: finalKundeId, 
                 name: name.trim(),
                 datum: datum,
                 start: start,

@@ -231,18 +231,22 @@
             
             <div style="background: rgba(0,0,0,0.4); padding: 30px; border-radius: 20px; border-left: 4px solid var(--neon-cyan); margin-bottom: 25px;">
                 <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Kunde / Bezeichnung</div>
-                <div id="detailName" style="font-size: 1.8rem; font-weight: 900; color: white; margin-bottom: 15px;">-</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div id="detailName" style="font-size: 1.8rem; font-weight: 900; color: white;">-</div>
+                </div>
+                
                 <div id="detailTerminSettings" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;"></div>
+                
                 <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Zeit & Typ</div>
                 <div id="detailZeitKat" style="font-size: 1.2rem; color: var(--neon-gold); font-weight: bold; margin-bottom: 15px;">-</div>
+                
                 <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Kontakt</div>
-                <div id="detailKontaktFull" style="font-size: 1.1rem; color: white; margin-bottom: 15px;">-</div>
-
-                <div id="dbExtensionsContainer" style="display: none; flex-direction: column; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed rgba(5,217,232,0.2);">
+                <div id="detailKontaktFull" style="font-size: 1.1rem; color: white; margin-bottom: 5px;">-</div>
+                <div id="detailLinkBtn" style="margin-bottom: 15px;"></div> <div id="dbExtensionsContainer" style="display: none; flex-direction: column; gap: 15px; margin-top: 20px; padding-top: 20px; border-top: 1px dashed rgba(5,217,232,0.2);">
                     <div style="font-size: 0.85rem; color: var(--neon-violet); text-transform: uppercase; font-weight: bold; letter-spacing: 2px;">Datenbank Akte</div>
                     <div class="kunden-stats-row" id="detailStatsRow" style="margin-bottom: 0;"></div>
                     <div id="detailVorlieben" style="font-size: 1rem; color: #ccc; line-height: 1.6; background: rgba(188, 0, 221, 0.1); padding: 15px; border-radius: 12px; border-left: 2px solid var(--neon-violet);"></div>
-                </div>
+                    <div id="detailKundenAllgNotizen" style="font-size: 1rem; color: #ccc; line-height: 1.6; background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: 12px; border-left: 2px solid #aaa;"></div> </div>
 
                 <div style="font-size: 0.85rem; color: var(--neon-cyan); opacity: 0.8; text-transform: uppercase; font-weight: bold; letter-spacing: 2px; margin-top: 20px;">Termin-Notizen</div>
                 <div id="detailNotizen" style="font-size: 1.1rem; color: #ccc; line-height: 1.6; background: rgba(5, 217, 232, 0.05); padding: 15px; border-radius: 12px; margin-top: 5px;">-</div>
@@ -283,19 +287,14 @@
             document.getElementById('lightbox').style.display = 'flex'; 
         }
 
-        // DIE PERFEKTE SUCH-FUNKTION (Sicher gegen unsichtbare Leerzeichen & alte Termine)
+        // DIE PERFEKTE SUCH-FUNKTION
         function safeFindKunde(t, kundenDB) {
             let kunde = null;
-            // 1. Priorität: Suche hart nach der ID
-            if (t.kunde_id) {
-                kunde = kundenDB.find(k => String(k.id) === String(t.kunde_id));
-            }
-            // 2. Priorität: Sicherer Namens-Abgleich (ohne Leerzeichen)
+            if (t.kunde_id) { kunde = kundenDB.find(k => String(k.id) === String(t.kunde_id)); }
             if (!kunde && t.name) {
                 const searchName = String(t.name).toLowerCase().trim();
                 kunde = kundenDB.find(k => String(k.name).toLowerCase().trim() === searchName);
             }
-            // 3. Letzter Ausweg: Handynummer, ABER nur wenn sie nicht leer ist!
             if (!kunde && t.kontakt && t.kontakt.trim() !== '') {
                 const searchKontakt = String(t.kontakt).trim();
                 kunde = kundenDB.find(k => String(k.kontakt).trim() === searchKontakt);
@@ -344,6 +343,7 @@
             return "<span style='color: var(--neon-gold); text-shadow: 0 0 8px var(--neon-gold);'>" + "★".repeat(num) + "</span><span style='color: #333; text-shadow: none;'>" + "★".repeat(5 - num) + "</span>";
         }
 
+        // --- ERWEITERTES DETAIL MODAL ---
         function openDetailModal(id) {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
             const t = termine.find(x => x.id === id);
@@ -351,7 +351,6 @@
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             
-            // Die neue Panzer-Suche nutzen!
             let kunde = safeFindKunde(t, kunden);
 
             document.getElementById('detailName').innerText = t.name;
@@ -361,6 +360,14 @@
             const liveKontakt = (kunde && kunde.kontakt) ? kunde.kontakt : t.kontakt;
             document.getElementById('detailKontaktFull').innerText = (livePlattform && livePlattform !== 'none' && livePlattform !== "") ? `${livePlattform}: ${liveKontakt}` : (liveKontakt ? liveKontakt : 'Kein Kontakt hinterlegt');
             
+            // Link Button
+            const linkBtnDiv = document.getElementById('detailLinkBtn');
+            if (kunde && kunde.link && kunde.link.trim() !== '') {
+                linkBtnDiv.innerHTML = `<a href="${kunde.link}" target="_blank" style="display: inline-block; padding: 6px 12px; background: rgba(5,217,232,0.1); border: 1px solid var(--neon-cyan); color: var(--neon-cyan); text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 0.8rem;">🔗 Link zum Profil</a>`;
+            } else {
+                linkBtnDiv.innerHTML = '';
+            }
+
             document.getElementById('detailNotizen').innerHTML = (t.notizen || 'Keine Termin-Notizen').replace(/\n/g, '<br>');
 
             let displayPreis = (kunde && kunde.preis) ? kunde.preis : t.preis;
@@ -377,16 +384,24 @@
             const dbContainer = document.getElementById('dbExtensionsContainer');
             const statsRow = document.getElementById('detailStatsRow');
             const vorliebenDiv = document.getElementById('detailVorlieben');
+            const allgNotizenDiv = document.getElementById('detailKundenAllgNotizen');
 
             if (kunde) {
                 dbContainer.style.display = 'flex';
                 const groesse = kunde.groesse && kunde.groesse !== "Unbekannt" ? kunde.groesse : "?";
                 let noshowHTML = (kunde.noshows && kunde.noshows > 0) ? `<div class="stat-badge" style="border-color:var(--neon-red); color:var(--neon-red);">⚠️ ${kunde.noshows}x No-Show</div>` : '';
                 statsRow.innerHTML = `<div class="stat-badge">📐 ${groesse}</div><div class="stat-badge">Vibe <span class="stars">${getStarString(kunde.vibe)}</span></div><div class="stat-badge">Perf <span class="stars">${getStarString(kunde.perf)}</span></div>${noshowHTML}`;
+                
                 if (kunde.vorlieben && kunde.vorlieben.trim() !== '') {
                     vorliebenDiv.style.display = 'block';
                     vorliebenDiv.innerHTML = `<strong>Vorlieben / Tabus:</strong><br>${kunde.vorlieben.replace(/\n/g, '<br>')}`;
                 } else { vorliebenDiv.style.display = 'none'; }
+
+                if (kunde.notizen && kunde.notizen !== 'Automatisch durch Termin erstellt.' && kunde.notizen.trim() !== '') {
+                    allgNotizenDiv.style.display = 'block';
+                    allgNotizenDiv.innerHTML = `<strong>Kunden-Akte Notizen:</strong><br>${kunde.notizen.replace(/\n/g, '<br>')}`;
+                } else { allgNotizenDiv.style.display = 'none'; }
+
             } else { dbContainer.style.display = 'none'; }
 
             const b = document.getElementById('detailKundenBilder'); 
@@ -449,10 +464,11 @@
 
             localStorage.setItem('appTermine', JSON.stringify(termine));
             document.getElementById('abrechnungModal').style.display = 'none';
-            const urlParams = newSearchParams(window.location.search);
+            const urlParams = new URLSearchParams(window.location.search);
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
         }
 
+        // --- ERWEITERTES TIMELINE RENDER SYSTEM ---
         function renderTimeline(datum) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
@@ -563,15 +579,17 @@
                         block.style.borderLeftColor = f;
                         block.onclick = () => openDetailModal(t.id);
                         
-                        // Die Panzer-Suche auch hier!
                         let dbKunde = safeFindKunde(t, kundenDB);
                         
                         let displayPreis = (dbKunde && dbKunde.preis) ? dbKunde.preis : t.preis;
                         let expectedPreis = displayPreis || ''; 
-                        
                         let displayPraef = (dbKunde && dbKunde.praeferenz) ? dbKunde.praeferenz : (t.praeferenz || 'none');
                         
-                        // Kontakt schick formatieren
+                        // Extra Infos für die Karten ziehen
+                        let displayLink = (dbKunde && dbKunde.link) ? dbKunde.link : '';
+                        let displayGroesse = (dbKunde && dbKunde.groesse && dbKunde.groesse !== "Unbekannt") ? dbKunde.groesse : '';
+                        let displayVibe = (dbKunde && dbKunde.vibe) ? parseInt(dbKunde.vibe) : 0;
+                        
                         const livePlattform = (dbKunde && dbKunde.plattform) ? dbKunde.plattform : t.plattform;
                         const liveKontakt = (dbKunde && dbKunde.kontakt) ? dbKunde.kontakt : t.kontakt;
                         let displayKontakt = "";
@@ -588,11 +606,17 @@
 
                         if (flexDir === 'row') {
                             let kontaktMini = displayKontakt ? `<span style="font-size: 0.7rem; color: #aaa; margin-left: 10px;">📱 ${displayKontakt}</span>` : '';
+                            // Kompaktes Info-Badge für kleine Balken
+                            let miniInfo = '';
+                            if(displayPreis) miniInfo += ` 💰${displayPreis}`;
+                            if(displayPraef && displayPraef !== 'none') miniInfo += ` 💦${displayPraef}`;
+                            if(displayVibe > 0) miniInfo += ` ⭐${displayVibe}`;
+                            
                             block.innerHTML = `
                                 <div class="cyber-node" style="border-color:${f};"></div>
                                 <div style="display:flex; align-items:center; gap: 10px; flex-grow: 1; overflow: hidden; white-space: nowrap;">
                                     <span class="block-time">${t.start} - ${t.ende}</span>
-                                    <span class="block-title">${t.name}</span>
+                                    <span class="block-title">${t.name} <span style="font-size:0.7rem; color:var(--neon-gold); font-weight:normal;">${miniInfo}</span></span>
                                     ${kontaktMini}
                                 </div>
                                 <div style="display:flex; gap: 10px; align-items:center; flex-shrink: 0;">
@@ -603,8 +627,14 @@
                         } else {
                             let pBadge = displayPreis ? `<span style="background: rgba(229,176,92,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-gold); color: var(--neon-gold);">💰 ${displayPreis}€</span>` : '';
                             let praefBadge = (displayPraef && displayPraef !== 'none') ? `<span style="background: rgba(188,0,221,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-violet); color: var(--neon-violet);">💦 ${displayPraef}</span>` : '';
+                            let linkBadge = displayLink ? `<a href="${displayLink}" target="_blank" onclick="event.stopPropagation();" style="background: rgba(5,217,232,0.1); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-cyan); color: var(--neon-cyan); text-decoration: none;">🔗 Profil</a>` : '';
+                            
+                            let groesseTxt = displayGroesse ? `<span style="color: #aaa;">📐 ${displayGroesse}</span>` : '';
+                            let vibeTxt = displayVibe > 0 ? `<span style="color: var(--neon-gold);">⭐ ${displayVibe}/5</span>` : '';
+                            let extraInfos = (groesseTxt || vibeTxt) ? `<div style="font-size: 0.75rem; margin-top: 5px; display:flex; gap:10px;">${groesseTxt} ${vibeTxt}</div>` : '';
+                            
                             let kontaktRow = displayKontakt ? `<div style="font-size: 0.75rem; color: #ccc; margin-top: 5px;">📱 ${displayKontakt}</div>` : '';
-                            let notizRow = t.notizen ? `<div style="font-size: 0.7rem; color: #888; margin-top: 3px; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">📝 ${t.notizen}</div>` : '';
+                            let notizRow = t.notizen ? `<div style="font-size: 0.7rem; color: #888; margin-top: 5px; font-style: italic; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">📝 ${t.notizen}</div>` : '';
 
                             block.innerHTML = `
                                 <div class="cyber-node" style="border-color:${f};"></div>
@@ -613,10 +643,12 @@
                                     <div class="block-time">${t.start} - ${t.ende}</div>
                                 </div>
                                 ${kontaktRow}
-                                <div style="font-size: 0.85rem; margin-top: 6px; display:flex; gap:8px; flex-wrap: wrap;">
+                                <div style="font-size: 0.85rem; margin-top: 6px; display:flex; gap:8px; flex-wrap: wrap; align-items:center;">
                                     ${pBadge}
                                     ${praefBadge}
+                                    ${linkBadge}
                                 </div>
+                                ${extraInfos}
                                 ${notizRow}
                                 <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);">
                                     ${deleteBtn}

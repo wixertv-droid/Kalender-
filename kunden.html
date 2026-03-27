@@ -86,7 +86,7 @@
         <div class="btn-cyber btn-add" onclick="openKundeModal()">➕</div>
     </div>
 
-    <div class="kunden-container">
+    <div class="kunden-container" style="padding-bottom: 100px;">
         <input type="text" id="kundenSuche" class="search-bar" placeholder="Kunden durchsuchen..." onkeyup="renderKunden()">
         
         <div class="control-bar">
@@ -113,6 +113,10 @@
         <a href="kunden.html" class="nav-item active">
             <div class="nav-icon" style="color: var(--neon-pink);">👥</div>
             <span>Kunden</span>
+        </a>
+        <a href="events.html" class="nav-item">
+            <div class="nav-icon" style="color: #ff3300;">🔥</div>
+            <span>Events</span>
         </a>
         <a href="stats.html" class="nav-item">
             <div class="nav-icon" style="color: var(--neon-gold);">💰</div>
@@ -359,7 +363,6 @@
             
             liste.innerHTML = '';
             
-            // 1. Filtern (sucht auch im 2. Nickname)
             let filtered = kunden.filter(k => {
                 if (!k || !k.name) return false; 
                 const searchName = k.name.toLowerCase();
@@ -368,7 +371,6 @@
                 return searchName.includes(search) || searchKontakt1.includes(search) || searchKontakt2.includes(search);
             });
 
-            // 2. Sortieren
             filtered.sort((a, b) => {
                 if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
                 if (sortBy === 'status') {
@@ -380,7 +382,6 @@
                 return 0;
             });
 
-            // 3. Karten zeichnen
             filtered.forEach(k => {
                 const avatarImg = k.bild1 ? `background-image:url('${k.bild1}'); background-size:cover; background-position:center;` : "";
                 const avatarText = k.bild1 ? "" : (k.name ? k.name.substring(0,2).toUpperCase() : "??");
@@ -488,6 +489,7 @@
             document.getElementById('kundeModal').style.display = 'flex';
         }
 
+        // --- DIE NEUE, INTELLIGENTE SPEICHER-FUNKTION ---
         function saveKunde() {
             const name = document.getElementById('kundeName').value;
             if(!name) return alert("Name fehlt!");
@@ -497,12 +499,24 @@
             btn.style.opacity = "0.7";
             
             let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+            
+            // Alter Name und Kontakt zum Abgleich (falls er geändert wurde)
+            let alterName = '';
+            let alterKontakt = '';
+            if (editKundeId) {
+                let alterKunde = kunden.find(k => k.id === editKundeId);
+                if(alterKunde) {
+                    alterName = alterKunde.name;
+                    alterKontakt = alterKunde.kontakt;
+                }
+            }
+
             const data = {
                 id: editKundeId || Date.now(),
-                name: name,
+                name: name.trim(),
                 status: document.getElementById('kundeStatus').value,
                 plattform: document.getElementById('kundePlattform').value,
-                kontakt: document.getElementById('kundeKontakt').value,
+                kontakt: document.getElementById('kundeKontakt').value.trim(),
                 
                 plattform2: document.getElementById('kundePlattform2').value,
                 kontakt2: document.getElementById('kundeKontakt2').value,
@@ -520,6 +534,32 @@
 
             if (editKundeId) {
                 kunden = kunden.map(k => k.id === editKundeId ? { ...k, ...data } : k);
+                
+                // 🚀 NEU: TERMINE AUTOMATISCH MIT-UPDATEN!
+                let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+                let termineGeaendert = false;
+
+                termine = termine.map(t => {
+                    // Suche Termine, die entweder den alten Namen oder den alten Kontakt haben
+                    if ((alterKontakt && t.kontakt === alterKontakt) || (alterName && t.name.toLowerCase() === alterName.toLowerCase())) {
+                        termineGeaendert = true;
+                        return {
+                            ...t,
+                            name: data.name,                // Neuer Name
+                            plattform: data.plattform,      // Neue Plattform
+                            kontakt: data.kontakt,          // Neuer Kontakt
+                            preis: data.preis,              // Neuer Preis
+                            praeferenz: data.praeferenz     // Neue Präferenz
+                        };
+                    }
+                    return t;
+                });
+
+                if (termineGeaendert) {
+                    localStorage.setItem('appTermine', JSON.stringify(termine));
+                    console.log("SYS_LOG: Termine des Kunden erfolgreich mitgeändert!");
+                }
+                
             } else {
                 kunden.push(data);
             }

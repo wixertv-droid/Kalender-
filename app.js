@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.9 - LIVE KUNDEN-SYNC)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.10 - ID-BASIERTER KUNDEN-SYNC)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -249,7 +249,7 @@ function generiereWochenAnsicht() {
     }
 }
 
-// --- V6.9 FIX: LIVE KUNDEN ABFRAGE BEIM ÖFFNEN ---
+// --- V6.10 FIX: ID-BASIERTE KUNDEN-ZUORDNUNG ---
 function openModal(editId = null) {
     const modal = document.getElementById('terminModal');
     if (!modal) return;
@@ -285,8 +285,22 @@ function openModal(editId = null) {
         const t = termine.find(x => x.id === editId);
         
         if (t) {
-            // Wir suchen den Kunden LIVE in der Datenbank, um die aktuellsten Infos zu ziehen!
-            const liveKunde = kunden.find(k => k.name.toLowerCase().trim() === (t.name || '').toLowerCase().trim());
+            let liveKunde = null;
+            
+            // PRIMÄRE SUCHE: Suche über die eindeutige ID (sicher)
+            if (t.kunde_id) {
+                liveKunde = kunden.find(k => k.id == t.kunde_id);
+            }
+            
+            // FALLBACK (Für sehr alte Termine vor diesem Update): Suche über den Namen
+            if (!liveKunde) {
+                liveKunde = kunden.find(k => k.name.toLowerCase().trim() === (t.name || '').toLowerCase().trim());
+            }
+
+            // Befülle das versteckte ID-Feld
+            if(document.getElementById('terminKundeId')) {
+                document.getElementById('terminKundeId').value = liveKunde ? liveKunde.id : '';
+            }
 
             document.getElementById('terminName').value = t.name || '';
             document.getElementById('terminDatum').value = t.datum || '';
@@ -294,11 +308,11 @@ function openModal(editId = null) {
             document.getElementById('terminEnde').value = t.ende || '';
             document.getElementById('terminKategorie').value = t.kat || 'kat1';
             
-            // Wenn der Kunde live gefunden wurde, nutze seine ECHTE, aktuelle Kontaktnummer!
+            // Wenn der Kunde live gefunden wurde, nutze seine aktuelle Nummer!
             document.getElementById('terminPlattform').value = (liveKunde && liveKunde.plattform) ? liveKunde.plattform : (t.plattform || 'none');
             document.getElementById('terminKontakt').value = (liveKunde && liveKunde.kontakt) ? liveKunde.kontakt : (t.kontakt || '');
             
-            // Die Notiz bleibt strikt Termin-bezogen!
+            // Die Notiz bleibt immer strikt Termin-bezogen
             document.getElementById('terminNotizen').value = t.notizen || '';
             
             if(document.getElementById('terminPreis')) {
@@ -309,6 +323,7 @@ function openModal(editId = null) {
             }
         }
     } else {
+        if(document.getElementById('terminKundeId')) document.getElementById('terminKundeId').value = '';
         document.getElementById('terminName').value = '';
         document.getElementById('terminKontakt').value = '';
         document.getElementById('terminNotizen').value = '';
@@ -344,7 +359,7 @@ function toggleKontaktFeld() {
     }
 }
 
-// --- V6.9 FIX: AGGRESSIVER DB-UPDATE ---
+// --- V6.10 FIX: SPEICHERT DIE ID ZUM TERMIN ---
 function saveAppointment() {
     try {
         const name = document.getElementById('terminName').value;
@@ -355,6 +370,10 @@ function saveAppointment() {
         const plattform = document.getElementById('terminPlattform').value;
         const kontakt = document.getElementById('terminKontakt').value;
         const notizen = document.getElementById('terminNotizen').value;
+        
+        // Verstecktes ID-Feld auslesen
+        const kundeIdInput = document.getElementById('terminKundeId');
+        const kundeIdStr = kundeIdInput ? kundeIdInput.value : '';
         
         const preisInput = document.getElementById('terminPreis');
         const praefInput = document.getElementById('terminPraeferenz');
@@ -388,13 +407,29 @@ function saveAppointment() {
         }
 
         let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-        
-        // Wir suchen den Kunden knallhart über den Namen
-        let kundeGefunden = kunden.find(k => k.name.toLowerCase().trim() === name.toLowerCase().trim());
+        let kundeGefunden = null;
 
+        // 1. Priorität: Hat das Autocomplete eine ID hinterlassen?
+        if (kundeIdStr) {
+            kundeGefunden = kunden.find(k => k.id == parseInt(kundeIdStr));
+        }
+
+        // 2. Fallback: Suche nach Nummer oder Name, falls manuell abgetippt wurde
         if (!kundeGefunden) {
+            if (kontakt && kontakt.trim() !== '') {
+                kundeGefunden = kunden.find(k => k.kontakt.trim() === kontakt.trim());
+            } else {
+                kundeGefunden = kunden.find(k => k.name.toLowerCase().trim() === name.toLowerCase().trim());
+            }
+        }
+
+        let finalKundeId;
+
+        // Kundenprofil erstellen oder aktualisieren
+        if (!kundeGefunden) {
+            finalKundeId = Date.now() + 1;
             const neuerKunde = {
-                id: Date.now() + 1, 
+                id: finalKundeId, 
                 name: name.trim(),
                 plattform: plattform !== 'none' ? plattform : '',
                 kontakt: kontakt.trim(),
@@ -407,10 +442,11 @@ function saveAppointment() {
             kunden.push(neuerKunde);
             localStorage.setItem('appKunden', JSON.stringify(kunden));
         } else {
-            let kIndex = kunden.findIndex(k => k.id === kundeGefunden.id);
+            finalKundeId = kundeGefunden.id;
+            let kIndex = kunden.findIndex(k => k.id === finalKundeId);
             let updated = false;
             
-            // Wenn eine neue Nummer/Plattform im Termin eingetippt wird, überschreibe das echte DB Profil sofort!
+            // Profil-Update
             if (kontakt.trim() !== '' && kunden[kIndex].kontakt !== kontakt.trim()) {
                 kunden[kIndex].kontakt = kontakt.trim();
                 if(plattform !== 'none') kunden[kIndex].plattform = plattform;
@@ -430,9 +466,11 @@ function saveAppointment() {
             }
         }
 
+        // Termin speichern und finalKundeId mitgeben!
         if (currentEditId) {
             const index = termine.findIndex(t => t.id === currentEditId);
             if(index > -1) {
+                termine[index].kunde_id = finalKundeId; // NEU
                 termine[index].name = name.trim();
                 termine[index].datum = datum;
                 termine[index].start = start;
@@ -448,6 +486,7 @@ function saveAppointment() {
         } else {
             const neuerTermin = {
                 id: Date.now(),
+                kunde_id: finalKundeId, // NEU
                 name: name.trim(),
                 datum: datum,
                 start: start,

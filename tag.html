@@ -47,7 +47,7 @@
             text-shadow: 0 0 5px rgba(5, 217, 232, 0.3); z-index: 2;
         }
 
-        /* LIVE LASER */
+        /* LIVE LASER (Aktuelle Zeit) */
         .live-time-laser {
             position: absolute; left: 60px; right: 0; height: 2px;
             background: var(--neon-red); box-shadow: 0 0 15px var(--neon-red);
@@ -370,9 +370,10 @@
             
             document.getElementById('detailKontaktFull').innerHTML = kontaktText;
             
-            // PROFIL LINK LADEN (Beide Felder prüfen: profillink oder link)
+            // PROFIL LINK FIX: Prüft profilLink, profillink und link!
             const linkBtnDiv = document.getElementById('detailLinkBtn');
-            let linkData = (kunde && kunde.profillink) ? kunde.profillink : ((kunde && kunde.link) ? kunde.link : '');
+            let linkData = '';
+            if (kunde) { linkData = kunde.profilLink || kunde.profillink || kunde.link || ''; }
             
             if (linkData && linkData.trim() !== '') {
                 let linkUrl = linkData;
@@ -597,13 +598,14 @@
                         let expectedPreis = displayPreis || ''; 
                         let displayPraef = (dbKunde && dbKunde.praeferenz) ? dbKunde.praeferenz : (t.praeferenz || 'none');
                         
-                        let displayLink = (dbKunde && dbKunde.profillink) ? dbKunde.profillink : ((dbKunde && dbKunde.link) ? dbKunde.link : '');
+                        // PROFIL LINK FIX AUCH HIER!
+                        let displayLink = '';
+                        if (dbKunde) { displayLink = dbKunde.profilLink || dbKunde.profillink || dbKunde.link || ''; }
                         if (displayLink && !displayLink.startsWith('http')) displayLink = 'https://' + displayLink;
                         
                         let displayGroesse = (dbKunde && dbKunde.groesse && dbKunde.groesse !== "Unbekannt") ? dbKunde.groesse : '';
                         let displayVibe = (dbKunde && dbKunde.vibe) ? parseInt(dbKunde.vibe) : 0;
                         
-                        // BEIDE KONTAKTE LADEN FÜR DIE ÜBERSICHT
                         const p1 = (dbKunde && dbKunde.plattform) ? dbKunde.plattform : t.plattform;
                         const k1 = (dbKunde && dbKunde.kontakt) ? dbKunde.kontakt : t.kontakt;
                         const p2 = (dbKunde && dbKunde.plattform2) ? dbKunde.plattform2 : null;

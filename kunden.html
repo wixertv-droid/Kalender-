@@ -18,7 +18,7 @@
     <script src="app.js" defer></script>
 
     <style>
-        /* --- BESSERE STRUKTUR FÜR DIE KUNDEN-LISTEN (TABLET/HANDY SAFE) --- */
+        /* --- BESSERE STRUKTUR FÜR DIE KUNDEN-LISTEN --- */
         .kunden-container { padding: 15px; margin-bottom: 80px; }
         
         .kunde-row { 
@@ -51,6 +51,7 @@
         }
         .kunde-card:hover { border-color: var(--neon-cyan); box-shadow: 0 0 15px rgba(5,217,232,0.1); }
         
+        /* Avatar (Perfekt zentrierte Bilder!) */
         .k-avatar { 
             width: 45px; height: 45px; 
             border-radius: 50%; 
@@ -58,11 +59,12 @@
             font-weight: bold; font-size: 1.1rem; 
             border: 2px solid var(--neon-cyan); 
             color: var(--neon-cyan); 
-            background: rgba(5,217,232,0.1); 
+            background-color: rgba(5,217,232,0.1); 
             text-transform: uppercase;
             flex-shrink: 0;
-            background-size: cover;
-            background-position: center;
+            background-size: cover;          /* BILD FIX */
+            background-position: center;     /* BILD FIX */
+            background-repeat: no-repeat;
         }
         
         .k-details { flex-grow: 1; min-width: 200px; display: flex; flex-direction: column; gap: 5px; }
@@ -100,10 +102,13 @@
             width: 70px; height: 70px; border-radius: 50%; 
             display: flex; justify-content: center; align-items: center; 
             font-weight: bold; font-size: 1.5rem; border: 2px dashed var(--neon-cyan); 
-            color: var(--neon-cyan); background: rgba(5,217,232,0.05); 
-            cursor: pointer; transition: 0.2s; overflow: hidden; position: relative;
+            color: var(--neon-cyan); background-color: rgba(5,217,232,0.05); 
+            cursor: pointer; transition: 0.2s; position: relative;
+            background-size: cover;          /* BILD FIX */
+            background-position: center;     /* BILD FIX */
+            background-repeat: no-repeat;
         }
-        .img-circle:hover { background: rgba(5,217,232,0.15); box-shadow: 0 0 15px rgba(5,217,232,0.3); transform: scale(1.05); }
+        .img-circle:hover { box-shadow: 0 0 15px rgba(5,217,232,0.5); transform: scale(1.05); }
         
         .btn-delete-img {
             position: absolute; top: -5px; right: -10px;
@@ -122,6 +127,10 @@
         
         .form-section { background: rgba(255, 255, 255, 0.02); border: 1px solid #222; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
         .section-title { font-size: 0.7rem; text-transform: uppercase; color: #666; letter-spacing: 1px; margin-bottom: 10px; font-weight: bold; }
+
+        /* LIGHTBOX FIX: Z-Index 9999 zwingt es ÜBER alles andere! */
+        #lightbox { display: none; position: fixed; z-index: 9999; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); justify-content: center; align-items: center; cursor: zoom-out; backdrop-filter: blur(10px); }
+        #lightbox img { max-width: 90%; max-height: 90%; border-radius: 15px; box-shadow: 0 0 50px rgba(5, 217, 232, 0.5); border: 2px solid var(--neon-cyan); object-fit: contain; }
 
         @media (min-width: 768px) {
             .k-stats { align-items: flex-end; }
@@ -354,6 +363,7 @@
         function changeSort() { renderKunden(); }
         function searchKunden() { renderKunden(); }
 
+        // --- LIGHTBOX ÖFFNEN ---
         function openLightbox(src) { 
             document.getElementById('lightboxImg').src = src; 
             document.getElementById('lightbox').style.display = 'flex'; 
@@ -404,9 +414,8 @@
                 const img = new Image();
                 img.src = e.target.result;
                 img.onload = function() {
-                    // Canvas für Komprimierung erstellen
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; // Perfekte Größe für Avatare und Vollbild
+                    const MAX_WIDTH = 800; 
                     const MAX_HEIGHT = 800;
                     let width = img.width;
                     let height = img.height;
@@ -422,9 +431,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // Bild in Base64 umwandeln (Qualität 70% für kleine Datengröße)
                     const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-
                     document.getElementById('kBild' + num).value = compressedDataUrl;
                     updatePreviewVisuals(num, compressedDataUrl);
                 }
@@ -502,12 +509,14 @@
                     
                     const initials = (k.name ? k.name.substring(0,2) : '??').toUpperCase();
                     
-                    // Avatar-Bild anzeigen, falls vorhanden
+                    // Avatar-Bild anzeigen + Klickbar machen für Lightbox!
                     let avatarStyle = "";
                     let avatarInhalt = initials;
+                    let avatarClick = "";
                     if (k.bild1 && k.bild1.trim() !== '') {
-                        avatarStyle = `background-image: url('${k.bild1}'); background-size: cover; border-style: solid;`;
+                        avatarStyle = `background-image: url('${k.bild1}'); border-style: solid; cursor: zoom-in;`;
                         avatarInhalt = "";
+                        avatarClick = `onclick="event.stopPropagation(); openLightbox('${k.bild1}')"`;
                     }
 
                     let kontakte = [];
@@ -528,7 +537,7 @@
                     container.innerHTML += `
                         <div class="kunde-row" onclick="openKundeModal(${k.id})">
                             <button class="btn-delete-kunde" onclick="event.stopPropagation(); deleteKunde(${k.id})">✖</button>
-                            <div class="k-avatar" style="${avatarStyle}">${avatarInhalt}</div>
+                            <div class="k-avatar" style="${avatarStyle}" ${avatarClick}>${avatarInhalt}</div>
                             <div class="k-details">
                                 <div class="k-name-wrap"><span class="k-name">${k.name}</span> ${statusBadge}</div>
                                 ${kontaktHtml}
@@ -555,12 +564,14 @@
                     
                     const initials = (k.name ? k.name.substring(0,2) : '??').toUpperCase();
                     
-                    // Avatar-Bild anzeigen, falls vorhanden
-                    let avatarStyle = "width:38px; height:38px; font-size:0.9rem;";
+                    // Avatar-Bild anzeigen + Klickbar machen für Lightbox!
+                    let avatarStyle = "width:38px; height:38px; font-size:0.9rem; ";
                     let avatarInhalt = initials;
+                    let avatarClick = "";
                     if (k.bild1 && k.bild1.trim() !== '') {
-                        avatarStyle += `background-image: url('${k.bild1}'); background-size: cover; border-style: solid;`;
+                        avatarStyle += `background-image: url('${k.bild1}'); border-style: solid; cursor: zoom-in;`;
                         avatarInhalt = "";
+                        avatarClick = `onclick="event.stopPropagation(); openLightbox('${k.bild1}')"`;
                     }
 
                     let kontakte = [];
@@ -585,7 +596,7 @@
                             <button class="btn-delete-kunde" onclick="event.stopPropagation(); deleteKunde(${k.id})">✖</button>
                             
                             <div class="k-name-wrap" style="margin-bottom: 5px;">
-                                <div class="k-avatar" style="${avatarStyle}">${avatarInhalt}</div>
+                                <div class="k-avatar" style="${avatarStyle}" ${avatarClick}>${avatarInhalt}</div>
                                 <div style="display:flex; flex-direction:column; align-items:flex-start;">
                                     <span class="k-name" style="font-size:1.1rem; line-height: 1.1;">${k.name}</span>
                                     ${statusBadge}
@@ -637,7 +648,6 @@
                     document.getElementById('kVorlieben').value = k.vorlieben || '';
                     document.getElementById('kNotizen').value = k.notizen || '';
                     
-                    // Bilder in die Vorschau laden
                     document.getElementById('kBild1').value = k.bild1 || '';
                     updatePreviewVisuals(1, k.bild1 || '');
                     
@@ -665,7 +675,6 @@
                 document.getElementById('kVorlieben').value = '';
                 document.getElementById('kNotizen').value = '';
                 
-                // Bilder zurücksetzen
                 document.getElementById('kBild1').value = '';
                 updatePreviewVisuals(1, '');
                 
@@ -705,7 +714,6 @@
                 vorlieben: document.getElementById('kVorlieben').value,
                 notizen: document.getElementById('kNotizen').value,
                 
-                // Speichere die (komprimierten) Base64 Bilder
                 bild1: document.getElementById('kBild1').value,
                 bild2: document.getElementById('kBild2').value
             };

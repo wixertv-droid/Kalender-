@@ -93,7 +93,7 @@
             <div class="form-title" style="color: #ff3300; border-bottom-color: #ff3300;">Event Setup</div>
             
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 2;"><label>Event Art (z.B. GB)</label><input type="text" id="evName" class="cyber-input-full"></div>
+                <div class="form-group" style="flex: 2;"><label>Event Art (z.B. GB)</label><input type="text" id="evName" class="cyber-input-full" placeholder="z.B. GB"></div>
                 <div class="form-group" style="flex: 1;"><label>Datum</label><input type="date" id="evDatum" class="cyber-input-full"></div>
             </div>
 
@@ -104,32 +104,48 @@
             </div>
 
             <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 2;"><label>Stadt / Location</label><input type="text" id="evOrt" class="cyber-input-full"></div>
-                <div class="form-group" style="flex: 1;"><label>Preis (€)</label><input type="number" id="evPreis" class="cyber-input-full"></div>
+                <div class="form-group" style="flex: 1;"><label>Stadt</label><input type="text" id="evStadt" class="cyber-input-full" placeholder="z.B. Leipzig"></div>
+                <div class="form-group" style="flex: 2;"><label>Location</label><input type="text" id="evLocation" class="cyber-input-full" placeholder="Hotel / Privat"></div>
+                <div class="form-group" style="flex: 1;"><label>Preis p.P. (€)</label><input type="number" id="evPreis" class="cyber-input-full" placeholder="z.B. 80"></div>
             </div>
 
             <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
                 <div style="color: var(--neon-cyan); font-weight: bold; text-transform: uppercase; margin-bottom: 10px;">Die Darstellerin</div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 2;"><label>Name</label><input type="text" id="evGirlName" class="cyber-input-full"></div>
-                    <div class="form-group" style="flex: 1;"><label>Alter</label><input type="number" id="evGirlAge" class="cyber-input-full"></div>
+                    <div class="form-group" style="flex: 2;"><label>Name</label><input type="text" id="evGirlName" class="cyber-input-full" placeholder="z.B. Susi"></div>
+                    <div class="form-group" style="flex: 1;"><label>Alter</label><input type="number" id="evGirlAge" class="cyber-input-full" placeholder="35"></div>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 1;"><label>Größe</label><input type="text" id="evGirlHeight" class="cyber-input-full"></div>
-                    <div class="form-group" style="flex: 1;"><label>Gewicht</label><input type="text" id="evGirlWeight" class="cyber-input-full"></div>
+                    <div class="form-group" style="flex: 1;"><label>Größe (cm)</label><input type="number" id="evGirlHeight" class="cyber-input-full" placeholder="165"></div>
+                    <div class="form-group" style="flex: 1;"><label>Gewicht (kg)</label><input type="number" id="evGirlWeight" class="cyber-input-full" placeholder="64"></div>
                 </div>
                 <div class="form-group">
                     <label>Typ / Beschreibung</label>
-                    <input type="text" id="evGirlType" class="cyber-input-full">
+                    <input type="text" id="evGirlType" class="cyber-input-full" placeholder="z.B. schlanke und naturgeile Dreilochstute">
                 </div>
             </div>
 
             <div style="margin-top: 10px; border-top: 1px solid #333; padding-top: 15px;">
                 <div style="color: var(--neon-gold); font-weight: bold; text-transform: uppercase; margin-bottom: 10px;">Details & Specials</div>
                 
-                <div class="form-group"><label>Gewollt (Vorlieben)</label><input type="text" id="evVorlieben" class="cyber-input-full"></div>
-                <div class="form-group"><label>Tabus</label><input type="text" id="evTabus" class="cyber-input-full"></div>
-                <div class="form-group"><label>Safe / AO (Wichtig für Inventar)</label><input type="text" id="evPraef" class="cyber-input-full"></div>
+                <div class="form-group"><label>Gewollt (Vorlieben)</label><input type="text" id="evVorlieben" class="cyber-input-full" placeholder="GV, anal, lecken..."></div>
+                <div class="form-group"><label>Tabus</label><input type="text" id="evTabus" class="cyber-input-full" placeholder="Keine Gewalt, kein KV"></div>
+
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; background: rgba(255,51,0,0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(255,51,0,0.3); margin-bottom: 15px;">
+                    <div class="form-group" style="flex: 1; margin-bottom:0;"><label>Safe / AO (Inventar-Check)</label>
+                        <select id="evPraef" class="cyber-select">
+                            <option value="AO">AO (Alles ohne)</option>
+                            <option value="Safe">Safe</option>
+                            <option value="AO & Safe möglich">AO & Safe möglich</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1; margin-bottom:0;"><label>Handtücher</label>
+                        <select id="evTowels" class="cyber-select">
+                            <option value="Werden gestellt">Werden gestellt</option>
+                            <option value="Bitte mitbringen">Bitte mitbringen</option>
+                        </select>
+                    </div>
+                </div>
 
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
                     <div class="form-group" style="flex: 1;"><label>Natursekt (NS)</label>

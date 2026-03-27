@@ -98,21 +98,14 @@
     </div>
 
     <div class="dashboard">
-        <div style="display: flex; gap: 10px;">
-            <div class="btn-cyber btn-settings" onclick="location.href='einstellungen.html'" title="Einstellungen">⚙️</div>
-            <div class="btn-cyber" onclick="location.href='jahr.html'" title="Jahreskalender" style="color: var(--neon-cyan); border-color: var(--neon-cyan);">📅</div>
-            <div class="btn-cyber" onclick="location.href='stats.html'" title="Finanz Core" style="color: var(--neon-gold); border-color: var(--neon-gold); text-shadow: 0 0 10px rgba(229,176,92,0.5);">💰</div>
-        </div>
+        <div class="btn-cyber btn-settings" onclick="location.href='jahr.html'" title="Jahresansicht" style="color: var(--neon-cyan); border-color: var(--neon-cyan);">📅</div>
         
         <div class="header-info">
             <div class="titel-neon" id="header-monat">SYNCING...</div>
             <div id="header-countdown" class="countdown-pulsing">SYSTEM READY</div>
         </div>
 
-        <div style="display: flex; gap: 10px;">
-            <div class="btn-cyber" onclick="location.href='kunden.html'" title="Kunden Datenbank" style="color: var(--neon-cyan); border-color: var(--neon-cyan);">👥</div>
-            <div class="btn-cyber btn-add" onclick="openModal()" title="Neuer Termin">➕</div>
-        </div>
+        <div class="btn-cyber btn-add" onclick="openModal()" title="Neuer Termin">➕</div>
     </div>
 
     <div class="wochen-container">
@@ -123,6 +116,25 @@
         <button class="week-nav-btn today" onclick="location.href='woche.html'">Heute</button>
         <button class="week-nav-btn" onclick="changeWeek(7)">Nächste ➡️</button>
     </div>
+
+    <nav class="bottom-nav">
+        <a href="woche.html" class="nav-item active">
+            <div class="nav-icon" style="filter: grayscale(0%) opacity(1);">🗂️</div>
+            <span>Woche</span>
+        </a>
+        <a href="kunden.html" class="nav-item">
+            <div class="nav-icon" style="color: var(--neon-pink);">👥</div>
+            <span>Kunden</span>
+        </a>
+        <a href="stats.html" class="nav-item">
+            <div class="nav-icon" style="color: var(--neon-gold);">💰</div>
+            <span>Finance</span>
+        </a>
+        <a href="einstellungen.html" class="nav-item">
+            <div class="nav-icon" style="color: #fff;">⚙️</div>
+            <span>System</span>
+        </a>
+    </nav>
 
     <div class="modal-overlay" id="terminModal">
         <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
@@ -190,7 +202,6 @@
                         document.getElementById('terminKontakt').value = k.kontakt || '';
                         document.getElementById('terminNotizen').value = k.notizen || '';
                         
-                        // Lade Preis und Praeferenz in das Modal
                         document.getElementById('terminPreis').value = k.preis || '';
                         document.getElementById('terminPraeferenz').value = k.praeferenz || 'none';
 
@@ -210,28 +221,23 @@
             let dObj;
 
             if (currentD) {
-                // Zerlegt das Datum (verhindert Zeitzonen-Bugs beim Wechseln)
                 const parts = currentD.split('-');
                 dObj = new Date(parts[0], parts[1] - 1, parts[2]);
             } else {
-                dObj = new Date(); // Heute
+                dObj = new Date(); 
             }
 
-            // Tage addieren/abziehen (+7 oder -7)
             dObj.setDate(dObj.getDate() + days);
 
-            // Zurück in Format YYYY-MM-DD
             const year = dObj.getFullYear();
             const month = String(dObj.getMonth() + 1).padStart(2, '0');
             const day = String(dObj.getDate()).padStart(2, '0');
             
             const newDateStr = `${year}-${month}-${day}`;
 
-            // Seite mit dem neuen Datum neu laden
             window.location.href = `woche.html?d=${newDateStr}`;
         }
 
-        // Datum für das Modal voreinstellen
         document.addEventListener('DOMContentLoaded', () => {
             const dInput = document.getElementById('terminDatum');
             const urlParams = new URLSearchParams(window.location.search);

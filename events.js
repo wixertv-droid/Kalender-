@@ -24,16 +24,35 @@ function renderEvents() {
     events.sort((a, b) => new Date(a.datum) - new Date(b.datum));
 
     events.forEach(e => {
-        const confirmed = e.guests ? e.guests.filter(g => g.status === 'bestaetigt' || g.status === 'erschienen').length : 0;
+        // --- NEU: Gästestatistik berechnen ---
+        const total = e.guests ? e.guests.length : 0;
+        const erschienen = e.guests ? e.guests.filter(g => g.status === 'erschienen').length : 0;
+        const noshow = e.guests ? e.guests.filter(g => g.status === 'noshow').length : 0;
         
+        const d = new Date(e.datum);
+        const datumStr = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const isPast = d < new Date(new Date().setHours(0,0,0,0));
+        const opacity = isPast ? '0.5' : '1';
+        const border = e.color || '#ff3300';
+
         container.innerHTML += `
-            <div class="event-card" style="border-left-color: ${e.color || '#ff3300'}" onclick="openEventModal(${e.id})">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div style="font-size: 1.2rem; font-weight: bold; color: ${e.color || '#ff3300'}">${e.name}</div>
-                    <div class="stat-badge" style="border-color: #ff3300; color: #ff3300;">${confirmed} Gäste</div>
+            <div class="finance-card" style="margin-bottom: 15px; border-left: 4px solid ${border}; opacity: ${opacity}; cursor: pointer;" onclick="openEventModal(${e.id})">
+                <button class="btn-delete-kunde" onclick="event.stopPropagation(); deleteEvent(${e.id})" style="position: absolute; right: 10px; top: 10px; background: rgba(255,42,109,0.1); color: #ff2a6d; border: 1px solid #ff2a6d; border-radius: 5px; width: 30px; height: 30px; cursor: pointer; z-index: 10; display: flex; justify-content: center; align-items: center;">✖</button>
+                
+                <div style="font-size: 1.2rem; font-weight: bold; color: ${border}; margin-bottom: 8px; padding-right: 35px;">${e.name}</div>
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <div class="stat-badge" style="border-color: #aaa; color: #fff;">👥 ${total} Anmeldungen</div>
+                    <div class="stat-badge" style="border-color: var(--neon-green); color: var(--neon-green);">✅ ${erschienen} Da</div>
+                    <div class="stat-badge" style="border-color: var(--neon-red); color: var(--neon-red);">❌ ${noshow} No-Show</div>
                 </div>
-                <div style="color: #aaa; font-size: 0.85rem; margin-top: 5px;">📅 ${e.datum} | ⏰ ${e.start} - ${e.ende} Uhr</div>
-                <div style="color: #888; font-size: 0.8rem; margin-top: 5px;">📍 ${e.ort || 'TBA'} | 💦 ${e.praef}</div>
+                
+                <div style="display: flex; gap: 15px; font-size: 0.85rem; color: #aaa; margin-bottom: 10px; font-family: monospace;">
+                    <span style="color: var(--neon-cyan);">📅 ${datumStr} | ⏰ ${e.start} - ${e.ende}</span>
+                    ${e.ort ? `<span style="color: var(--neon-gold);">📍 ${e.ort}</span>` : ''}
+                </div>
+                
+                ${e.notizen ? `<div style="font-size: 0.85rem; color: #888; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px; line-height: 1.4;">${e.notizen}</div>` : ''}
             </div>
         `;
     });
@@ -117,6 +136,19 @@ function copyPromo() {
     navigator.clipboard.writeText(text).then(() => alert("✅ Promo-Text kopiert!"));
 }
 
+// --- NEU: AUTO-SAVE FÜR GÄSTE ---
+// Speichert Gästelisten-Änderungen sofort im Hintergrund
+function autoSaveGuests() {
+    if (!currentEditEventId) return;
+    let events = JSON.parse(localStorage.getItem('appEvents')) || [];
+    let evIndex = events.findIndex(e => e.id === currentEditEventId);
+    if (evIndex > -1) {
+        events[evIndex].guests = currentGuests;
+        localStorage.setItem('appEvents', JSON.stringify(events)); // Löst sofortigen Cloud-Upload aus!
+        renderEvents(); // Hintergrund-Liste updaten
+    }
+}
+
 // --- GÄSTE LOGIK ---
 function renderGuests() {
     const list = document.getElementById('gaesteListe');
@@ -129,16 +161,23 @@ function renderGuests() {
 
     currentGuests.forEach(g => {
         let statusColor = '#aaa';
-        let nextAction = '';
+        let actionBtns = '';
+        
         if(g.status === 'angemeldet') {
             statusColor = '#aaa';
-            nextAction = `<button class="btn-status" style="border-color: var(--neon-cyan); color: var(--neon-cyan);" onclick="changeGuestStatus('${g.id}', 'bestaetigt')">Bestätigen</button>`;
+            actionBtns = `<button class="btn-status" style="border-color: var(--neon-cyan); color: var(--neon-cyan);" onclick="changeGuestStatus('${g.id}', 'bestaetigt')">Bestätigen</button>`;
         } else if(g.status === 'bestaetigt') {
             statusColor = 'var(--neon-cyan)';
-            nextAction = `<button class="btn-status" style="border-color: var(--neon-green); color: var(--neon-green);" onclick="changeGuestStatus('${g.id}', 'erschienen')">Erschienen!</button>`;
+            actionBtns = `
+                <button class="btn-status" style="border-color: var(--neon-green); color: var(--neon-green);" onclick="changeGuestStatus('${g.id}', 'erschienen')">✓ Da</button>
+                <button class="btn-status" style="border-color: var(--neon-red); color: var(--neon-red);" onclick="changeGuestStatus('${g.id}', 'noshow')">❌ No-Show</button>
+            `;
         } else if(g.status === 'erschienen') {
             statusColor = 'var(--neon-green)';
-            nextAction = `<span style="color: var(--neon-green); font-size: 0.8rem; font-weight: bold;">✓ Da</span>`;
+            actionBtns = `<span style="color: var(--neon-green); font-size: 0.8rem; font-weight: bold; margin-right: 5px;">✓ Erschienen</span>`;
+        } else if(g.status === 'noshow') {
+            statusColor = 'var(--neon-red)';
+            actionBtns = `<span style="color: var(--neon-red); font-size: 0.8rem; font-weight: bold; margin-right: 5px;">❌ No-Show</span>`;
         }
 
         list.innerHTML += `
@@ -148,8 +187,8 @@ function renderGuests() {
                     <div style="color: ${statusColor}; font-size: 0.7rem; text-transform: uppercase;">${g.status}</div>
                 </div>
                 <div style="display:flex; gap:5px; align-items:center;">
-                    ${nextAction}
-                    <button class="btn-status" style="color: #ff2a6d; border-color: #ff2a6d; padding: 5px;" onclick="removeGuest('${g.id}')">✖</button>
+                    ${actionBtns}
+                    <button class="btn-status" style="color: #ff2a6d; border-color: #ff2a6d; padding: 5px; margin-left: 5px;" onclick="removeGuest('${g.id}')">🗑️</button>
                 </div>
             </div>
         `;
@@ -160,7 +199,6 @@ function addGuest() {
     const input = document.getElementById('newGuestName');
     if(!input.value.trim()) return;
     
-    // Gast der Liste hinzufügen
     currentGuests.push({
         id: Date.now().toString(),
         name: input.value.trim(),
@@ -169,6 +207,7 @@ function addGuest() {
     
     input.value = '';
     renderGuests();
+    autoSaveGuests(); // Sofort speichern!
 }
 
 function changeGuestStatus(id, newStatus) {
@@ -176,6 +215,7 @@ function changeGuestStatus(id, newStatus) {
     if(guest) {
         guest.status = newStatus;
         renderGuests();
+        autoSaveGuests(); // Sofort speichern!
     }
 }
 
@@ -183,6 +223,7 @@ function removeGuest(id) {
     if(confirm("Gast wirklich entfernen?")) {
         currentGuests = currentGuests.filter(g => g.id !== id);
         renderGuests();
+        autoSaveGuests(); // Sofort speichern!
     }
 }
 
@@ -220,7 +261,6 @@ function saveEvent() {
         events.push(data);
     }
 
-    // Speichern -> app.js sendet es an Supabase
     localStorage.setItem('appEvents', JSON.stringify(events));
     
     closeEventModal();
@@ -241,10 +281,8 @@ function deleteEvent() {
     }
 }
 
-// Beim Laden der Seite ausführen
 document.addEventListener('DOMContentLoaded', () => {
     renderEvents();
-    
     setTimeout(() => {
         const loader = document.getElementById('app-loader');
         if (loader) {

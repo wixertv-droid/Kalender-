@@ -1,119 +1,119 @@
-let enteredPin = "";
-let systemPin = localStorage.getItem('appPin') || "0000";
+/* ==========================================================================
+   AGENDA 2050 - CYBER GATEWAY (login.js) - SUPABASE AUTHENTICATION
+   ========================================================================== */
 
-// --- NEU: CLOUD FUNKGERÄT FÜR DEN TÜRSTEHER ---
-// Zieht die echte PIN aus der Datenbank, falls der Browser-Cache gelöscht wurde
-async function syncPinFromCloud() {
+const SUPABASE_URL = 'https://xdynlrghhnxbmcylafxg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkeW5scmdoaG54Ym1jeWxhZnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDcxMzgsImV4cCI6MjA4OTkyMzEzOH0.Zre-Vv5MElN3q6-R804ZrhYxnvEwhB0b3f8_ohFoe3A';
+
+let currentPin = "";
+let correctPin = "0000"; // Fallback, falls komplett offline
+let isChecking = false;
+
+// 1. Zieht die ECHTE PIN aus der Supabase-Datenbank, sobald die Seite lädt!
+async function fetchRealPin() {
     try {
-        const fbApp = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js");
-        const fbDb = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js");
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=pin`, {
+            method: 'GET',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`
+            }
+        });
         
-        const firebaseConfig = {
-            apiKey: "AIzaSyAEUmqJJVTb-6HLJelRavBYX7HYbYgAOk4",
-            authDomain: "project-905317930122069871.firebaseapp.com",
-            projectId: "project-905317930122069871",
-            storageBucket: "project-905317930122069871.firebasestorage.app",
-            messagingSenderId: "614371371179",
-            appId: "1:614371371179:web:c79cabf95b410b70142fee"
-        };
-
-        const app = fbApp.initializeApp(firebaseConfig);
-        const db = fbDb.getFirestore(app);
-        
-        // Fragt direkt den Tresorraum in der Cloud ab
-        const docRef = fbDb.doc(db, "agenda2050", "systemdaten");
-        const docSnap = await fbDb.getDoc(docRef);
-        
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.pin) {
-                systemPin = data.pin; // Überschreibt die 0000 mit der Cloud-PIN
-                localStorage.setItem('appPin', systemPin); // Speichert sie wieder lokal
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.length > 0 && data[0].pin) {
+                correctPin = data[0].pin;
+                // Speichert die Cloud-PIN direkt lokal ab, falls beim nächsten Mal das Internet weg ist
+                localStorage.setItem('appPin', correctPin);
+                console.log("SYS_LOG: Cloud-PIN synchronisiert.");
             }
         }
-    } catch(e) {
-        console.log("Cloud-Verbindung für PIN-Sync fehlgeschlagen (Nutzer offline?)");
+    } catch (e) {
+        console.log("SYS_LOG: Cloud nicht erreichbar. Nutze lokalen PIN-Cache.");
+        correctPin = localStorage.getItem('appPin') || "0000";
     }
 }
 
-// Führt den Sync sofort aus, wenn die Login-Seite geöffnet wird
-syncPinFromCloud();
-// ----------------------------------------------
+// Startet den Cloud-Check direkt
+fetchRealPin();
 
-
+// --- NUMPAD LOGIK ---
 function addNumber(num) {
-    if (enteredPin.length < 4) {
-        enteredPin += num;
+    if (isChecking) return; // Nichts tippen lassen, während er lädt
+    
+    if (currentPin.length < 4) {
+        currentPin += num;
         updateDots();
     }
-    if (enteredPin.length === 4) {
+    if (currentPin.length === 4) {
         checkPin();
     }
 }
 
 function clearPin() {
-    enteredPin = "";
+    currentPin = "";
     updateDots();
+    const status = document.getElementById('status-text');
+    if (status) {
+        status.innerText = "AWAITING INPUT...";
+        status.style.color = "var(--neon-cyan)";
+    }
 }
 
 function updateDots() {
     const dots = document.querySelectorAll('.pin-dot');
-    dots.forEach((dot, i) => {
-        if (i < enteredPin.length) dot.classList.add('filled');
-        else dot.classList.remove('filled');
+    dots.forEach((dot, index) => {
+        if (index < currentPin.length) {
+            dot.classList.add('active'); // CSS-Klasse muss in deiner login.css existieren (oft background: #fff;)
+            dot.style.background = "var(--neon-cyan)";
+            dot.style.boxShadow = "0 0 10px var(--neon-cyan)";
+        } else {
+            dot.classList.remove('active');
+            dot.style.background = "rgba(5, 217, 232, 0.2)";
+            dot.style.boxShadow = "none";
+        }
     });
 }
 
 function checkPin() {
-    if (enteredPin === systemPin) {
-        startBootSequence();
-    } else {
-        const ring = document.getElementById('cyberRing');
-        ring.classList.add('ring-error');
-        document.getElementById('status-text').innerText = "ZUGRIFF VERWEIGERT";
-        document.getElementById('status-text').style.color = "var(--neon-pink)";
-        
-        setTimeout(() => {
-            ring.classList.remove('ring-error');
-            document.getElementById('status-text').innerText = "AWAITING INPUT...";
-            document.getElementById('status-text').style.color = "var(--neon-cyan)";
-            clearPin();
-        }, 1000);
-    }
-}
-
-function startBootSequence() {
-    // PIN Feld ausblenden
-    document.getElementById('pinBox').style.display = 'none';
-    document.getElementById('numpadBox').style.display = 'none';
+    isChecking = true;
+    const status = document.getElementById('status-text');
+    status.innerText = "AUTHENTICATING...";
+    status.style.color = "var(--neon-gold)";
     
-    // Prozentanzeige einblenden
-    const anzeige = document.getElementById('prozent');
-    anzeige.style.display = 'block';
-    
-    document.getElementById('status-text').innerText = "INITIALISIERE...";
-    document.getElementById('status-text').style.color = "var(--neon-green)";
-
-    // Session Key setzen (Türsteher-Schutz für den Rest der App)
-    sessionStorage.setItem('authKey', 'verified');
-
-    let prozentValue = 0;
-    const interval = setInterval(() => {
-        prozentValue += Math.floor(Math.random() * 5) + 1; 
-        if(prozentValue > 100) prozentValue = 100;
-        
-        anzeige.innerText = prozentValue + '%';
-
-        if(prozentValue > 30) document.getElementById('status-text').innerText = "Lade Datenbank...";
-        if(prozentValue > 70) document.getElementById('status-text').innerText = "Entschlüssele Kalender...";
-        
-        if(prozentValue === 100) {
-            document.getElementById('status-text').innerText = "ZUGRIFF GEWÄHRT";
-            clearInterval(interval);
+    // Kurze Denkpause für das Cyber-Feeling
+    setTimeout(() => {
+        if (currentPin === correctPin) {
+            status.innerText = "ACCESS GRANTED";
+            status.style.color = "var(--neon-green)";
             
+            // Gibt den goldenen Schlüssel für alle anderen HTML-Seiten
+            sessionStorage.setItem('authKey', 'true');
+            
+            // Animation und Weiterleitung
             setTimeout(() => {
                 window.location.href = 'woche.html';
+            }, 800);
+            
+        } else {
+            status.innerText = "ACCESS DENIED";
+            status.style.color = "var(--neon-red)";
+            
+            // ERROR-Wackeln
+            const pinBox = document.getElementById('pinBox');
+            if (pinBox) {
+                pinBox.style.transform = "translateX(-10px)";
+                setTimeout(() => pinBox.style.transform = "translateX(10px)", 50);
+                setTimeout(() => pinBox.style.transform = "translateX(-10px)", 100);
+                setTimeout(() => pinBox.style.transform = "translateX(10px)", 150);
+                setTimeout(() => pinBox.style.transform = "translateX(0)", 200);
+            }
+            
+            setTimeout(() => {
+                clearPin();
+                isChecking = false;
             }, 1000);
         }
-    }, 50);
+    }, 600); 
 }

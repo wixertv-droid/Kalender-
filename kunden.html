@@ -79,12 +79,11 @@
     </div>
 
     <div class="dashboard">
-        <div class="btn-cyber btn-settings" onclick="location.href='woche.html'">⬅️</div>
-        <div class="header-info">
+        <div style="width: 44px;"></div> <div class="header-info">
             <div class="titel-neon">Datenbank</div>
             <div class="countdown-pulsing" id="kunden-counter">0 Profile</div>
         </div>
-        <div class="btn-cyber btn-add" onclick="openKundeModal()">+</div>
+        <div class="btn-cyber btn-add" onclick="openKundeModal()">➕</div>
     </div>
 
     <div class="kunden-container">
@@ -105,6 +104,25 @@
 
         <div class="kunden-liste" id="kundenListe"></div>
     </div>
+
+    <nav class="bottom-nav">
+        <a href="woche.html" class="nav-item">
+            <div class="nav-icon" style="color: var(--neon-cyan);">🗂️</div>
+            <span>Woche</span>
+        </a>
+        <a href="kunden.html" class="nav-item active">
+            <div class="nav-icon" style="color: var(--neon-pink);">👥</div>
+            <span>Kunden</span>
+        </a>
+        <a href="stats.html" class="nav-item">
+            <div class="nav-icon" style="color: var(--neon-gold);">💰</div>
+            <span>Finance</span>
+        </a>
+        <a href="einstellungen.html" class="nav-item">
+            <div class="nav-icon" style="color: #fff;">⚙️</div>
+            <span>System</span>
+        </a>
+    </nav>
 
     <div class="modal-overlay" id="kundeModal">
         <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
@@ -341,7 +359,7 @@
             
             liste.innerHTML = '';
             
-            // 1. Filtern (sucht jetzt auch im 2. Nickname)
+            // 1. Filtern (sucht auch im 2. Nickname)
             let filtered = kunden.filter(k => {
                 if (!k || !k.name) return false; 
                 const searchName = k.name.toLowerCase();
@@ -376,7 +394,6 @@
                 let preisBadge = k.preis ? `<div class="stat-badge badge-preis">💰 ${k.preis}€</div>` : '';
                 let strikeBadge = (k.noshows && k.noshows > 0) ? `<div class="stat-badge" style="color:var(--neon-red); border-color:var(--neon-red);">⚠️ ${k.noshows}x No-Show</div>` : '';
 
-                // NEU: Anzeige für Kontakt 1 & 2
                 let kontakt1HTML = (k.plattform !== 'none' && k.plattform ? `<span style="color:var(--neon-cyan)">${k.plattform}:</span> ` : '') + (k.kontakt || '');
                 
                 let kontakt2HTML = '';
@@ -385,7 +402,6 @@
                     
                     if (k.profilLink) {
                         let linkUrl = k.profilLink.startsWith('http') ? k.profilLink : 'https://' + k.profilLink;
-                        // Button, der direkt das Portal öffnet, ohne die Karte anzuklicken
                         kontakt2HTML = `<div style="margin-top: 6px;"><a href="${linkUrl}" target="_blank" onclick="event.stopPropagation();" class="link-button">🔗 ${plat2Text}</a></div>`;
                     } else {
                         kontakt2HTML = `<div style="margin-top: 4px; color: #888; font-size: 0.8rem;">${plat2Text}</div>`;
@@ -433,7 +449,6 @@
                     document.getElementById('kundePlattform').value = k.plattform || 'none';
                     document.getElementById('kundeKontakt').value = k.kontakt || '';
                     
-                    // NEUE FELDER LADEN
                     document.getElementById('kundePlattform2').value = k.plattform2 || 'none';
                     document.getElementById('kundeKontakt2').value = k.kontakt2 || '';
                     document.getElementById('kundeLink').value = k.profilLink || '';
@@ -457,7 +472,6 @@
                 document.getElementById('kundePlattform').value = 'none';
                 document.getElementById('kundeKontakt').value = '';
                 
-                // NEUE FELDER RESETTEN
                 document.getElementById('kundePlattform2').value = 'none';
                 document.getElementById('kundeKontakt2').value = '';
                 document.getElementById('kundeLink').value = '';
@@ -490,7 +504,6 @@
                 plattform: document.getElementById('kundePlattform').value,
                 kontakt: document.getElementById('kundeKontakt').value,
                 
-                // NEUE FELDER SPEICHERN
                 plattform2: document.getElementById('kundePlattform2').value,
                 kontakt2: document.getElementById('kundeKontakt2').value,
                 profilLink: document.getElementById('kundeLink').value,
@@ -545,7 +558,7 @@
             
             const platOptions = `<option value="none">Keine</option><option value="${s.plat1}">${s.plat1}</option><option value="${s.plat2}">${s.plat2}</option><option value="${s.plat3 || 'Telegram'}">${s.plat3 || 'Telegram'}</option><option value="${s.plat4 || 'Telefon'}">${s.plat4 || 'Telefon'}</option>`;
             document.getElementById('kundePlattform').innerHTML = platOptions;
-            document.getElementById('kundePlattform2').innerHTML = platOptions; // Für das zweite Dropdown!
+            document.getElementById('kundePlattform2').innerHTML = platOptions; 
         }
 
         function closeKundeModal() { document.getElementById('kundeModal').style.display = 'none'; }

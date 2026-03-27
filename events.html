@@ -11,13 +11,27 @@
     <script src="events.js" defer></script>
     
     <style>
-        .event-card { background: rgba(20,0,0,0.4); border: 1px solid #ff3300; border-left: 4px solid #ff3300; padding: 15px; border-radius: 12px; margin-bottom: 15px; cursor: pointer; transition: 0.3s; }
-        .event-card:hover { background: rgba(255,51,0,0.1); box-shadow: 0 0 20px rgba(255,51,0,0.2); }
+        .finance-card {
+            background: var(--glass-bg); border: 1px solid var(--glass-border);
+            padding: 20px; border-radius: 15px; position: relative; overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: 0.3s;
+        }
+        .finance-card:hover { background: rgba(255,255,255,0.05); }
+        .finance-card::after {
+            content: ""; position: absolute; top: 0; right: 0; width: 60px; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03));
+            transform: skewX(-45deg) translateX(50px);
+        }
         .wa-box { background: #0a1f10; border: 1px dashed #25D366; padding: 15px; border-radius: 10px; margin-top: 15px; font-family: monospace; white-space: pre-wrap; color: #fff; font-size: 0.85rem;}
         .attendee-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #666;}
+        
+        /* Status Farben */
         .att-status-angemeldet { border-color: #aaa; }
         .att-status-bestaetigt { border-color: var(--neon-cyan); }
         .att-status-erschienen { border-color: var(--neon-green); background: rgba(57,255,20,0.05); }
+        .att-status-noshow { border-color: var(--neon-red); background: rgba(255,42,109,0.05); }
+        
         .btn-status { font-size: 0.7rem; padding: 5px 8px; background: rgba(0,0,0,0.5); border: 1px solid #666; color: #fff; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
@@ -32,7 +46,7 @@
         <div style="width: 44px;"></div>
         <div class="header-info">
             <div class="titel-neon" style="color: #ff3300; text-shadow: 0 0 15px #ff3300;">EVENTS</div>
-            <div class="countdown-pulsing">GangBangs & Specials</div>
+            <div class="countdown-pulsing">Touren & Specials</div>
         </div>
         <div class="btn-cyber btn-add" onclick="openEventModal()" style="color: #ff3300; border-color: #ff3300;">➕</div>
     </div>

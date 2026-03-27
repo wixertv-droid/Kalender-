@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V7.0 - RELATIONAL DB FIX)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.9 - LIVE KUNDEN-SYNC)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -43,7 +43,7 @@ localStorage.setItem = function(key, value) {
                 kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
                 einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
                 pin: localStorage.getItem('appPin') || "0000",
-                events: JSON.parse(localStorage.getItem('appEvents') || '[]'),
+                events: JSON.parse(localStorage.getItem('appEvents') || '[]'), 
                 last_update: newTimestamp
             };
 
@@ -96,7 +96,7 @@ async function autoFetchCloud() {
             if (dbData.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(dbData.kunden));
             if (dbData.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen));
             if (dbData.pin) originalSetItem.call(localStorage, 'appPin', dbData.pin);
-            if (dbData.events) originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events));
+            if (dbData.events) originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events)); 
             
             originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update);
             
@@ -105,7 +105,7 @@ async function autoFetchCloud() {
             if(typeof renderWeek === 'function') renderWeek();
             if(typeof renderKunden === 'function') renderKunden();
             if(typeof calculateStats === 'function') calculateStats();
-            if(typeof renderEvents === 'function') renderEvents();
+            if(typeof renderEvents === 'function') renderEvents(); 
             if(typeof renderTimeline === 'function') {
                 const urlParams = new URLSearchParams(window.location.search);
                 renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
@@ -133,24 +133,18 @@ async function initCloud() {
         
         setTimeout(() => {
             hdCountdown.innerText = "SYNCING..."; 
-            
             hdCountdown.style.color = "";
             hdCountdown.style.borderColor = "";
             hdCountdown.style.textShadow = "";
-            
             if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
             if(typeof renderWeek === 'function') renderWeek(); 
             updateLiveSystem(); 
-            
         }, 3000);
     }
 }
 
-window.forceCloudUpload = async function() { alert("Das System speichert jetzt alles sofort vollautomatisch!"); };
-window.forceCloudDownload = async function() {
-    alert("Manueller Sync gestartet...");
-    await autoFetchCloud();
-}
+window.forceCloudUpload = async function() { alert("System speichert alles sofort!"); };
+window.forceCloudDownload = async function() { alert("Manueller Sync gestartet..."); await autoFetchCloud(); }
 
 
 /* ==========================================================================
@@ -255,12 +249,12 @@ function generiereWochenAnsicht() {
     }
 }
 
+// --- V6.9 FIX: LIVE KUNDEN ABFRAGE BEIM ÖFFNEN ---
 function openModal(editId = null) {
     const modal = document.getElementById('terminModal');
     if (!modal) return;
 
     currentEditId = editId;
-    window.selectedKundeId = null;
 
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
     const settings = { ...DEFAULTS, ...storedSettings };
@@ -287,20 +281,32 @@ function openModal(editId = null) {
 
     if (editId) {
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+        const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
         const t = termine.find(x => x.id === editId);
+        
         if (t) {
-            window.selectedKundeId = t.kundeId || null;
+            // Wir suchen den Kunden LIVE in der Datenbank, um die aktuellsten Infos zu ziehen!
+            const liveKunde = kunden.find(k => k.name.toLowerCase().trim() === (t.name || '').toLowerCase().trim());
+
             document.getElementById('terminName').value = t.name || '';
             document.getElementById('terminDatum').value = t.datum || '';
             document.getElementById('terminStart').value = t.start || '';
             document.getElementById('terminEnde').value = t.ende || '';
             document.getElementById('terminKategorie').value = t.kat || 'kat1';
-            document.getElementById('terminPlattform').value = t.plattform || 'none';
-            document.getElementById('terminKontakt').value = t.kontakt || '';
+            
+            // Wenn der Kunde live gefunden wurde, nutze seine ECHTE, aktuelle Kontaktnummer!
+            document.getElementById('terminPlattform').value = (liveKunde && liveKunde.plattform) ? liveKunde.plattform : (t.plattform || 'none');
+            document.getElementById('terminKontakt').value = (liveKunde && liveKunde.kontakt) ? liveKunde.kontakt : (t.kontakt || '');
+            
+            // Die Notiz bleibt strikt Termin-bezogen!
             document.getElementById('terminNotizen').value = t.notizen || '';
             
-            if(document.getElementById('terminPreis')) document.getElementById('terminPreis').value = t.preis || '';
-            if(document.getElementById('terminPraeferenz')) document.getElementById('terminPraeferenz').value = t.praeferenz || 'none';
+            if(document.getElementById('terminPreis')) {
+                document.getElementById('terminPreis').value = (liveKunde && liveKunde.preis) ? liveKunde.preis : (t.preis || '');
+            }
+            if(document.getElementById('terminPraeferenz')) {
+                document.getElementById('terminPraeferenz').value = (liveKunde && liveKunde.praeferenz) ? liveKunde.praeferenz : (t.praeferenz || 'none');
+            }
         }
     } else {
         document.getElementById('terminName').value = '';
@@ -328,7 +334,6 @@ function closeModal() {
     const vBox = document.getElementById('kundenVorschlaege');
     if (vBox) vBox.style.display = 'none';
     currentEditId = null;
-    window.selectedKundeId = null;
 }
 
 function toggleKontaktFeld() {
@@ -339,7 +344,7 @@ function toggleKontaktFeld() {
     }
 }
 
-// NEU: SAUBERE DATENBANK VERKNÜPFUNG ÜBER KUNDE-ID
+// --- V6.9 FIX: AGGRESSIVER DB-UPDATE ---
 function saveAppointment() {
     try {
         const name = document.getElementById('terminName').value;
@@ -362,6 +367,7 @@ function saveAppointment() {
         }
 
         let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+        
         let nStartMin = parseTimeStr(start, "00:00");
         let nEndeMin = parseTimeStr(ende, "23:59");
         if (ende === "00:00" || nEndeMin === 0) nEndeMin = 1440; 
@@ -376,37 +382,15 @@ function saveAppointment() {
             return false;
         });
 
-        const events = JSON.parse(localStorage.getItem('appEvents')) || [];
-        const overlapEvent = events.find(e => {
-            if (e.datum === datum) {
-                let eStartMin = parseTimeStr(e.start, "00:00");
-                let eEndeMin = parseTimeStr(e.ende, "23:59");
-                if (e.ende === "00:00" || eEndeMin === 0) eEndeMin = 1440;
-                return (nStartMin < eEndeMin && nEndeMin > eStartMin);
-            }
-            return false;
-        });
-
-        if (overlap || overlapEvent) {
-             let msg = overlap ? `den Termin "${overlap.name}"` : `das Event "${overlapEvent.name}"`;
-             alert(`⚠️ DOPPELBUCHUNG VERHINDERT!\n\nDu hast zur selben Zeit bereits ${msg}.\nBitte ändere die Zeit.`);
-             return;
+        if (overlap) {
+            alert(`⚠️ DOPPELBUCHUNG VERHINDERT!\n\nDu hast zur selben Zeit bereits den Termin "${overlap.name}" (${overlap.start} - ${overlap.ende} Uhr).\nBitte ändere die Zeit.`);
+            return; 
         }
 
         let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-        let kundeGefunden = false;
-        let kId = window.selectedKundeId || null;
-
-        // WICHTIG: Erst nach ID suchen, dann nach Kontakt, dann nach exaktem Namen
-        if (kId) {
-            kundeGefunden = kunden.find(k => k.id === kId);
-        } 
-        if (!kundeGefunden && kontakt && kontakt.trim() !== '') {
-            kundeGefunden = kunden.find(k => k.kontakt && k.kontakt.trim() === kontakt.trim());
-        } 
-        if (!kundeGefunden) {
-            kundeGefunden = kunden.find(k => k.name && k.name.toLowerCase() === name.toLowerCase().trim());
-        }
+        
+        // Wir suchen den Kunden knallhart über den Namen
+        let kundeGefunden = kunden.find(k => k.name.toLowerCase().trim() === name.toLowerCase().trim());
 
         if (!kundeGefunden) {
             const neuerKunde = {
@@ -422,13 +406,33 @@ function saveAppointment() {
             };
             kunden.push(neuerKunde);
             localStorage.setItem('appKunden', JSON.stringify(kunden));
-            kundeGefunden = neuerKunde;
-        } 
+        } else {
+            let kIndex = kunden.findIndex(k => k.id === kundeGefunden.id);
+            let updated = false;
+            
+            // Wenn eine neue Nummer/Plattform im Termin eingetippt wird, überschreibe das echte DB Profil sofort!
+            if (kontakt.trim() !== '' && kunden[kIndex].kontakt !== kontakt.trim()) {
+                kunden[kIndex].kontakt = kontakt.trim();
+                if(plattform !== 'none') kunden[kIndex].plattform = plattform;
+                updated = true;
+            }
+            if (preis && kunden[kIndex].preis !== preis) {
+                kunden[kIndex].preis = preis;
+                updated = true;
+            }
+            if (praeferenz !== 'none' && kunden[kIndex].praeferenz !== praeferenz) {
+                kunden[kIndex].praeferenz = praeferenz;
+                updated = true;
+            }
+            
+            if (updated) {
+                localStorage.setItem('appKunden', JSON.stringify(kunden));
+            }
+        }
 
         if (currentEditId) {
             const index = termine.findIndex(t => t.id === currentEditId);
             if(index > -1) {
-                termine[index].kundeId = kundeGefunden.id;
                 termine[index].name = name.trim();
                 termine[index].datum = datum;
                 termine[index].start = start;
@@ -444,7 +448,6 @@ function saveAppointment() {
         } else {
             const neuerTermin = {
                 id: Date.now(),
-                kundeId: kundeGefunden.id,
                 name: name.trim(),
                 datum: datum,
                 start: start,
@@ -533,17 +536,13 @@ function updateLiveSystem() {
 
     const countdownElement = document.getElementById('header-countdown');
     if (countdownElement && countdownElement.innerText !== "SUPABASE CONNECTED") {
-        
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-        const events = JSON.parse(localStorage.getItem('appEvents')) || [];
-        const allItems = [...termine, ...events];
-
         const jetzt = new Date();
         const jetztTime = jetzt.getTime();
         
         const heuteKalenderTime = new Date(jetzt.getFullYear(), jetzt.getMonth(), jetzt.getDate()).getTime();
 
-        let zukuenftigeTermine = allItems
+        let zukuenftigeTermine = termine
             .filter(t => t && t.datum && t.start && typeof t.start === 'string' && t.start.includes(':'))
             .map(t => {
                 const parts = t.datum.split('-'); 
@@ -582,9 +581,6 @@ function renderWeek() {
     if (!wochenContainer) return;
 
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
-    const events = JSON.parse(localStorage.getItem('appEvents')) || [];
-    const allItems = [...termine, ...events.map(e => ({...e, isEvent: true}))];
-
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
     const settings = { ...DEFAULTS, ...storedSettings };
 
@@ -597,7 +593,7 @@ function renderWeek() {
 
     if(gesamtArbeitsMin <= 0) return;
 
-    allItems.forEach(t => {
+    termine.forEach(t => {
         if (!t || !t.datum || !t.start || !t.ende || !t.start.includes(':') || !t.ende.includes(':')) return;
 
         const tagZeile = document.querySelector(`.tag-zeile[data-datum="${t.datum}"]`);
@@ -634,22 +630,16 @@ function renderWeek() {
                     const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
 
                     const segment = document.createElement('div');
-                    
-                    const safeKat = t.isEvent ? 'event' : (t.kat || 'kat1');
+                    const safeKat = t.kat || 'kat1';
                     segment.className = `termin-segment ${safeKat}`;
                     segment.style.left = linksPosition + '%';
                     segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
-                    
-                    if (t.isEvent) {
-                        segment.style.background = `rgba(255, 51, 0, 0.2)`;
-                        segment.style.borderLeft = `3px solid ${t.color || '#ff3300'}`;
-                    }
                     
                     if (isOutsideLeft || isOutsideRight) {
                         segment.style.opacity = '0.5';
                     }
                     
-                    const katName = t.isEvent ? '🔥 ' + t.name : (settings[safeKat + "_name"] || "Termin");
+                    const katName = settings[safeKat + "_name"] || "Termin";
                     
                     let timeText = `${t.start} - ${t.ende}`;
                     if(isOutsideLeft) timeText = `<< ${timeText}`;
@@ -657,7 +647,7 @@ function renderWeek() {
                     
                     segment.innerHTML = `
                         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
-                            <span class="status-label" style="margin-bottom: 2px; ${t.isEvent ? 'color:#ff3300;' : ''}">${katName}</span>
+                            <span class="status-label" style="margin-bottom: 2px;">${katName}</span>
                             <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
                         </div>
                     `;

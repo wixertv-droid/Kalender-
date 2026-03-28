@@ -462,7 +462,7 @@ function saveEvent() {
         gWeight: document.getElementById('evGirlWeight').value,
         gType: document.getElementById('evGirlType').value,
         
-        ns: document.getElementById('evNS').value,
+        ns: document.getElementById('evNS').value = 'Ja Hiv Schnelltest wird vor Ort gemacht ';
         video: document.getElementById('evVideo').value,
         bilder: document.getElementById('evBilder').value,
         vorlieben: document.getElementById('evVorlieben').value,

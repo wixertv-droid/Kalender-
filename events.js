@@ -190,7 +190,7 @@ function openEventSetup(isNew = false) {
         
         document.getElementById('evVorlieben').value = '';
         document.getElementById('evTabus').value = '';
-        document.getElementById('evNS').value = 'Nein';
+        document.getElementById('evNS').value = 'Ja Hiv Schnelltest wird vor Ort gemacht ';
         document.getElementById('evVideo').value = 'Keine';
         document.getElementById('evBilder').value = 'Ja';
         document.getElementById('evPraef').value = 'AO';

@@ -12,6 +12,42 @@
     <title>Agenda 2050 | Setup</title>
     <link rel="stylesheet" href="style.css">
     <script src="app.js" defer></script>
+    <style>
+        .sperr-liste {
+            margin-top: 15px;
+            border-top: 1px dashed rgba(5, 217, 232, 0.3);
+            padding-top: 15px;
+        }
+        .sperr-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border-left: 3px solid #ff3300;
+        }
+        .sperr-info {
+            font-size: 0.85rem;
+            color: #ccc;
+        }
+        .sperr-titel {
+            font-weight: bold;
+            color: white;
+            margin-bottom: 3px;
+        }
+        .btn-delete-sperre {
+            background: rgba(255, 51, 0, 0.2);
+            border: 1px solid #ff3300;
+            color: #ff3300;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
 
@@ -82,6 +118,43 @@
                     <input type="time" id="arbeitsEnde" class="cyber-input-full">
                 </div>
             </div>
+        </div>
+
+        <div class="settings-card" style="border-left: 4px solid #ff3300;">
+            <div class="setting-title" style="color: #ff3300; border-bottom-color: rgba(255, 51, 0, 0.3);">Sperrzeiten (Urlaub / Privat)</div>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Blockiert Bereiche im Kalender. Trage halbe oder ganze Tage ein.</p>
+            
+            <div class="form-group">
+                <label class="input-label" style="color: #ff3300;">Grund / Bezeichnung</label>
+                <input type="text" id="sperrName" class="cyber-input-full" placeholder="z.B. Urlaub, Arzt, Periode...">
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label class="input-label">Start Datum</label>
+                    <input type="date" id="sperrStartDatum" class="cyber-input-full">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label class="input-label">Start Uhrzeit</label>
+                    <input type="time" id="sperrStartZeit" class="cyber-input-full" value="00:00">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label class="input-label">End Datum</label>
+                    <input type="date" id="sperrEndDatum" class="cyber-input-full">
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label class="input-label">End Uhrzeit</label>
+                    <input type="time" id="sperrEndZeit" class="cyber-input-full" value="23:59">
+                </div>
+            </div>
+
+            <button class="btn-save" onclick="addSperrzeit()" style="background: rgba(255, 51, 0, 0.1); border: 1px solid #ff3300; color: #ff3300; width: 100%;">Sperrzeit Hinzufügen</button>
+            
+            <div class="sperr-liste" id="sperrzeitenListe">
+                </div>
         </div>
 
         <div class="settings-card">
@@ -202,6 +275,9 @@
             document.getElementById('plat3').value = s.plat3 || d.plat3;
             document.getElementById('plat4').value = s.plat4 || d.plat4;
 
+            // Lade Sperrzeiten in die Liste
+            renderSperrzeitenListe();
+
             setTimeout(() => {
                 const loader = document.getElementById('app-loader');
                 if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
@@ -216,7 +292,6 @@
             document.getElementById('confirmPin').type = type;
         }
 
-        // KORRIGIERTE PIN-SPEICHERUNG MIT BESTÄTIGUNG
         function changeSystemPin(btnElement) {
             const oldInput = document.getElementById('oldPin').value;
             const newInput = document.getElementById('newPin').value;
@@ -236,7 +311,6 @@
                 return;
             }
 
-            // Speichert lokal -> app.js fängt es ab und sendet es sofort an Supabase!
             localStorage.setItem('appPin', newInput);
             
             const originalText = btnElement.innerText;
@@ -257,6 +331,95 @@
                 btnElement.style.color = "";
             }, 800);
         }
+
+        // --- NEU: SPERRZEITEN LOGIK ---
+        function addSperrzeit() {
+            const name = document.getElementById('sperrName').value.trim();
+            const sDatum = document.getElementById('sperrStartDatum').value;
+            const sZeit = document.getElementById('sperrStartZeit').value;
+            const eDatum = document.getElementById('sperrEndDatum').value;
+            const eZeit = document.getElementById('sperrEndZeit').value;
+
+            if (!name || !sDatum || !eDatum) {
+                alert("Bitte Grund, Start- und Enddatum eintragen!");
+                return;
+            }
+
+            // Sicherstellen, dass das Enddatum nicht vor dem Startdatum liegt
+            const startD = new Date(`${sDatum}T${sZeit}`);
+            const endD = new Date(`${eDatum}T${eZeit}`);
+            if (endD <= startD) {
+                alert("Fehler: Das Ende der Sperrung darf nicht vor dem Start liegen.");
+                return;
+            }
+
+            let sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || [];
+            
+            sperrzeiten.push({
+                id: Date.now(),
+                name: name,
+                startDatum: sDatum,
+                startZeit: sZeit,
+                endDatum: eDatum,
+                endZeit: eZeit
+            });
+
+            // Speichern löst den Cloud-Upload in der app.js aus
+            localStorage.setItem('appSperrzeiten', JSON.stringify(sperrzeiten));
+            
+            // Felder leeren
+            document.getElementById('sperrName').value = '';
+            document.getElementById('sperrStartDatum').value = '';
+            document.getElementById('sperrEndDatum').value = '';
+            
+            renderSperrzeitenListe();
+        }
+
+        function deleteSperrzeit(id) {
+            let sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || [];
+            sperrzeiten = sperrzeiten.filter(s => s.id !== id);
+            localStorage.setItem('appSperrzeiten', JSON.stringify(sperrzeiten));
+            renderSperrzeitenListe();
+        }
+
+        function renderSperrzeitenListe() {
+            const container = document.getElementById('sperrzeitenListe');
+            let sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || [];
+            
+            container.innerHTML = '';
+
+            if (sperrzeiten.length === 0) {
+                container.innerHTML = '<div style="color: #666; font-size: 0.85rem; text-align: center; font-style: italic;">Keine aktiven Sperrzeiten vorhanden.</div>';
+                return;
+            }
+
+            // Sortieren nach Startdatum
+            sperrzeiten.sort((a, b) => new Date(a.startDatum) - new Date(b.startDatum));
+
+            sperrzeiten.forEach(s => {
+                // Deutsches Datumsformat für Anzeige
+                const sdFormat = s.startDatum.split('-').reverse().join('.');
+                const edFormat = s.endDatum.split('-').reverse().join('.');
+                
+                let timeStr = "";
+                if (s.startDatum === s.endDatum) {
+                    timeStr = `${sdFormat} (${s.startZeit} - ${s.endZeit} Uhr)`;
+                } else {
+                    timeStr = `${sdFormat} (${s.startZeit}) bis ${edFormat} (${s.endZeit})`;
+                }
+
+                container.innerHTML += `
+                    <div class="sperr-item">
+                        <div class="sperr-info">
+                            <div class="sperr-titel">${s.name}</div>
+                            <div>${timeStr}</div>
+                        </div>
+                        <button class="btn-delete-sperre" onclick="deleteSperrzeit(${s.id})">✖</button>
+                    </div>
+                `;
+            });
+        }
+        // --- ENDE SPERRZEITEN LOGIK ---
 
         function saveSystemSettings() {
             const btn = document.getElementById('save-btn');
@@ -281,7 +444,6 @@
                 plat4: document.getElementById('plat4').value
             };
 
-            // Löst den Supabase-Upload in der app.js aus
             localStorage.setItem('appEinstellungen', JSON.stringify(newSettings));
             
             if (typeof ladeUndWendeEinstellungenAn === 'function') {
@@ -320,6 +482,7 @@
                 termine: JSON.parse(localStorage.getItem('appTermine')) || [],
                 kunden: JSON.parse(localStorage.getItem('appKunden')) || [],
                 einstellungen: JSON.parse(localStorage.getItem('appEinstellungen')) || {},
+                sperrzeiten: JSON.parse(localStorage.getItem('appSperrzeiten')) || [], // Nimmt Sperrzeiten ins Backup auf
                 exportDate: new Date().toISOString()
             };
 
@@ -349,6 +512,7 @@
                         if (importedData.termine) localStorage.setItem('appTermine', JSON.stringify(importedData.termine));
                         if (importedData.kunden) localStorage.setItem('appKunden', JSON.stringify(importedData.kunden));
                         if (importedData.einstellungen) localStorage.setItem('appEinstellungen', JSON.stringify(importedData.einstellungen));
+                        if (importedData.sperrzeiten) localStorage.setItem('appSperrzeiten', JSON.stringify(importedData.sperrzeiten)); // Lädt Sperrzeiten aus Backup
                         
                         alert("✅ SYNC ERFOLGREICH: Alle Daten wurden wiederhergestellt!");
                         location.reload(); 

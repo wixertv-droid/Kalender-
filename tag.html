@@ -188,12 +188,12 @@
                 <input type="date" id="terminDatum" class="cyber-input-full">
             </div>
 
-            <div style="display:flex; gap:15px;">
-                <div class="form-group" style="flex:1;">
+            <div style="display:flex; gap:15px; flex-wrap: wrap;">
+                <div class="form-group" style="flex:1; min-width: 130px;">
                     <label class="input-label">Startzeit</label>
                     <input type="time" id="terminStart" class="cyber-input-full">
                 </div>
-                <div class="form-group" style="flex:1;">
+                <div class="form-group" style="flex:1; min-width: 130px;">
                     <label class="input-label">Endzeit</label>
                     <input type="time" id="terminEnde" class="cyber-input-full">
                 </div>
@@ -327,7 +327,6 @@
                         document.getElementById('terminPreis').value = k.preis || '';
                         document.getElementById('terminPraeferenz').value = k.praeferenz || 'none';
                         
-                        // FIX: Auch die Kategorie (Status) in das Formular laden!
                         const selKat = document.getElementById('terminKategorie');
                         if (selKat && k.status && k.status !== 'none') { 
                             selKat.value = k.status; 
@@ -494,7 +493,7 @@
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
                 const events = JSON.parse(localStorage.getItem('appEvents')) || [];
-                const sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || []; // NEU
+                const sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || [];
                 const kundenDB = JSON.parse(localStorage.getItem('appKunden')) || [];
                 const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { arbeitsStart: '08:00', arbeitsEnde: '22:00' };
                 const matrix = document.getElementById('timeline-matrix');

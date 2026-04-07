@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.16 - SYNC FESTUNG)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.17 - SYNC REPARATUR)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -33,7 +33,6 @@ localStorage.setItem = function(key, value) {
 
     if (["appTermine", "appKunden", "appEinstellungen", "appPin", "appEvents", "appSperrzeiten"].includes(key)) {
         clearTimeout(syncTimeout);
-        // Puffer auf 500ms erhöht für sichereren Upload
         syncTimeout = setTimeout(async () => {
             isUploading = true;
             const newTimestamp = new Date().toISOString() + "-" + Math.random().toString(36).substring(2, 8);
@@ -61,7 +60,6 @@ localStorage.setItem = function(key, value) {
                     body: JSON.stringify(payload)
                 });
                 
-                // FEHLER-KONTROLLE: Upload nur freigeben, wenn Supabase OK gibt
                 if (!response.ok) {
                     console.error("❌ Cloud Upload abgelehnt!", await response.text());
                     return; 
@@ -81,19 +79,23 @@ async function autoFetchCloud() {
     if (isUploading) return; 
     
     try {
-        // ANTI-CACHE-BUSTER (t=Date.now()) zwingt das Handy, den Cache zu ignorieren!
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*&nocache=${Date.now()}`, {
+        // FIX: Kein '&nocache=' mehr in der URL, da Supabase das als Spalte interpretiert!
+        // Wir nutzen nur noch das fetch-Attribut `cache: 'no-store'`, was völlig ausreicht.
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*`, {
             method: 'GET',
             headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Cache-Control': 'no-store, no-cache, must-revalidate',
-                'Pragma': 'no-cache'
+                'Cache-Control': 'no-cache'
             },
             cache: 'no-store'
         });
 
-        if (!response.ok) return;
+        if (!response.ok) {
+            console.error("❌ Supabase GET Fehler:", await response.text());
+            return;
+        }
+        
         const data = await response.json();
         
         if(data && data.length > 0) {
@@ -135,7 +137,7 @@ async function initCloud() {
     isCloudConnected = true;
     
     await autoFetchCloud();
-    setInterval(autoFetchCloud, 10000); 
+    setInterval(autoFetchCloud, 5000); // Auf 5 Sekunden beschleunigt für schnellere Updates!
 
     const hdCountdown = document.getElementById('header-countdown');
     if(hdCountdown) {

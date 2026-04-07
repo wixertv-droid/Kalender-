@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.15 - SPERRZEITEN)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.16 - SYNC FESTUNG)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -31,14 +31,13 @@ localStorage.setItem = function(key, value) {
 
     if (isSyncingFromCloud) return; 
 
-    // NEU: appSperrzeiten zum Auslöser hinzugefügt
     if (["appTermine", "appKunden", "appEinstellungen", "appPin", "appEvents", "appSperrzeiten"].includes(key)) {
         clearTimeout(syncTimeout);
+        // Puffer auf 500ms erhöht für sichereren Upload
         syncTimeout = setTimeout(async () => {
             isUploading = true;
             const newTimestamp = new Date().toISOString() + "-" + Math.random().toString(36).substring(2, 8);
             
-            // NEU: sperrzeiten im Payload hinzugefügt
             const payload = {
                 id: 1, 
                 termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
@@ -51,7 +50,7 @@ localStorage.setItem = function(key, value) {
             };
 
             try {
-                await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
                     method: 'PATCH', 
                     headers: {
                         'apikey': SUPABASE_KEY,
@@ -62,13 +61,19 @@ localStorage.setItem = function(key, value) {
                     body: JSON.stringify(payload)
                 });
                 
+                // FEHLER-KONTROLLE: Upload nur freigeben, wenn Supabase OK gibt
+                if (!response.ok) {
+                    console.error("❌ Cloud Upload abgelehnt!", await response.text());
+                    return; 
+                }
+
                 originalSetItem.call(localStorage, 'lastCloudUpdate', newTimestamp);
                 console.log("☁️ Auto-Upload erfolgreich!");
-            } catch(e) { console.error("Cloud Upload Fehler:", e); }
+            } catch(e) { console.error("Cloud Upload Netzwerkfehler:", e); }
             finally {
                 isUploading = false;
             }
-        }, 300); 
+        }, 500); 
     }
 };
 
@@ -76,12 +81,16 @@ async function autoFetchCloud() {
     if (isUploading) return; 
     
     try {
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*`, {
+        // ANTI-CACHE-BUSTER (t=Date.now()) zwingt das Handy, den Cache zu ignorieren!
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*&nocache=${Date.now()}`, {
             method: 'GET',
             headers: {
                 'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`
-            }
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Cache-Control': 'no-store, no-cache, must-revalidate',
+                'Pragma': 'no-cache'
+            },
+            cache: 'no-store'
         });
 
         if (!response.ok) return;
@@ -100,8 +109,6 @@ async function autoFetchCloud() {
             if (dbData.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen));
             if (dbData.pin) originalSetItem.call(localStorage, 'appPin', dbData.pin);
             if (dbData.events) originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events)); 
-            
-            // NEU: Sperrzeiten aus der Cloud laden
             if (dbData.sperrzeiten) originalSetItem.call(localStorage, 'appSperrzeiten', JSON.stringify(dbData.sperrzeiten)); 
             
             originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update);
@@ -582,14 +589,13 @@ function updateLiveSystem() {
     }
 }
 
-// --- V6.15 FIX: SPERRZEITEN WERDEN IN DER WOCHE GEZEICHNET ---
 function renderWeek() {
     const wochenContainer = document.querySelector('.wochen-container');
     if (!wochenContainer) return;
 
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
     const events = JSON.parse(localStorage.getItem('appEvents')) || [];
-    const sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || []; // NEU
+    const sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || []; 
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
     const settings = { ...DEFAULTS, ...storedSettings };
 
@@ -610,11 +616,8 @@ function renderWeek() {
         kat: 'event'
     }));
     
-    // NEU: Sperrzeiten für die Zeitleiste formatieren
     const formatiertSperrzeiten = [];
     sperrzeiten.forEach(s => {
-        // Wir nehmen an, dass Sperrzeiten am gleichen Tag stattfinden, 
-        // oder wir erstellen für jeden Tag der Sperrzeit einen eigenen Eintrag
         let aktDatum = new Date(s.startDatum);
         const endDatum = new Date(s.endDatum);
         
@@ -623,7 +626,6 @@ function renderWeek() {
             let drawStart = s.startZeit;
             let drawEnd = s.endZeit;
             
-            // Wenn es sich über mehrere Tage erstreckt, müssen Start/Ende an den Zwischentagen angepasst werden
             if (isoDatum !== s.startDatum) drawStart = "00:00";
             if (isoDatum !== s.endDatum) drawEnd = "23:59";
             
@@ -684,7 +686,6 @@ function renderWeek() {
                     if(isOutsideLeft) timeText = `<< ${timeText}`;
                     if(isOutsideRight) timeText = `${timeText} >>`;
 
-                    // NEU: SPERRZEIT ZEICHNEN
                     if (t.isSperre) {
                         segment.className = `termin-segment`;
                         segment.style.background = `repeating-linear-gradient(45deg, rgba(255, 51, 0, 0.2), rgba(255, 51, 0, 0.2) 10px, rgba(0, 0, 0, 0.4) 10px, rgba(0, 0, 0, 0.4) 20px)`;
@@ -696,7 +697,6 @@ function renderWeek() {
                                 <span class="status-label" style="margin-bottom: 2px; color: #ff3300; font-weight: bold; font-size:0.6rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%; text-align: center;">⛔ ${t.name}</span>
                             </div>
                         `;
-                        // Klick auf Sperrzeit -> Gehe zu Einstellungen
                         segment.onclick = (e) => {
                             e.stopPropagation();
                             window.location.href = 'einstellungen.html';

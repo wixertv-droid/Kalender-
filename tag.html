@@ -317,6 +317,8 @@
                     d.className = 'vorschlag-item';
                     let warningHTML = (k.noshows && k.noshows > 0) ? `<span style="color: var(--neon-red); font-weight: bold; float: right; font-size: 0.8rem;">⚠️ ${k.noshows}x NO-SHOW</span>` : '';
                     d.innerHTML = `<strong>${k.name}</strong> ${warningHTML}<br><small style="color:#aaa;">${k.plattform !== 'none' ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</small>`;
+                    
+                    // Klick auf Such-Vorschlag
                     d.onclick = () => {
                         document.getElementById('terminKundeId').value = k.id;
                         document.getElementById('terminName').value = k.name;
@@ -324,6 +326,13 @@
                         document.getElementById('terminKontakt').value = k.kontakt || '';
                         document.getElementById('terminPreis').value = k.preis || '';
                         document.getElementById('terminPraeferenz').value = k.praeferenz || 'none';
+                        
+                        // FIX: Auch die Kategorie (Status) in das Formular laden!
+                        const selKat = document.getElementById('terminKategorie');
+                        if (selKat && k.status && k.status !== 'none') { 
+                            selKat.value = k.status; 
+                        }
+                        
                         if(typeof toggleKontaktFeld === 'function') toggleKontaktFeld();
                         vBox.style.display = 'none';
                         if(k.noshows && k.noshows > 0) alert(`ACHTUNG: Dieser Kunde ist in der Vergangenheit bereits ${k.noshows}x nicht erschienen!`);
@@ -370,7 +379,6 @@
             
             document.getElementById('detailKontaktFull').innerHTML = kontaktText;
             
-            // PROFIL LINK FIX: Prüft profilLink, profillink und link!
             const linkBtnDiv = document.getElementById('detailLinkBtn');
             let linkData = '';
             if (kunde) { linkData = kunde.profilLink || kunde.profillink || kunde.link || ''; }
@@ -481,11 +489,12 @@
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0], false);
         }
 
-        // TIMELINE RENDERING
+        // TIMELINE RENDERING (Inklusive Sperrzeiten)
         function renderTimeline(datum, isInitialRender = false) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
                 const events = JSON.parse(localStorage.getItem('appEvents')) || [];
+                const sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || []; // NEU
                 const kundenDB = JSON.parse(localStorage.getItem('appKunden')) || [];
                 const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || { arbeitsStart: '08:00', arbeitsEnde: '22:00' };
                 const matrix = document.getElementById('timeline-matrix');
@@ -494,7 +503,35 @@
                 
                 const tagesTermine = termine.filter(t => t.datum === datum);
                 const tagesEvents = events.filter(e => e.datum === datum).map(e => ({...e, isEvent: true, start: e.start || "00:00", ende: e.ende || "23:59"}));
-                let combinedItems = [...tagesTermine, ...tagesEvents];
+                
+                // SPERRZEITEN FÜR DIESEN TAG FORMATIEREN
+                const formatiertSperrzeiten = [];
+                sperrzeiten.forEach(s => {
+                    let aktDatum = new Date(s.startDatum);
+                    const endDatum = new Date(s.endDatum);
+                    
+                    while (aktDatum <= endDatum) {
+                        const isoDatum = aktDatum.toISOString().split('T')[0];
+                        if (isoDatum === datum) {
+                            let drawStart = s.startZeit;
+                            let drawEnd = s.endZeit;
+                            
+                            if (isoDatum !== s.startDatum) drawStart = "00:00";
+                            if (isoDatum !== s.endDatum) drawEnd = "23:59";
+                            
+                            formatiertSperrzeiten.push({
+                                isSperre: true,
+                                id: s.id,
+                                name: s.name,
+                                start: drawStart,
+                                ende: drawEnd
+                            });
+                        }
+                        aktDatum.setDate(aktDatum.getDate() + 1);
+                    }
+                });
+
+                let combinedItems = [...tagesTermine, ...tagesEvents, ...formatiertSperrzeiten];
 
                 const now = new Date();
                 const currentDate = now.toISOString().split('T')[0];
@@ -567,7 +604,39 @@
                     
                     const isPast = (datum < currentDate) || (datum === currentDate && eMin <= (now.getHours()*60 + now.getMinutes()));
 
-                    if (t.isEvent) {
+                    // SPERRZEIT ZEICHNEN
+                    if (t.isSperre) {
+                        const f = '#ff3300';
+                        block.style.borderLeftColor = f;
+                        block.style.background = `repeating-linear-gradient(45deg, rgba(255, 51, 0, 0.1), rgba(255, 51, 0, 0.1) 10px, rgba(10, 15, 20, 0.8) 10px, rgba(10, 15, 20, 0.8) 20px)`;
+                        block.onclick = () => location.href = 'einstellungen.html';
+                        
+                        if (flexDir === 'row') {
+                            block.innerHTML = `
+                                <div class="cyber-node" style="border-color:${f};"></div>
+                                <div style="display:flex; align-items:center; gap: 10px; flex-grow: 1; overflow: hidden; white-space: nowrap;">
+                                    <span class="block-time">${t.start} - ${t.ende}</span>
+                                    <span class="block-title" style="color:${f};">⛔ ${t.name}</span>
+                                </div>
+                                <div class="stat-badge" style="border-color:${f}; color:${f};">SPERRE</div>
+                            `;
+                        } else {
+                            block.innerHTML = `
+                                <div class="cyber-node" style="border-color:${f};"></div>
+                                <div style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
+                                    <div style="display:flex; align-items:center;">
+                                        <div style="font-size: 1.5rem; margin-right: 10px; text-shadow: 0 0 10px ${f};">⛔</div>
+                                        <div>
+                                            <div class="block-title" style="color: ${f};">${t.name}</div>
+                                            <div class="block-time">${t.start} - ${t.ende}</div>
+                                        </div>
+                                    </div>
+                                    <div class="stat-badge" style="border-color:${f}; color:${f};">SPERRE</div>
+                                </div>
+                            `;
+                        }
+                    }
+                    else if (t.isEvent) {
                         const f = t.color || '#ff3300';
                         block.style.borderLeftColor = f;
                         block.style.background = `linear-gradient(90deg, rgba(255, 51, 0, 0.15) 0%, rgba(10, 15, 20, 0.8) 40%)`;
@@ -598,23 +667,16 @@
                         let expectedPreis = displayPreis || ''; 
                         let displayPraef = (dbKunde && dbKunde.praeferenz) ? dbKunde.praeferenz : (t.praeferenz || 'none');
                         
-                        // PROFIL LINK FIX AUCH HIER!
-                        let displayLink = '';
-                        if (dbKunde) { displayLink = dbKunde.profilLink || dbKunde.profillink || dbKunde.link || ''; }
+                        let displayLink = (dbKunde && dbKunde.profillink) ? dbKunde.profillink : ((dbKunde && dbKunde.link) ? dbKunde.link : '');
                         if (displayLink && !displayLink.startsWith('http')) displayLink = 'https://' + displayLink;
                         
                         let displayGroesse = (dbKunde && dbKunde.groesse && dbKunde.groesse !== "Unbekannt") ? dbKunde.groesse : '';
                         let displayVibe = (dbKunde && dbKunde.vibe) ? parseInt(dbKunde.vibe) : 0;
                         
-                        const p1 = (dbKunde && dbKunde.plattform) ? dbKunde.plattform : t.plattform;
-                        const k1 = (dbKunde && dbKunde.kontakt) ? dbKunde.kontakt : t.kontakt;
-                        const p2 = (dbKunde && dbKunde.plattform2) ? dbKunde.plattform2 : null;
-                        const k2 = (dbKunde && dbKunde.kontakt2) ? dbKunde.kontakt2 : null;
-                        
-                        let kontaktArr = [];
-                        if (k1 && k1.trim() !== '') kontaktArr.push((p1 && p1 !== 'none') ? `${p1}: ${k1}` : k1);
-                        if (k2 && k2.trim() !== '') kontaktArr.push((p2 && p2 !== 'none') ? `${p2}: ${k2}` : k2);
-                        let displayKontakt = kontaktArr.join(' | ');
+                        const livePlattform = (dbKunde && dbKunde.plattform) ? dbKunde.plattform : t.plattform;
+                        const liveKontakt = (dbKunde && dbKunde.kontakt) ? dbKunde.kontakt : t.kontakt;
+                        let displayKontakt = "";
+                        if (liveKontakt) { displayKontakt = (livePlattform && livePlattform !== 'none' && livePlattform !== "") ? `${livePlattform}: ${liveKontakt}` : liveKontakt; }
                         
                         let statusHTML = '';
                         if (t.status === 'done') statusHTML = `<div class="status-done">💰 ${t.umsatz} €</div>`;
@@ -624,7 +686,7 @@
                         let deleteBtn = `<button onclick="event.stopPropagation(); deleteTermin(${t.id})" style="background: rgba(255, 0, 60, 0.1); border: 1px solid var(--neon-red); color: var(--neon-red); padding: 5px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.7rem;">✖ Löschen</button>`;
 
                         if (flexDir === 'row') {
-                            let kontaktMini = displayKontakt ? `<span style="font-size: 0.7rem; color: #aaa; margin-left: 10px;">📱 ${kontaktArr[0]} ${kontaktArr.length > 1 ? '(+1)' : ''}</span>` : '';
+                            let kontaktMini = displayKontakt ? `<span style="font-size: 0.7rem; color: #aaa; margin-left: 10px;">📱 ${displayKontakt}</span>` : '';
                             let miniInfo = '';
                             if(displayPreis) miniInfo += ` 💰${displayPreis}`;
                             if(displayPraef && displayPraef !== 'none') miniInfo += ` 💦${displayPraef}`;
@@ -678,7 +740,6 @@
                     matrix.appendChild(block);
                 });
 
-                // --- INTELLIGENTES AUTO-SCROLLING ---
                 if (isInitialRender) {
                     setTimeout(() => {
                         const matrixRect = matrix.getBoundingClientRect();

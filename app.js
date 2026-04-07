@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.19 - INIT FIX & SMART SAVE)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.20 - VOLLSTÄNDIG & KORREKT)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -177,6 +177,174 @@ function ladeUndWendeEinstellungenAn() {
         root.style.setProperty('--color-kat2', settings.kat2_farbe);
         root.style.setProperty('--color-kat3', settings.kat3_farbe);
     } catch (e) {}
+}
+
+function generiereWochenAnsicht() {
+    const container = document.querySelector('.wochen-container');
+    if (!container) return; 
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let startDatum = new Date();
+    if (urlParams.get('d')) startDatum = new Date(urlParams.get('d'));
+
+    let tag = startDatum.getDay();
+    let diff = startDatum.getDate() - tag + (tag === 0 ? -6 : 1);
+    let montag = new Date(startDatum.setDate(diff));
+
+    const wochentage = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+    const heute = new Date();
+    const heuteISO = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+    const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+    const settings = { ...DEFAULTS, ...storedSettings }; 
+    
+    const zeiten = getArbeitsZeiten(settings);
+    const startMin = zeiten.startMin;
+    const endeMin = zeiten.endeMin;
+    
+    const viertel = zeiten.gesamtArbeitsMin / 4;
+    const q1Min = Math.floor(startMin + viertel);
+    const midMin = Math.floor(startMin + viertel * 2);
+    const q3Min = Math.floor(startMin + viertel * 3);
+    
+    const timeStr = (m) => {
+        let h = Math.floor(m / 60);
+        let min = m % 60;
+        if (h === 24) return `00:${String(min).padStart(2, '0')}`;
+        return String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+    };
+    
+    const skalaHTML = `<span>${settings.arbeitsStart}</span><span>${timeStr(q1Min)}</span><span>${timeStr(midMin)}</span><span>${timeStr(q3Min)}</span><span>${settings.arbeitsEnde}</span>`;
+
+    container.innerHTML = ''; 
+
+    for (let i = 0; i < 7; i++) {
+        let aktuellesDatum = new Date(montag);
+        aktuellesDatum.setDate(montag.getDate() + i);
+        
+        let isoDatum = new Date(aktuellesDatum.getTime() - (aktuellesDatum.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+        let tagZahl = String(aktuellesDatum.getDate()).padStart(2, '0');
+        let monatZahl = String(aktuellesDatum.getMonth() + 1).padStart(2, '0');
+        
+        let isHeute = (isoDatum === heuteISO) ? 'heute' : '';
+        let timelineId = (isoDatum === heuteISO) ? 'id="timeline-heute"' : '';
+
+        if (i === 0 && document.getElementById('header-monat')) {
+            const monate = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+            const cloudDot = isCloudConnected ? ' <span id="cloud-dot-indicator" style="color: var(--neon-green); font-size: 0.6em; vertical-align: super; text-shadow: 0 0 10px var(--neon-green);" title="Cloud Sync Aktiv">●</span>' : '';
+            document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
+        }
+
+        container.innerHTML += `
+            <div class="tag-zeile ${isHeute}" data-datum="${isoDatum}" style="cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;" onclick="window.location.href='tag.html?d=${isoDatum}'">
+                <div class="tag-header"><span class="tag-name">${wochentage[i]} <small>${tagZahl}.${monatZahl}.</small></span></div>
+                <div class="timeline-horizontal" ${timelineId} style="background-image: repeating-linear-gradient(to right, transparent, transparent 24.8%, rgba(255,255,255,0.06) 25%); overflow: visible;"></div>
+                <div class="timeline-skala">${skalaHTML}</div>
+            </div>
+        `;
+    }
+}
+
+function openModal(editId = null) {
+    const modal = document.getElementById('terminModal');
+    if (!modal) return;
+
+    currentEditId = editId;
+
+    const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+    const settings = { ...DEFAULTS, ...storedSettings };
+    
+    const catDropdown = document.getElementById('terminKategorie');
+    if (catDropdown) {
+        catDropdown.innerHTML = `
+            <option value="kat1">${settings.kat1_name}</option>
+            <option value="kat2">${settings.kat2_name}</option>
+            <option value="kat3">${settings.kat3_name}</option>
+        `;
+    }
+
+    const platDropdown = document.getElementById('terminPlattform');
+    if (platDropdown) {
+        platDropdown.innerHTML = `
+            <option value="none">Keine Plattform</option>
+            <option value="${settings.plat1}">${settings.plat1}</option>
+            <option value="${settings.plat2}">${settings.plat2}</option>
+            <option value="${settings.plat3}">${settings.plat3}</option>
+            <option value="${settings.plat4}">${settings.plat4}</option>
+        `;
+    }
+
+    if (editId) {
+        const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+        const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
+        const t = termine.find(x => x.id === editId);
+        
+        if (t) {
+            let liveKunde = null;
+            if (t.kunde_id) {
+                liveKunde = kunden.find(k => k.id == t.kunde_id);
+            }
+            if (!liveKunde) {
+                liveKunde = kunden.find(k => k.name.toLowerCase().trim() === (t.name || '').toLowerCase().trim());
+            }
+
+            if(document.getElementById('terminKundeId')) {
+                document.getElementById('terminKundeId').value = liveKunde ? liveKunde.id : '';
+            }
+
+            document.getElementById('terminName').value = t.name || '';
+            document.getElementById('terminDatum').value = t.datum || '';
+            document.getElementById('terminStart').value = t.start || '';
+            document.getElementById('terminEnde').value = t.ende || '';
+            document.getElementById('terminKategorie').value = t.kat || 'kat1';
+            
+            document.getElementById('terminPlattform').value = (liveKunde && liveKunde.plattform) ? liveKunde.plattform : (t.plattform || 'none');
+            document.getElementById('terminKontakt').value = (liveKunde && liveKunde.kontakt) ? liveKunde.kontakt : (t.kontakt || '');
+            
+            document.getElementById('terminNotizen').value = t.notizen || '';
+            
+            if(document.getElementById('terminPreis')) {
+                document.getElementById('terminPreis').value = (liveKunde && liveKunde.preis) ? liveKunde.preis : (t.preis || '');
+            }
+            if(document.getElementById('terminPraeferenz')) {
+                document.getElementById('terminPraeferenz').value = (liveKunde && liveKunde.praeferenz) ? liveKunde.praeferenz : (t.praeferenz || 'none');
+            }
+        }
+    } else {
+        if(document.getElementById('terminKundeId')) document.getElementById('terminKundeId').value = '';
+        document.getElementById('terminName').value = '';
+        document.getElementById('terminKontakt').value = '';
+        document.getElementById('terminNotizen').value = '';
+        document.getElementById('terminStart').value = '';
+        document.getElementById('terminEnde').value = '';
+        
+        if(document.getElementById('terminPreis')) document.getElementById('terminPreis').value = '';
+        if(document.getElementById('terminPraeferenz')) document.getElementById('terminPraeferenz').value = 'none';
+    }
+
+    const kontaktContainer = document.getElementById('kontaktContainer');
+    if (kontaktContainer) {
+        const pValue = document.getElementById('terminPlattform').value;
+        kontaktContainer.style.display = (pValue !== 'none') ? 'block' : 'none';
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeModal() {
+    const modal = document.getElementById('terminModal');
+    if (modal) modal.style.display = 'none';
+    const vBox = document.getElementById('kundenVorschlaege');
+    if (vBox) vBox.style.display = 'none';
+    currentEditId = null;
+}
+
+function toggleKontaktFeld() {
+    const platSelect = document.getElementById('terminPlattform');
+    const container = document.getElementById('kontaktContainer');
+    if (platSelect && container) {
+        container.style.display = (platSelect.value !== 'none') ? 'block' : 'none';
+    }
 }
 
 // --- INTELLIGENTER SAVE ---
@@ -601,7 +769,7 @@ function renderWeek() {
 }
 
 // ============================================================================
-// WICHTIG: DIE INITIALISIERUNG BEIM LADEN DER SEITE
+// INITIALISIERUNG BEIM LADEN DER SEITE
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
     if (!sessionStorage.getItem('authKey')) {
@@ -622,7 +790,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(err => console.log('SW Fehler:', err));
     }
 
-    // Versteckt den Loading-Screen nach dem Laden!
     setTimeout(() => {
         const loader = document.getElementById('app-loader');
         if (loader) {

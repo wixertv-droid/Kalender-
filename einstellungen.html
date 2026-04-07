@@ -129,23 +129,23 @@
                 <input type="text" id="sperrName" class="cyber-input-full" placeholder="z.B. Urlaub, Arzt, Periode...">
             </div>
 
-            <div style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1; min-width: 130px;">
                     <label class="input-label">Start Datum</label>
                     <input type="date" id="sperrStartDatum" class="cyber-input-full">
                 </div>
-                <div class="form-group" style="flex: 1;">
+                <div class="form-group" style="flex: 1; min-width: 130px;">
                     <label class="input-label">Start Uhrzeit</label>
                     <input type="time" id="sperrStartZeit" class="cyber-input-full" value="00:00">
                 </div>
             </div>
             
-            <div style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                <div class="form-group" style="flex: 1; min-width: 130px;">
                     <label class="input-label">End Datum</label>
                     <input type="date" id="sperrEndDatum" class="cyber-input-full">
                 </div>
-                <div class="form-group" style="flex: 1;">
+                <div class="form-group" style="flex: 1; min-width: 130px;">
                     <label class="input-label">End Uhrzeit</label>
                     <input type="time" id="sperrEndZeit" class="cyber-input-full" value="23:59">
                 </div>
@@ -332,7 +332,7 @@
             }, 800);
         }
 
-        // --- NEU: SPERRZEITEN LOGIK ---
+        // --- SPERRZEITEN LOGIK ---
         function addSperrzeit() {
             const name = document.getElementById('sperrName').value.trim();
             const sDatum = document.getElementById('sperrStartDatum').value;
@@ -482,7 +482,7 @@
                 termine: JSON.parse(localStorage.getItem('appTermine')) || [],
                 kunden: JSON.parse(localStorage.getItem('appKunden')) || [],
                 einstellungen: JSON.parse(localStorage.getItem('appEinstellungen')) || {},
-                sperrzeiten: JSON.parse(localStorage.getItem('appSperrzeiten')) || [], // Nimmt Sperrzeiten ins Backup auf
+                sperrzeiten: JSON.parse(localStorage.getItem('appSperrzeiten')) || [],
                 exportDate: new Date().toISOString()
             };
 
@@ -512,7 +512,7 @@
                         if (importedData.termine) localStorage.setItem('appTermine', JSON.stringify(importedData.termine));
                         if (importedData.kunden) localStorage.setItem('appKunden', JSON.stringify(importedData.kunden));
                         if (importedData.einstellungen) localStorage.setItem('appEinstellungen', JSON.stringify(importedData.einstellungen));
-                        if (importedData.sperrzeiten) localStorage.setItem('appSperrzeiten', JSON.stringify(importedData.sperrzeiten)); // Lädt Sperrzeiten aus Backup
+                        if (importedData.sperrzeiten) localStorage.setItem('appSperrzeiten', JSON.stringify(importedData.sperrzeiten));
                         
                         alert("✅ SYNC ERFOLGREICH: Alle Daten wurden wiederhergestellt!");
                         location.reload(); 

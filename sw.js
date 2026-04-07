@@ -1,41 +1,34 @@
-const CACHE_NAME = 'agenda-2050-v3'; // <--- Das v3 ist der Schlüssel!
-const ASSETS = [
-  './',
-  './index.html',
-  './woche.html',
-  './jahr.html',
-  './kunden.html',
-  './einstellungen.html',
-  './style.css',
-  './app.js',
-  './manifest.json',
-  './icon.png'
-];
+const CACHE_NAME = 'agenda-2050-cache-v7';
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Zwingt den neuen Worker, sofort zu starten
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
+    self.skipWaiting(); // Zwingt den Service Worker, sich sofort zu aktualisieren
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
-    })
-  );
-  self.clients.claim(); // Übernimmt sofort die Kontrolle
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cache) => {
+                    if (cache !== CACHE_NAME) {
+                        return caches.delete(cache); // Löscht alte Caches
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
-  );
+    // 🚨 ANTI-CACHE-FESTUNG: Supabase API NIEMALS cachen! Immer live durchlassen!
+    if (event.request.url.includes('supabase.co')) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
+    // Für alle anderen Dateien (HTML, CSS, JS, Bilder): Netzwerk zuerst, dann Fallback auf Cache
+    event.respondWith(
+        fetch(event.request).catch(() => {
+            return caches.match(event.request);
+        })
+    );
 });

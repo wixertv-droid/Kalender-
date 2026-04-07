@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.18 - SMART SAVE)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.19 - INIT FIX & SMART SAVE)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -437,9 +437,207 @@ function updateLiveSystem() {
     }
 }
 
+function renderWeek() {
+    const wochenContainer = document.querySelector('.wochen-container');
+    if (!wochenContainer) return;
+
+    const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+    const events = JSON.parse(localStorage.getItem('appEvents')) || [];
+    const sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || []; 
+    const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
+    const settings = { ...DEFAULTS, ...storedSettings };
+
+    const zeiten = getArbeitsZeiten(settings);
+    const startMin = zeiten.startMin;
+    const endeMin = zeiten.endeMin;
+    const gesamtArbeitsMin = zeiten.gesamtArbeitsMin;
+
+    document.querySelectorAll('.termin-segment').forEach(el => el.remove());
+
+    if(gesamtArbeitsMin <= 0) return;
+
+    const formatiertEvents = events.map(e => ({
+        ...e,
+        isEvent: true,
+        start: e.start || "00:00",
+        ende: e.ende || "23:59",
+        kat: 'event'
+    }));
+    
+    const formatiertSperrzeiten = [];
+    sperrzeiten.forEach(s => {
+        let aktDatum = new Date(s.startDatum);
+        const endDatum = new Date(s.endDatum);
+        
+        while (aktDatum <= endDatum) {
+            const isoDatum = aktDatum.toISOString().split('T')[0];
+            let drawStart = s.startZeit;
+            let drawEnd = s.endZeit;
+            
+            if (isoDatum !== s.startDatum) drawStart = "00:00";
+            if (isoDatum !== s.endDatum) drawEnd = "23:59";
+            
+            formatiertSperrzeiten.push({
+                isSperre: true,
+                id: s.id,
+                name: s.name,
+                datum: isoDatum,
+                start: drawStart,
+                ende: drawEnd
+            });
+            
+            aktDatum.setDate(aktDatum.getDate() + 1);
+        }
+    });
+
+    const combinedItems = [...termine, ...formatiertEvents, ...formatiertSperrzeiten];
+
+    combinedItems.forEach(t => {
+        if (!t || !t.datum || !t.start || !t.ende || !t.start.includes(':') || !t.ende.includes(':')) return;
+
+        const tagZeile = document.querySelector(`.tag-zeile[data-datum="${t.datum}"]`);
+        if (tagZeile) {
+            const timeline = tagZeile.querySelector('.timeline-horizontal');
+            if (timeline) {
+                try {
+                    let tStartMin = parseTimeStr(t.start, "00:00");
+                    let tEndeMin = parseTimeStr(t.ende, "23:59");
+                    if (t.ende === "00:00" || tEndeMin === 0) tEndeMin = 1440; 
+
+                    let anzeigeStart = tStartMin;
+                    let anzeigeEnde = tEndeMin;
+                    let isOutsideLeft = false;
+                    let isOutsideRight = false;
+
+                    if (tEndeMin <= startMin) {
+                        anzeigeStart = startMin;
+                        anzeigeEnde = startMin + (gesamtArbeitsMin * 0.05); 
+                        isOutsideLeft = true;
+                    } else if (tStartMin >= endeMin) {
+                        anzeigeStart = endeMin - (gesamtArbeitsMin * 0.05);
+                        anzeigeEnde = endeMin;
+                        isOutsideRight = true;
+                    } else {
+                        if (anzeigeStart < startMin) { anzeigeStart = startMin; isOutsideLeft = true; }
+                        if (anzeigeEnde > endeMin) { anzeigeEnde = endeMin; isOutsideRight = true; }
+                    }
+
+                    let anzeigeDauer = anzeigeEnde - anzeigeStart;
+                    if (anzeigeDauer < (gesamtArbeitsMin * 0.03)) anzeigeDauer = gesamtArbeitsMin * 0.03;
+
+                    const linksPosition = ((anzeigeStart - startMin) / gesamtArbeitsMin) * 100;
+                    const breite = (anzeigeDauer / gesamtArbeitsMin) * 100;
+
+                    const segment = document.createElement('div');
+                    
+                    let timeText = `${t.start} - ${t.ende}`;
+                    if(isOutsideLeft) timeText = `<< ${timeText}`;
+                    if(isOutsideRight) timeText = `${timeText} >>`;
+
+                    if (t.isSperre) {
+                        segment.className = `termin-segment`;
+                        segment.style.background = `repeating-linear-gradient(45deg, rgba(255, 51, 0, 0.2), rgba(255, 51, 0, 0.2) 10px, rgba(0, 0, 0, 0.4) 10px, rgba(0, 0, 0, 0.4) 20px)`;
+                        segment.style.border = `1px dashed #ff3300`;
+                        segment.style.zIndex = "4"; 
+                        
+                        segment.innerHTML = `
+                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; overflow: hidden; padding: 0 2px;">
+                                <span class="status-label" style="margin-bottom: 2px; color: #ff3300; font-weight: bold; font-size:0.6rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%; text-align: center;">⛔ ${t.name}</span>
+                            </div>
+                        `;
+                        segment.onclick = (e) => {
+                            e.stopPropagation();
+                            window.location.href = 'einstellungen.html';
+                        };
+                        segment.style.pointerEvents = 'auto'; 
+                    }
+                    else if (t.isEvent) {
+                        const f = t.color || '#ff3300';
+                        segment.className = `termin-segment`;
+                        segment.style.background = `linear-gradient(90deg, rgba(255,51,0,0.6) 0%, rgba(10,0,0,0.8) 100%)`;
+                        segment.style.borderLeft = `3px solid ${f}`;
+                        segment.style.boxShadow = `0 0 8px ${f}`;
+                        segment.style.zIndex = "5"; 
+                        
+                        segment.innerHTML = `
+                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; overflow: hidden; padding: 0 2px;">
+                                <span class="status-label" style="margin-bottom: 2px; color: #fff; font-weight: bold; font-size:0.6rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%; text-align: center;">🔥 ${t.name}</span>
+                                <span style="font-size: 0.5rem; font-weight: bold; background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
+                            </div>
+                        `;
+                        segment.onclick = (e) => {
+                            e.stopPropagation();
+                            window.location.href = 'events.html';
+                        };
+                        segment.style.pointerEvents = 'auto'; 
+                    } else {
+                        const safeKat = t.kat || 'kat1';
+                        segment.className = `termin-segment ${safeKat}`;
+                        const katName = settings[safeKat + "_name"] || "Termin";
+                        const displayName = t.name ? t.name : 'Unbekannt';
+                        
+                        segment.innerHTML = `
+                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; pointer-events: none; overflow: hidden; padding: 0 2px;">
+                                <span class="status-label" style="margin-bottom: 2px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; max-width: 100%;">${displayName} <span style="opacity:0.7; font-size:0.8em;">(${katName})</span></span>
+                                <span style="font-size: 0.6rem; font-weight: bold; background: rgba(0,0,0,0.3); padding: 1px 4px; border-radius: 4px; white-space: nowrap;">${timeText}</span>
+                            </div>
+                        `;
+                    }
+
+                    segment.style.left = linksPosition + '%';
+                    segment.style.width = (breite < 0.5 ? 0.5 : breite) + '%';
+                    
+                    if (isOutsideLeft || isOutsideRight) {
+                        segment.style.opacity = '0.5';
+                    }
+                    
+                    timeline.appendChild(segment);
+                } catch (e) {
+                    console.error("Fehler beim Malen des Blocks:", e);
+                }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// WICHTIG: DIE INITIALISIERUNG BEIM LADEN DER SEITE
+// ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
     if (!sessionStorage.getItem('authKey')) {
+        window.location.href = 'index.html';
         return; 
     }
+
+    ladeUndWendeEinstellungenAn();
+    if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht(); 
+    if(typeof renderWeek === 'function') renderWeek();             
+    if(typeof updateLiveSystem === 'function') updateLiveSystem();
+    
     initCloud();
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {
+            reg.update();
+        }).catch(err => console.log('SW Fehler:', err));
+    }
+
+    // Versteckt den Loading-Screen nach dem Laden!
+    setTimeout(() => {
+        const loader = document.getElementById('app-loader');
+        if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => loader.remove(), 500);
+        }
+
+        const heuteZeile = document.querySelector('.tag-zeile.heute');
+        if (heuteZeile) {
+            heuteZeile.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            heuteZeile.style.transition = "background-color 0.8s ease-out";
+            heuteZeile.style.backgroundColor = "rgba(5, 217, 232, 0.15)";
+            setTimeout(() => {
+                heuteZeile.style.backgroundColor = "transparent";
+            }, 1200);
+        }
+    }, 600); 
 });

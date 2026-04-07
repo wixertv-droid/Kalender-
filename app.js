@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.14 - WOCHENANSICHT MIT NAMEN)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.15 - SPERRZEITEN)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -31,12 +31,14 @@ localStorage.setItem = function(key, value) {
 
     if (isSyncingFromCloud) return; 
 
-    if (["appTermine", "appKunden", "appEinstellungen", "appPin", "appEvents"].includes(key)) {
+    // NEU: appSperrzeiten zum Auslöser hinzugefügt
+    if (["appTermine", "appKunden", "appEinstellungen", "appPin", "appEvents", "appSperrzeiten"].includes(key)) {
         clearTimeout(syncTimeout);
         syncTimeout = setTimeout(async () => {
             isUploading = true;
             const newTimestamp = new Date().toISOString() + "-" + Math.random().toString(36).substring(2, 8);
             
+            // NEU: sperrzeiten im Payload hinzugefügt
             const payload = {
                 id: 1, 
                 termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
@@ -44,6 +46,7 @@ localStorage.setItem = function(key, value) {
                 einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
                 pin: localStorage.getItem('appPin') || "0000",
                 events: JSON.parse(localStorage.getItem('appEvents') || '[]'), 
+                sperrzeiten: JSON.parse(localStorage.getItem('appSperrzeiten') || '[]'),
                 last_update: newTimestamp
             };
 
@@ -98,6 +101,9 @@ async function autoFetchCloud() {
             if (dbData.pin) originalSetItem.call(localStorage, 'appPin', dbData.pin);
             if (dbData.events) originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events)); 
             
+            // NEU: Sperrzeiten aus der Cloud laden
+            if (dbData.sperrzeiten) originalSetItem.call(localStorage, 'appSperrzeiten', JSON.stringify(dbData.sperrzeiten)); 
+            
             originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update);
             
             ladeUndWendeEinstellungenAn();
@@ -108,7 +114,7 @@ async function autoFetchCloud() {
             if(typeof renderEvents === 'function') renderEvents(); 
             if(typeof renderTimeline === 'function') {
                 const urlParams = new URLSearchParams(window.location.search);
-                renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0]);
+                renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0], false);
             }
             updateLiveSystem(); 
             
@@ -351,7 +357,6 @@ function toggleKontaktFeld() {
     }
 }
 
-// --- V6.11 SAFE MODE: KEIN ÜBERSCHREIBEN DER DATENBANK MEHR ---
 function saveAppointment() {
     try {
         const name = document.getElementById('terminName').value;
@@ -476,7 +481,7 @@ function saveAppointment() {
                 const heute = new Date();
                 d = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
             }
-            renderTimeline(d);
+            renderTimeline(d, false);
         }
 
         updateLiveSystem();
@@ -577,13 +582,14 @@ function updateLiveSystem() {
     }
 }
 
-// --- V6.14 FIX: EVENTS & NAMEN IN DER WOCHENANSICHT ---
+// --- V6.15 FIX: SPERRZEITEN WERDEN IN DER WOCHE GEZEICHNET ---
 function renderWeek() {
     const wochenContainer = document.querySelector('.wochen-container');
     if (!wochenContainer) return;
 
     const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
     const events = JSON.parse(localStorage.getItem('appEvents')) || [];
+    const sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || []; // NEU
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
     const settings = { ...DEFAULTS, ...storedSettings };
 
@@ -603,8 +609,38 @@ function renderWeek() {
         ende: e.ende || "23:59",
         kat: 'event'
     }));
+    
+    // NEU: Sperrzeiten für die Zeitleiste formatieren
+    const formatiertSperrzeiten = [];
+    sperrzeiten.forEach(s => {
+        // Wir nehmen an, dass Sperrzeiten am gleichen Tag stattfinden, 
+        // oder wir erstellen für jeden Tag der Sperrzeit einen eigenen Eintrag
+        let aktDatum = new Date(s.startDatum);
+        const endDatum = new Date(s.endDatum);
+        
+        while (aktDatum <= endDatum) {
+            const isoDatum = aktDatum.toISOString().split('T')[0];
+            let drawStart = s.startZeit;
+            let drawEnd = s.endZeit;
+            
+            // Wenn es sich über mehrere Tage erstreckt, müssen Start/Ende an den Zwischentagen angepasst werden
+            if (isoDatum !== s.startDatum) drawStart = "00:00";
+            if (isoDatum !== s.endDatum) drawEnd = "23:59";
+            
+            formatiertSperrzeiten.push({
+                isSperre: true,
+                id: s.id,
+                name: s.name,
+                datum: isoDatum,
+                start: drawStart,
+                ende: drawEnd
+            });
+            
+            aktDatum.setDate(aktDatum.getDate() + 1);
+        }
+    });
 
-    const combinedItems = [...termine, ...formatiertEvents];
+    const combinedItems = [...termine, ...formatiertEvents, ...formatiertSperrzeiten];
 
     combinedItems.forEach(t => {
         if (!t || !t.datum || !t.start || !t.ende || !t.start.includes(':') || !t.ende.includes(':')) return;
@@ -648,7 +684,26 @@ function renderWeek() {
                     if(isOutsideLeft) timeText = `<< ${timeText}`;
                     if(isOutsideRight) timeText = `${timeText} >>`;
 
-                    if (t.isEvent) {
+                    // NEU: SPERRZEIT ZEICHNEN
+                    if (t.isSperre) {
+                        segment.className = `termin-segment`;
+                        segment.style.background = `repeating-linear-gradient(45deg, rgba(255, 51, 0, 0.2), rgba(255, 51, 0, 0.2) 10px, rgba(0, 0, 0, 0.4) 10px, rgba(0, 0, 0, 0.4) 20px)`;
+                        segment.style.border = `1px dashed #ff3300`;
+                        segment.style.zIndex = "4"; 
+                        
+                        segment.innerHTML = `
+                            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; overflow: hidden; padding: 0 2px;">
+                                <span class="status-label" style="margin-bottom: 2px; color: #ff3300; font-weight: bold; font-size:0.6rem; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; width: 100%; text-align: center;">⛔ ${t.name}</span>
+                            </div>
+                        `;
+                        // Klick auf Sperrzeit -> Gehe zu Einstellungen
+                        segment.onclick = (e) => {
+                            e.stopPropagation();
+                            window.location.href = 'einstellungen.html';
+                        };
+                        segment.style.pointerEvents = 'auto'; 
+                    }
+                    else if (t.isEvent) {
                         const f = t.color || '#ff3300';
                         segment.className = `termin-segment`;
                         segment.style.background = `linear-gradient(90deg, rgba(255,51,0,0.6) 0%, rgba(10,0,0,0.8) 100%)`;

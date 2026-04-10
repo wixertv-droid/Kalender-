@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V6.20 - VOLLSTÄNDIG & KORREKT)
+   AGENDA 2050 - ULTIMATIVE ZENTRALE ENGINE (V7.0 - CLOUD FIRST & SMART SAVE)
    ========================================================================== */
 
 const DEFAULTS = {
@@ -14,138 +14,115 @@ const DEFAULTS = {
 let currentEditId = null; 
 
 /* ==========================================================================
-   >>> SUPABASE ANBINDUNG <<<
+   >>> SUPABASE ANBINDUNG (DIRECT DATABASE CONNECTION) <<<
    ========================================================================== */
 const SUPABASE_URL = 'https://xdynlrghhnxbmcylafxg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkeW5scmdoaG54Ym1jeWxhZnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDcxMzgsImV4cCI6MjA4OTkyMzEzOH0.Zre-Vv5MElN3q6-R804ZrhYxnvEwhB0b3f8_ohFoe3A';
 
 let isCloudConnected = false; 
 let isSyncingFromCloud = false;
-let isUploading = false;
 let syncTimeout = null;
 
+// Überschreiben der Speicherfunktion, damit JEDE Änderung (Eintragen/Löschen) sofort hochlädt
 const originalSetItem = localStorage.setItem;
 
 localStorage.setItem = function(key, value) {
     originalSetItem.call(localStorage, key, value);
 
+    // Wenn die App gerade selber Daten aus der Cloud lädt, nicht sofort wieder hochladen!
     if (isSyncingFromCloud) return; 
 
     if (["appTermine", "appKunden", "appEinstellungen", "appPin", "appEvents", "appSperrzeiten"].includes(key)) {
         clearTimeout(syncTimeout);
-        syncTimeout = setTimeout(async () => {
-            isUploading = true;
-            const newTimestamp = new Date().toISOString() + "-" + Math.random().toString(36).substring(2, 8);
-            
-            const payload = {
-                id: 1, 
-                termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
-                kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
-                einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
-                pin: localStorage.getItem('appPin') || "0000",
-                events: JSON.parse(localStorage.getItem('appEvents') || '[]'), 
-                sperrzeiten: JSON.parse(localStorage.getItem('appSperrzeiten') || '[]'),
-                last_update: newTimestamp
-            };
-
-            try {
-                const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
-                    method: 'PATCH', 
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json',
-                        'Prefer': 'return=minimal'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) { return; }
-                originalSetItem.call(localStorage, 'lastCloudUpdate', newTimestamp);
-            } catch(e) {}
-            finally {
-                isUploading = false;
-            }
-        }, 500); 
+        syncTimeout = setTimeout(pushToSupabase, 400); // 400ms Puffer, bündelt schnelle Klicks
     }
 };
 
-async function autoFetchCloud() {
-    if (isUploading) return; 
-    
+// Die Funktion schießt den aktuellen Stand HART in die Datenbank
+async function pushToSupabase() {
+    const payload = {
+        id: 1, 
+        termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
+        kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
+        einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
+        pin: localStorage.getItem('appPin') || "0000",
+        events: JSON.parse(localStorage.getItem('appEvents') || '[]'), 
+        sperrzeiten: JSON.parse(localStorage.getItem('appSperrzeiten') || '[]'),
+        last_update: new Date().toISOString()
+    };
+
     try {
+        await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
+            method: 'PATCH', 
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(payload)
+        });
+        console.log("☁️ Auto-Upload: Datenbank aktualisiert!");
+    } catch(e) { 
+        console.error("☁️ Upload Fehler:", e); 
+    }
+}
+
+// LÄDT HART AUS DER CLOUD (Ignoriert jeden Cache!)
+async function fetchFromSupabase() {
+    try {
+        // Ein dynamischer Header zwingt iPhone/Safari dazu, die Datenbank live anzufragen
         const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*`, {
             method: 'GET',
             headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Cache-Control': 'no-cache'
-            },
-            cache: 'no-store'
+                'Cache-Control': 'no-store, max-age=0',
+                'X-Buster': Date.now().toString() 
+            }
         });
 
         if (!response.ok) return;
         const data = await response.json();
         
         if(data && data.length > 0) {
+            isSyncingFromCloud = true; // Blockiert den Upload, während wir runterladen
+            
             const dbData = data[0];
-            const localUpdate = localStorage.getItem('lastCloudUpdate');
+            originalSetItem.call(localStorage, 'appTermine', JSON.stringify(dbData.termine || []));
+            originalSetItem.call(localStorage, 'appKunden', JSON.stringify(dbData.kunden || []));
+            originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen || {}));
+            originalSetItem.call(localStorage, 'appPin', dbData.pin || "0000");
+            originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events || [])); 
+            originalSetItem.call(localStorage, 'appSperrzeiten', JSON.stringify(dbData.sperrzeiten || [])); 
             
-            if (!dbData.last_update || dbData.last_update === localUpdate) return;
-
-            isSyncingFromCloud = true;
-            
-            if (dbData.termine) originalSetItem.call(localStorage, 'appTermine', JSON.stringify(dbData.termine));
-            if (dbData.kunden) originalSetItem.call(localStorage, 'appKunden', JSON.stringify(dbData.kunden));
-            if (dbData.einstellungen) originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen));
-            if (dbData.pin) originalSetItem.call(localStorage, 'appPin', dbData.pin);
-            if (dbData.events) originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events)); 
-            if (dbData.sperrzeiten) originalSetItem.call(localStorage, 'appSperrzeiten', JSON.stringify(dbData.sperrzeiten)); 
-            
-            originalSetItem.call(localStorage, 'lastCloudUpdate', dbData.last_update);
-            
-            ladeUndWendeEinstellungenAn();
-            if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
-            if(typeof renderWeek === 'function') renderWeek();
-            if(typeof renderKunden === 'function') renderKunden();
-            if(typeof calculateStats === 'function') calculateStats();
-            if(typeof renderEvents === 'function') renderEvents(); 
-            if(typeof renderTimeline === 'function') {
-                const urlParams = new URLSearchParams(window.location.search);
-                renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0], false);
-            }
-            updateLiveSystem(); 
             isSyncingFromCloud = false;
+            console.log("☁️ Sync: Lokale Daten mit Cloud überschrieben.");
         }
-    } catch(e) {}
-}
-
-async function initCloud() {
-    isCloudConnected = true;
-    await autoFetchCloud();
-    setInterval(autoFetchCloud, 5000); 
-
-    const hdCountdown = document.getElementById('header-countdown');
-    if(hdCountdown) {
-        hdCountdown.innerText = "SUPABASE CONNECTED";
-        hdCountdown.style.color = "var(--neon-green)";
-        hdCountdown.style.borderColor = "var(--neon-green)";
-        hdCountdown.style.textShadow = "0 0 10px rgba(57, 255, 20, 0.5)";
-        
-        setTimeout(() => {
-            hdCountdown.innerText = "SYNCING..."; 
-            hdCountdown.style.color = "";
-            hdCountdown.style.borderColor = "";
-            hdCountdown.style.textShadow = "";
-            if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
-            if(typeof renderWeek === 'function') renderWeek(); 
-            updateLiveSystem(); 
-        }, 3000);
+    } catch(e) { 
+        console.error("☁️ Sync Fehler:", e); 
+        isSyncingFromCloud = false;
     }
 }
 
-window.forceCloudUpload = async function() { alert("System speichert alles sofort!"); };
-window.forceCloudDownload = async function() { alert("Manueller Sync gestartet..."); await autoFetchCloud(); }
+// Aktualisiert alle Ansichten nach einem Sync
+function refreshAllViews() {
+    ladeUndWendeEinstellungenAn();
+    if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
+    if(typeof renderWeek === 'function') renderWeek();
+    if(typeof renderKunden === 'function') renderKunden();
+    if(typeof calculateStats === 'function') calculateStats();
+    if(typeof renderEvents === 'function') renderEvents(); 
+    if(typeof renderTimeline === 'function') {
+        const urlParams = new URLSearchParams(window.location.search);
+        renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0], false);
+    }
+    if(typeof updateLiveSystem === 'function') updateLiveSystem(); 
+}
+
+/* ==========================================================================
+   >>> REST DER APP-LOGIK <<<
+   ========================================================================== */
 
 function parseTimeStr(timeStr, defaultStr) {
     if (!timeStr || !timeStr.includes(':')) timeStr = defaultStr;
@@ -231,7 +208,7 @@ function generiereWochenAnsicht() {
 
         if (i === 0 && document.getElementById('header-monat')) {
             const monate = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-            const cloudDot = isCloudConnected ? ' <span id="cloud-dot-indicator" style="color: var(--neon-green); font-size: 0.6em; vertical-align: super; text-shadow: 0 0 10px var(--neon-green);" title="Cloud Sync Aktiv">●</span>' : '';
+            const cloudDot = ' <span id="cloud-dot-indicator" style="color: var(--neon-green); font-size: 0.6em; vertical-align: super; text-shadow: 0 0 10px var(--neon-green);" title="Cloud Sync Aktiv">●</span>';
             document.getElementById('header-monat').innerHTML = `${monate[aktuellesDatum.getMonth()]} ${aktuellesDatum.getFullYear()}${cloudDot}`;
         }
 
@@ -277,12 +254,12 @@ function openModal(editId = null) {
     if (editId) {
         const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
-        const t = termine.find(x => x.id === editId);
+        const t = termine.find(x => String(x.id) === String(editId));
         
         if (t) {
             let liveKunde = null;
             if (t.kunde_id) {
-                liveKunde = kunden.find(k => k.id == t.kunde_id);
+                liveKunde = kunden.find(k => String(k.id) === String(t.kunde_id));
             }
             if (!liveKunde) {
                 liveKunde = kunden.find(k => k.name.toLowerCase().trim() === (t.name || '').toLowerCase().trim());
@@ -347,7 +324,7 @@ function toggleKontaktFeld() {
     }
 }
 
-// --- INTELLIGENTER SAVE ---
+// --- HARTER DOPPELBUCHUNGS- & SPERRZEITEN SCHUTZ ---
 function saveAppointment() {
     try {
         const name = document.getElementById('terminName').value;
@@ -376,32 +353,32 @@ function saveAppointment() {
         let nEndeMin = parseTimeStr(ende, "23:59");
         if (ende === "00:00" || nEndeMin === 0) nEndeMin = 1440; 
         
-        // 1. SPERRZEITEN-CHECK
+        // 1. SPERRZEITEN-CHECK (Repariert durch exakten String-Vergleich)
         let sperrzeiten = JSON.parse(localStorage.getItem('appSperrzeiten')) || [];
-        const apptDate = new Date(datum);
+        const apptDatum = datum; // YYYY-MM-DD
         
         const sperrOverlap = sperrzeiten.find(s => {
-            let sStartD = new Date(s.startDatum);
-            let sEndD = new Date(s.endDatum);
-            
-            if (apptDate >= sStartD && apptDate <= sEndD) {
-                let sStartMin = (datum === s.startDatum) ? parseTimeStr(s.startZeit, "00:00") : 0;
-                let sEndMin = (datum === s.endDatum) ? parseTimeStr(s.endZeit, "23:59") : 1440;
+            // Fällt das Datum in den Zeitraum der Sperre?
+            if (apptDatum >= s.startDatum && apptDatum <= s.endDatum) {
+                let sStartMin = (apptDatum === s.startDatum) ? parseTimeStr(s.startZeit, "00:00") : 0;
+                let sEndMin = (apptDatum === s.endDatum) ? parseTimeStr(s.endZeit, "23:59") : 1440;
                 if (s.endZeit === "00:00" || sEndMin === 0) sEndMin = 1440;
+                
+                // Überschneidet sich die Uhrzeit?
                 return (nStartMin < sEndMin && nEndeMin > sStartMin);
             }
             return false;
         });
 
         if (sperrOverlap) {
-            alert(`⛔ SPERRZEIT BLOCKIERT DEN TERMIN!\n\nDieser Zeitraum ist durch "${sperrOverlap.name}" blockiert.\nBitte wähle eine andere Zeit.`);
+            alert(`⛔ SPERRZEIT BLOCKIERT DEN TERMIN!\n\nDieser Zeitraum ist durch "${sperrOverlap.name}" gesperrt.\nBitte wähle eine andere Zeit.`);
             return; 
         }
 
         // 2. TERMIN DOPPELBUCHUNG-CHECK
         let termine = JSON.parse(localStorage.getItem('appTermine')) || [];
         const overlap = termine.find(t => {
-            if (t.datum === datum && t.id !== currentEditId) {
+            if (t.datum === datum && String(t.id) !== String(currentEditId)) {
                 let eStartMin = parseTimeStr(t.start, "00:00");
                 let eEndeMin = parseTimeStr(t.ende, "23:59");
                 if (t.ende === "00:00" || eEndeMin === 0) eEndeMin = 1440; 
@@ -420,9 +397,8 @@ function saveAppointment() {
         let kundeGefunden = null;
 
         if (kundeIdStr) {
-            kundeGefunden = kunden.find(k => k.id == parseInt(kundeIdStr));
+            kundeGefunden = kunden.find(k => String(k.id) === kundeIdStr);
         }
-
         if (!kundeGefunden) {
             kundeGefunden = kunden.find(k => k.name.toLowerCase().trim() === name.toLowerCase().trim());
         }
@@ -446,8 +422,6 @@ function saveAppointment() {
             localStorage.setItem('appKunden', JSON.stringify(kunden));
         } else {
             finalKundeId = kundeGefunden.id;
-            
-            // Wenn Name eingetippt (aber nicht in Vorschlagsliste geklickt) wurde -> Daten laden
             if (!kundeIdStr) {
                 if (kundeGefunden.status && kundeGefunden.status !== 'none') kat = kundeGefunden.status;
                 if (!preis && kundeGefunden.preis) preis = kundeGefunden.preis;
@@ -458,7 +432,7 @@ function saveAppointment() {
         }
 
         if (currentEditId) {
-            const index = termine.findIndex(t => t.id === currentEditId);
+            const index = termine.findIndex(t => String(t.id) === String(currentEditId));
             if(index > -1) {
                 termine[index].kunde_id = finalKundeId; 
                 termine[index].name = name.trim();
@@ -494,20 +468,7 @@ function saveAppointment() {
         localStorage.setItem('appTermine', JSON.stringify(termine));
         
         if(typeof closeModal === 'function') closeModal();
-        if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht();
-        if(typeof renderWeek === 'function') renderWeek();
-        
-        if(typeof renderTimeline === 'function') {
-            const urlParams = new URLSearchParams(window.location.search);
-            let d = urlParams.get('d');
-            if(!d) {
-                const heute = new Date();
-                d = new Date(heute.getTime() - (heute.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-            }
-            renderTimeline(d, false);
-        }
-
-        if(typeof updateLiveSystem === 'function') updateLiveSystem();
+        refreshAllViews();
         
     } catch (e) { console.error("Fehler beim Speichern:", e); }
 }
@@ -769,42 +730,45 @@ function renderWeek() {
 }
 
 // ============================================================================
-// INITIALISIERUNG BEIM LADEN DER SEITE
+// 🚀 CLOUD-FIRST INITIALISIERUNG
 // ============================================================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     if (!sessionStorage.getItem('authKey')) {
         window.location.href = 'index.html';
         return; 
     }
 
-    ladeUndWendeEinstellungenAn();
-    if(typeof generiereWochenAnsicht === 'function') generiereWochenAnsicht(); 
-    if(typeof renderWeek === 'function') renderWeek();             
-    if(typeof updateLiveSystem === 'function') updateLiveSystem();
-    
-    initCloud();
-
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js', { scope: './' }).then(reg => {
-            reg.update();
-        }).catch(err => console.log('SW Fehler:', err));
+    // 1. Ladebildschirm STARR anzeigen, bis die Datenbank geantwortet hat!
+    const loader = document.getElementById('app-loader');
+    if (loader) {
+        loader.style.opacity = '1';
+        loader.style.display = 'flex';
     }
 
-    setTimeout(() => {
-        const loader = document.getElementById('app-loader');
-        if (loader) {
-            loader.style.opacity = '0';
-            setTimeout(() => loader.remove(), 500);
-        }
+    // 2. WARTEN auf die aktuellsten Daten aus der Datenbank
+    await fetchFromSupabase();
 
-        const heuteZeile = document.querySelector('.tag-zeile.heute');
-        if (heuteZeile) {
-            heuteZeile.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            heuteZeile.style.transition = "background-color 0.8s ease-out";
-            heuteZeile.style.backgroundColor = "rgba(5, 217, 232, 0.15)";
-            setTimeout(() => {
-                heuteZeile.style.backgroundColor = "transparent";
-            }, 1200);
-        }
-    }, 600); 
+    // 3. ERST JETZT den Kalender zeichnen (kein Flimmern, keine alten Daten)
+    refreshAllViews();
+
+    // 4. Ladebildschirm ausblenden
+    if (loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => loader.remove(), 500);
+    }
+
+    // 5. Heute-Zeile zentrieren (für woche.html)
+    const heuteZeile = document.querySelector('.tag-zeile.heute');
+    if (heuteZeile) {
+        heuteZeile.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        heuteZeile.style.transition = "background-color 0.8s ease-out";
+        heuteZeile.style.backgroundColor = "rgba(5, 217, 232, 0.15)";
+        setTimeout(() => { heuteZeile.style.backgroundColor = "transparent"; }, 1200);
+    }
+
+    // 6. Ab jetzt im Hintergrund alle 5 Sekunden auf Updates lauschen
+    setInterval(async () => {
+        await fetchFromSupabase();
+        refreshAllViews();
+    }, 5000);
 });

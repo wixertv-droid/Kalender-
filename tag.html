@@ -318,7 +318,6 @@
                     let warningHTML = (k.noshows && k.noshows > 0) ? `<span style="color: var(--neon-red); font-weight: bold; float: right; font-size: 0.8rem;">⚠️ ${k.noshows}x NO-SHOW</span>` : '';
                     d.innerHTML = `<strong>${k.name}</strong> ${warningHTML}<br><small style="color:#aaa;">${k.plattform !== 'none' ? k.plattform + ': ' : ''}${k.kontakt || 'Kein Kontakt'}</small>`;
                     
-                    // Klick auf Such-Vorschlag
                     d.onclick = () => {
                         document.getElementById('terminKundeId').value = k.id;
                         document.getElementById('terminName').value = k.name;
@@ -360,7 +359,6 @@
             document.getElementById('detailName').innerText = t.name;
             document.getElementById('detailZeitKat').innerText = `${t.start} - ${t.ende} // ${settings[t.kat+"_name"] || 'Termin'}`;
             
-            // KONTAKT 1 & 2 LADEN
             let p1 = (kunde && kunde.plattform) ? kunde.plattform : t.plattform;
             let k1 = (kunde && kunde.kontakt) ? kunde.kontakt : t.kontakt;
             let p2 = (kunde && kunde.plattform2) ? kunde.plattform2 : null;
@@ -488,7 +486,6 @@
             renderTimeline(urlParams.get('d') || new Date().toISOString().split('T')[0], false);
         }
 
-        // TIMELINE RENDERING (Inklusive Sperrzeiten)
         function renderTimeline(datum, isInitialRender = false) {
             try {
                 const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
@@ -503,7 +500,6 @@
                 const tagesTermine = termine.filter(t => t.datum === datum);
                 const tagesEvents = events.filter(e => e.datum === datum).map(e => ({...e, isEvent: true, start: e.start || "00:00", ende: e.ende || "23:59"}));
                 
-                // SPERRZEITEN FÜR DIESEN TAG FORMATIEREN
                 const formatiertSperrzeiten = [];
                 sperrzeiten.forEach(s => {
                     let aktDatum = new Date(s.startDatum);
@@ -593,13 +589,14 @@
                     const block = document.createElement('div');
                     block.className = 'cyber-block';
                     
-                    const flexDir = heightPx < 80 ? 'row' : 'column';
+                    // FIX: Alle Termine bis zu 1 Stunde 10 Min. (140px) sind jetzt kompakt!
+                    const flexDir = heightPx <= 140 ? 'row' : 'column';
                     
                     block.style.top = topPx + 'px';
                     block.style.height = heightPx + 'px';
-                    block.style.padding = heightPx < 80 ? '10px 15px' : '15px';
-                    block.style.justifyContent = heightPx < 80 ? 'space-between' : 'flex-start';
-                    block.style.alignItems = heightPx < 80 ? 'center' : 'stretch';
+                    block.style.padding = heightPx <= 140 ? '10px 15px' : '15px';
+                    block.style.justifyContent = heightPx <= 140 ? 'space-between' : 'flex-start';
+                    block.style.alignItems = heightPx <= 140 ? 'center' : 'stretch';
                     
                     const isPast = (datum < currentDate) || (datum === currentDate && eMin <= (now.getHours()*60 + now.getMinutes()));
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Private Kalender backend. Nginx mTLS + server-verified 4 digit PIN."""
+"""Private Kalender backend. Server-side PIN, optional device certificate gate."""
 import getpass
 import hashlib
 import hmac
@@ -22,6 +22,7 @@ DB = DATA / "kalender.sqlite3"
 ORIGIN = os.getenv("KALENDER_ORIGIN", "https://kalender.bytevo.de").rstrip("/")
 HOST = "127.0.0.1"  # Do not expose local trusted proxy headers on public interfaces
 PORT = int(os.getenv("KALENDER_PORT", "3102"))
+REQUIRE_DEVICE_CERT = os.getenv("KALENDER_REQUIRE_DEVICE_CERT", "1") == "1"
 FIELDS = {"termine": list, "kunden": list, "einstellungen": dict, "events": list, "sperrzeiten": list}
 EMPTY = {"termine": [], "kunden": [], "einstellungen": {}, "events": [], "sperrzeiten": []}
 FILES = set("index.html woche.html jahr.html tag.html kunden.html events.html einstellungen.html stats.html loader.html app.js events.js login.js server-sync.js webmeldungen.js style.css login.css manifest.json sw.js favicon.ico favicon-32.png apple-touch-icon.png apple-touch-icon-1.png icon.png icon-192.png icon-single.png 1774360504505.png".split())
@@ -139,7 +140,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def device_ok(self):
         # Localhost-only backend: only dedicated Nginx vhost supplies this header.
-        return self.headers.get("X-Kalender-Verified", "") == "SUCCESS"
+        return (not REQUIRE_DEVICE_CERT) or self.headers.get("X-Kalender-Verified", "") == "SUCCESS"
 
     def cookie(self, token=None):
         value = token or ""

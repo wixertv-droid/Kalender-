@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kalender – Sicher anmelden</title>
+    <title>Kalender – Gerät überprüfen</title>
     <link rel="stylesheet" href="login.css">
     <link rel="icon" type="image/png" href="./icon.png">
     <link rel="apple-touch-icon" href="./icon.png">
@@ -29,17 +29,13 @@
         </div>
 
         <div class="gateway-content">
-            <form id="login-form" autocomplete="on">
-                <label for="login-password" class="login-label">ADMIN-PASSWORT</label>
-                <input id="login-password" type="password" name="password"
-                    minlength="12" maxlength="1024" autocomplete="current-password"
-                    placeholder="Passwort eingeben" required autofocus>
-                <button type="submit" class="login-submit">SICHER ANMELDEN</button>
-                <p class="login-help">Deine Daten liegen auf deinem Server. Eine 4-stellige PIN reicht für den Internetzugriff nicht aus.</p>
-            </form>
+            <div class="login-help" style="text-align:center;padding:20px;line-height:1.7">
+                <strong>Gerät wird überprüft</strong>
+                <p>Keine PIN und kein Passwort nötig. Der Zugriff erfolgt über das einmalig installierte Gerätezertifikat.</p>
+            </div>
         </div>
 
-        <div class="loader-status" id="status-text">AWAITING INPUT...</div>
+        <div class="loader-status" id="status-text">VERBINDUNG WIRD GEPRÜFT...</div>
     </div>
 
     <script src="login.js"></script>

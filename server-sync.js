@@ -1,7 +1,8 @@
 /* Server-Sync: no Supabase credentials, protected same-origin API. */
 const KALENDER_KEYS=['appTermine','appKunden','appEinstellungen','appEvents','appSperrzeiten'];
 const KALENDER_FIELDS=['termine','kunden','einstellungen','events','sperrzeiten'];
-const originalSetItem=localStorage.setItem.bind(localStorage);
+const nativeStorageSetItem=Storage.prototype.setItem;
+const originalSetItem=nativeStorageSetItem.bind(localStorage);
 let isCloudConnected=false, isSyncingFromCloud=false, syncRevision=null;
 let syncInFlight=false, syncBlocked=false, syncTimeout=null, localChanges=0;
 let dirty=localStorage.getItem('_kalenderUnsaved')==='1';
@@ -26,9 +27,9 @@ function kalenderData() {
     });
     return data;
 }
-localStorage.setItem=function(key,value) {
-    originalSetItem(key,value);
-    if(isSyncingFromCloud||!KALENDER_KEYS.includes(key))return;
+Storage.prototype.setItem=function(key,value) {
+    nativeStorageSetItem.call(this,key,value);
+    if(this!==localStorage||isSyncingFromCloud||!KALENDER_KEYS.includes(key))return;
     dirty=true;
     localChanges++;
     originalSetItem('_kalenderUnsaved','1');

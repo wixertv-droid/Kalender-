@@ -1,4 +1,53 @@
-# kalender.bytevo.de auf bestehendem netcup-VPS installieren (ohne App-Login)
+# kalender.bytevo.de auf bestehendem netcup-VPS installieren
+
+## Update vom 16.10.2026: PIN zurück und Datenübernahme
+
+Die Anwendung nutzt weiterhin die bereits eingerichteten mTLS-Gerätezertifikate,
+zusätzlich die vertraute vierstellige PIN-Eingabe. Die PIN wird nur auf dem
+Kalender-Server mittels PBKDF2-Hash geprüft, niemals im Browser gespeichert.
+Nach fünf falschen Versuchen pro IP sind weitere Anmeldungen für 15 Minuten
+blockiert (serverseitige SQLite-Tabelle); Sitzungscookies sind HttpOnly, Secure,
+SameSite=Strict. Benutzer können die PIN in Einstellungen ändern.
+
+### Upgrade einer bestehenden Installation
+
+Vor dem Update vorhandene Daten sichern; danach den GitHub-Branch
+feature/secure-selfhosted-kalender mit git pull --ff-only aktualisieren.
+Neuen Code zuerst mit Python-Syntaxprüfung und GitHub-CI prüfen.
+Anschließend EINMALIG interaktiv eine PIN setzen:
+
+    runuser -u kalender -- env KALENDER_DATA_DIR=/var/lib/kalender python3 /var/www/kalender/server.py set-pin
+
+Es gibt keine feste Standard-PIN. Alte Browser-PINs werden ausdrücklich
+nicht aus dem unsicheren Supabase-Speicher importiert.
+Danach nur den Kalender-Dienst neu starten:
+
+    systemctl restart kalender
+
+Nginx-vhost, Zertifikate, Synsight und Roomdo müssen dafür NICHT verändert
+oder neugestartet werden.
+
+### Alte Supabase-Daten ohne Überschreiben übernehmen
+
+Die neue SQLite-Datenbank ist bei Neuinstallation leer. Zunächst Vorschau:
+
+    runuser -u kalender -- env KALENDER_DATA_DIR=/var/lib/kalender KALENDER_BACKUP_DIR=/var/backups/kalender python3 /var/www/kalender/migrate_from_supabase.py
+
+Die Vorschau enthält nur Anzahl Termine/Kunden/Events/Sperrzeiten und
+Zeit des letzten Updates, keine personenbezogenen Datensätze.
+
+Wenn die Zahlen dem alten Kalender entsprechen:
+
+    runuser -u kalender -- env KALENDER_DATA_DIR=/var/lib/kalender KALENDER_BACKUP_DIR=/var/backups/kalender python3 /var/www/kalender/migrate_from_supabase.py --apply
+
+Dieser Befehl fragt ausdrücklich nach der Bestätigung "IMPORTIEREN",
+legt zuerst eine konsistente Kopie der SQLite-Datenbank an und verweigert
+den Import, falls die Zieldatenbank bereits verändert wurde.
+
+Falls Supabase aufgrund seiner Zugriffsregeln keinen Zugriff erlaubt,
+keine Berechtigungen lockern: statt dessen die vorhandenen lokalen Daten
+aus dem ALTEN Kalender (MIGRATION.md) exportieren und in der neuen
+Kalenderoberfläche importieren.
 
 ## Vorher prüfen: unveränderte andere Domains
 
@@ -10,7 +59,7 @@ Der Screenshot im netcup CCP zeigte den neuen DNS-A-Record "kalender" ->
 159.195.157.24 noch unter "Gewünschte Änderungen an der Zonenrevision".
 Bitte zuerst "Änderungen anwenden" anklicken und DNS-Ausbreitung abwarten.
 
-WICHTIG: Keine PIN, kein Passwort im Kalender. Stattdessen braucht jedes Gerät
+WICHTIG: PIN-Anmeldung UND Gerätezertifikat. Zusätzlich braucht jedes Gerät
 ein einmalig installiertes Client-Zertifikat (mTLS). Ohne ein Zertifikat
 blockt Nginx alle Seiten und APIs. So bleiben personenbezogene Daten geschützt.
 Die .p12-Dateien niemals öffentlich hochladen oder in Git speichern.
@@ -59,8 +108,8 @@ fehlschlägt, DNS/Firewall/andere VHosts prüfen. Bestehende Sites nicht deaktiv
     bash /var/www/kalender/deploy/device-certificates.sh issue pc
     bash /var/www/kalender/deploy/device-certificates.sh issue iphone
 
-Das .p12-Export-Passwort ist NUR zum geschützten Installieren der Geräte-Datei
-notwendig. Es gibt KEIN Kalender-Passwort und keine PIN.
+Das .p12-Export-Passwort ist NUR zum Installieren der Geräte-Datei nötig.
+Danach zeigt der Kalender die vierstellige PIN-Eingabe.
 
 Ergebnis:
   /root/kalender-device-certificates/pc.p12
@@ -130,5 +179,6 @@ auf einen anderen Speicherort übertragen; Wiederherstellung testen.
 
 ## Bedienung
 
-Bei Aufruf prüft der Browser das auf dem Gerät installierte Zertifikat.
-Danach öffnet sich die Wochenansicht. Kein Login, keine PIN und kein Passwort.
+Bei Aufruf prüft Nginx das Gerätezertifikat und die Anwendung fragt die
+vierstellige PIN ab. Erst dann öffnet sich die Wochenansicht.
+

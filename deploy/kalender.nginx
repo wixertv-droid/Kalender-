@@ -1,5 +1,5 @@
 # Ausschließlich kalender.bytevo.de – andere vhosts unangetastet.
-# Erst nach Ausstellung des Let's Encrypt-Zertifikats und der Geräte-CA aktivieren.
+# HTTPS bleibt aktiv. Geräte-Zertifikatsprüfung vorerst ausgeschaltet. PIN bleibt Pflicht.
 server {
     listen 80;
     listen [::]:80;
@@ -21,9 +21,9 @@ server {
     ssl_certificate /etc/letsencrypt/live/kalender.bytevo.de/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/kalender.bytevo.de/privkey.pem;
 
-    ssl_client_certificate /etc/nginx/kalender/client-ca.crt;
-    ssl_verify_client on;
-    ssl_verify_depth 1;
+    # Später wieder aktivierbar: ssl_client_certificate + ssl_verify_client on
+    # Heute: Zugriff von iPhone/PC ohne Geräte-Zertifikat; PIN-Sitzung schützt die Daten.
+    ssl_verify_client off;
     ssl_protocols TLSv1.2 TLSv1.3;
     add_header Strict-Transport-Security "max-age=31536000" always;
 

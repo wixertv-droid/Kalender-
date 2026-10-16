@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060d14">
+<title>Agenda 2050 – Lokale Daten retten</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#112a32,#07121b 55%,#04070b);color:#e4f6fa;font:16px/1.5 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;padding:max(24px,env(safe-area-inset-top)) 16px max(50px,env(safe-area-inset-bottom));}
+main{max-width:700px;margin:auto}h1{color:#00d4df;font-size:24px;margin:0 0 12px;letter-spacing:.07em}h2{font-size:17px}p{margin:10px 0 18px}small{color:#a7bec5}.box{padding:20px;border:1px solid #167e89;border-radius:17px;background:#071820;margin:18px 0;box-shadow:0 8px 28px #0004}button,a.action{display:block;width:100%;border-radius:14px;border:1px solid #00bbce;background:#035f73;color:#fff;font-size:17px;font-weight:700;min-height:52px;padding:13px 10px;margin:12px 0;text-align:center;text-decoration:none;cursor:pointer}button.secondary{background:#122633;border-color:#66838e}button:disabled{opacity:.55}.warning{background:#34260d;border-color:#be902c}.warning strong{color:#ffdf88}.rows{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rows div{background:#0e2631;border-radius:10px;padding:12px}.rows strong{display:block;font-size:28px;color:#5ce2e6}.error{color:#ff9ea0}.ok{color:#a3f2bd}textarea{width:100%;height:170px;resize:vertical;border-radius:8px;padding:8px;background:#0a1722;border:1px solid #4a7680;color:#c1f4f7;font:11px monospace;display:none}a{color:#6be8f7}
+</style>
+</head>
+<body><main>
+<h1>AGENDA 2050 · DATENRETTUNG</h1>
+<p>Diese Seite liest <strong>nur den lokalen Speicher dieses Kalenders</strong> aus. Sie sendet keine Daten an GitHub, Supabase oder andere Server und verändert keine Einträge.</p>
+<div class="box">
+<h2>1 · Speicher auf diesem Gerät prüfen</h2>
+<p id="origin"></p>
+<div class="rows">
+<div>Termine<strong id="termine">–</strong></div>
+<div>Kunden<strong id="kunden">–</strong></div>
+<div>Events<strong id="events">–</strong></div>
+<div>Sperrzeiten<strong id="sperrzeiten">–</strong></div>
+</div>
+<p id="state" aria-live="polite">Prüfe den lokalen Speicher ...</p>
+</div>
+<div class="box">
+<h2>2 · Vollständige Sicherung erstellen</h2>
+<p>Alle Termine, Kunden, Events, Sperrzeiten und Einstellungen werden in einer JSON-Datei gespeichert. Die alte PIN wird <strong>nicht</strong> exportiert.</p>
+<button id="share" type="button">📤 Über iPhone-Teilen sichern</button>
+<button id="download" class="secondary" type="button">💾 JSON-Datei herunterladen</button>
+<button id="copy" class="secondary" type="button">📋 Daten in Zwischenablage kopieren</button>
+<button id="show" class="secondary" type="button">📝 JSON-Text anzeigen / markieren</button>
+<textarea id="raw" readonly aria-label="JSON-Backup-Daten"></textarea>
+<p id="message" aria-live="polite"></p>
+</div>
+<div class="box warning">
+<strong>WICHTIG – Erst prüfen, dann wechseln</strong>
+<p>Wenn hier weniger Einträge stehen als in deiner bisherigen Finanzübersicht, befindet sich dein alter Datenbestand möglicherweise im Speicher einer anderen iPhone-App (z. B. Home-Bildschirm-PWA statt Safari). Öffne die Rettungsseite <strong>aus der alten installierten App heraus</strong>, nicht in einem anderen Browser. Lösche die App nicht und leere keine Websitedaten.</p>
+</div>
+<a class="action" href="einstellungen.html">← Zurück zu System</a>
+</main>
+<script>
+(function(){
+"use strict";
+const fields={termine:"appTermine",kunden:"appKunden",einstellungen:"appEinstellungen",events:"appEvents",sperrzeiten:"appSperrzeiten"};
+let payload=null,content="",filename="";
+const $=id=>document.getElementById(id);
+function status(text,isBad){$('message').textContent=text;$('message').className=isBad?"error":"ok";}
+function read(){
+  const data={};
+  for(const [key,storageKey] of Object.entries(fields)){
+    const raw=localStorage.getItem(storageKey);
+    try {data[key]=raw ? JSON.parse(raw) : key==="einstellungen"?{}:[];}
+    catch(error){throw Error("Beschädigte lokale Daten bei "+storageKey+". Speicher nicht verändern!");}
+    if(!data[key]||typeof data[key]!=="object"||(key==="einstellungen"?Array.isArray(data[key]):!Array.isArray(data[key]))){throw Error("Unerwartetes Datenformat bei "+storageKey+".");}
+  }
+  const total=data.termine.length+data.kunden.length+data.events.length+data.sperrzeiten.length;
+  for(const key of ["termine","kunden","events","sperrzeiten"])$(key).textContent=data[key].length;
+  if(!total&&!Object.keys(data.einstellungen).length){
+    $('state').textContent="⚠️ Hier sind keine Kalenderdaten gespeichert. Nicht mit einem leeren Backup weitermachen. Öffne diese Seite direkt aus der alten installierten Kalender-App.";
+    $('state').className="error";
+    return;
+  }
+  $('state').textContent="✅ Lokaler Datenbestand erkannt. Einstellungen: "+Object.keys(data.einstellungen).length+" Felder.";
+  $('state').className="ok";
+  payload={...data,exportDate:new Date().toISOString(),exportSource:"lokaler iPhone-/Browser-Speicher"};
+  content=JSON.stringify(payload,null,2);
+  filename="agenda2050_vollbackup_"+new Date().toISOString().slice(0,10)+".json";
+}
+try{ $('origin').textContent="Webadresse: "+location.origin;read(); }
+catch(e){$('state').textContent="Fehler: "+e.message;$('state').className="error";}
+function file(){return new File([new Blob([content],{type:"application/json"})],filename,{type:"application/json"});}
+for(const id of ["share","download","copy","show"])$(id).disabled=!payload;
+$('share').addEventListener('click',async function(){
+  if(!payload)return;
+  try{
+    const f=file();
+    if(!navigator.share||!navigator.canShare||!navigator.canShare({files:[f]})){
+      return status("Dateifreigabe hier nicht unterstützt. Bitte 'JSON-Datei herunterladen' verwenden.",true);
+    }
+    await navigator.share({files:[f],title:"Agenda 2050 – vollständiges Backup"});
+    status("Teilen geöffnet/abgeschlossen. Prüfe, ob die Datei in 'Dateien' gespeichert wurde.",false);
+  }catch(e){status(e.name==="AbortError"?"Teilen abgebrochen.":("Teilen fehlgeschlagen: "+e.message),true);}
+});
+$('download').addEventListener('click',function(){
+  if(!payload)return;
+  const url=URL.createObjectURL(new Blob([content],{type:"application/json;charset=utf-8"}));
+  const link=document.createElement("a");link.href=url;link.download=filename;
+  document.body.appendChild(link);link.click();link.remove();
+  status("Download angestoßen. Prüfe in 'Dateien' → 'Downloads'.",false);
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+});
+$('copy').addEventListener('click',async function(){
+  if(!payload)return;
+  try {
+    if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(content);
+    else{const box=$('raw');box.style.display="block";box.value=content;box.focus();box.select();if(!document.execCommand("copy"))throw Error("Automatisches Kopieren nicht möglich");}
+    status("Kopiert. Füge den Text in eine lokale Notiz oder eine neue Datei ein; er enthält vertrauliche Kundendaten.",false);
+  }catch(e){$('show').click();status("Bitte JSON-Text manuell markieren und kopieren.",true);}
+});
+$('show').addEventListener('click',function(){
+  const box=$('raw');box.style.display="block";box.value=content;box.focus();box.select();
+  status("JSON angezeigt und markiert. Zum Kopieren lange drücken und 'Kopieren' wählen.",false);
+});
+})();
+</script>
+</body>
+</html>

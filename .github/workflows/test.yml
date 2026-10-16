@@ -1,0 +1,25 @@
+name: Kalender Sicherheits-/Starttests
+on:
+  push:
+    branches: ["feature/secure-selfhosted-kalender"]
+  pull_request:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python Syntax
+        run: python3 -m compileall -q server.py backup.py
+      - name: JavaScript Syntax
+        run: |
+          node --check app.js
+          node --check server-sync.js
+          node --check login.js
+          node --check events.js
+      - name: Server API Tests
+        run: python3 -m unittest discover -s tests -v

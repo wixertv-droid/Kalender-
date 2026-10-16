@@ -42,7 +42,7 @@ Das neue System importiert Daten nicht automatisch von Supabase.
    funktioniert wegen Secure-Cookie absichtlich nicht über unverschlüsseltes HTTP:
 
     sudo certbot --nginx -d kalender.bytevo.de --redirect
-    curl -I https://kalender.bytevo.de/
+    curl -sS -D- -o /dev/null https://kalender.bytevo.de/
 
 6. https://kalender.bytevo.de öffnen, mit dem festgelegten Passwort anmelden.
    Anschließend in Einstellungen > Backup-Import die JSON-Datei einspielen.
@@ -65,7 +65,6 @@ Eine Sicherung gilt erst nach erfolgreichem Rücksicherungstest als zuverlässig
 ## Updates ohne Datenverlust
 
     cd /var/www/kalender
-    sudo python3 /var/www/kalender/backup.py # nur als passender Datenbank-Berechtigter und mit ENV!
     sudo git pull --ff-only
     sudo systemctl restart kalender
     sudo systemctl status kalender

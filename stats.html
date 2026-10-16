@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <script>
-        if (!sessionStorage.getItem('authKey')) {
-            window.location.replace('index.html');
-        }
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Agenda 2050 | Finance Core</title>
@@ -101,6 +96,7 @@
         @keyframes blinker { 50% { opacity: 0; } }
 
     </style>
+<script src="server-sync.js" defer></script>
 </head>
 <body>
 
@@ -534,5 +530,6 @@
             }, 500); 
         };
     </script>
+<script>document.addEventListener('DOMContentLoaded',async()=>{await fetchFromSupabase();if(typeof calculateStats==='function')calculateStats();});</script>
 </body>
 </html>

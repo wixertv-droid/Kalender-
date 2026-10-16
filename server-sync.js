@@ -46,7 +46,7 @@ async function pushToSupabase() {
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({version:syncRevision,data:kalenderData()})
         });
-        if(response.status===403){location.replace('index.html');return;}
+        if(response.status===401||response.status===403){location.replace('index.html');return;}
         const result=await response.json();
         if(response.status===409){
             syncBlocked=true;
@@ -77,7 +77,7 @@ async function pushToSupabase() {
 async function fetchFromSupabase() {
     try {
         const response=await fetch('/api/data',{cache:'no-store',credentials:'same-origin'});
-        if(response.status===403){location.replace('index.html');return;}
+        if(response.status===401||response.status===403){location.replace('index.html');return;}
         if(!response.ok)throw Error('Serverstatus '+response.status);
         const {version,data}=await response.json();
         isCloudConnected=true;

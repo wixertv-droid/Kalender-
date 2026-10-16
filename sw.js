@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agenda-2050-v8'; // Neue Version, killt den alten Cache
+const CACHE_NAME = 'agenda-2050-v9-rescue'; // Neue Version, killt den alten Cache
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS = [
   './jahr.html',
   './kunden.html',
   './einstellungen.html',
+  './rettung.html',
   './style.css',
   './app.js',
   './manifest.json',

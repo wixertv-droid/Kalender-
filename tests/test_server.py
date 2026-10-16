@@ -93,6 +93,19 @@ class CalendarAPITests(unittest.TestCase):
         data["data"]["kunden"]=[{"id":"unsafe onclick","name":"Test"}]
         self.assertEqual(self.request("POST","/api/data",{"version":version,"data":data["data"]},verified=True,cookie=cookie)[0],400)
 
+    def test_pin_still_required_without_device_cert_gate(self):
+        old = self.app.REQUIRE_DEVICE_CERT
+        try:
+            self.app.REQUIRE_DEVICE_CERT = False
+            self.assertEqual(self.request("GET", "/api/data")[0], 401)
+            self.assertEqual(self.request("GET", "/api/session")[1]["authenticated"], False)
+            status, result, cookie, _ = self.request("POST", "/api/login", {"pin":"4729"})
+            self.assertEqual(status, 200)
+            self.assertIsNotNone(cookie)
+            self.assertEqual(self.request("GET", "/api/data", cookie=cookie.split(";",1)[0])[0], 200)
+        finally:
+            self.app.REQUIRE_DEVICE_CERT = old
+
     def test_rate_limit_and_login_page(self):
         ip="192.0.2.88"
         for _ in range(5):

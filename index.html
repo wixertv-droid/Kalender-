@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>System Boot // 2050</title>
+    <title>Kalender – PIN Anmeldung</title>
     <link rel="stylesheet" href="login.css">
     <link rel="icon" type="image/png" href="./icon.png">
     <link rel="apple-touch-icon" href="./icon.png">
@@ -29,35 +29,29 @@
         </div>
 
         <div class="gateway-content">
-            <div id="pinBox">
+            <div id="pinBox" aria-label="PIN-Eingabe">
                 <div class="pin-display">
-                    <div class="pin-dot"></div>
-                    <div class="pin-dot"></div>
-                    <div class="pin-dot"></div>
-                    <div class="pin-dot"></div>
+                    <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
                 </div>
             </div>
-
-            <div id="prozent" class="loader-text" style="display: none;">0%</div>
-
             <div id="numpadBox" class="numpad">
-                <div class="num-btn" onclick="addNumber('1')">1</div>
-                <div class="num-btn" onclick="addNumber('2')">2</div>
-                <div class="num-btn" onclick="addNumber('3')">3</div>
-                <div class="num-btn" onclick="addNumber('4')">4</div>
-                <div class="num-btn" onclick="addNumber('5')">5</div>
-                <div class="num-btn" onclick="addNumber('6')">6</div>
-                <div class="num-btn" onclick="addNumber('7')">7</div>
-                <div class="num-btn" onclick="addNumber('8')">8</div>
-                <div class="num-btn" onclick="addNumber('9')">9</div>
-                
-                <div class="num-btn action-btn error-btn" onclick="clearPin()">✖</div>
-                <div class="num-btn" onclick="addNumber('0')">0</div>
-                <div class="num-btn action-btn reset-btn" onclick="alert('SYSTEM-HINWEIS: Passwort-Wiederherstellung per Mail folgt in einem der nächsten Updates!')">?</div>
+                <button type="button" class="num-btn" onclick="addNumber('1')">1</button>
+                <button type="button" class="num-btn" onclick="addNumber('2')">2</button>
+                <button type="button" class="num-btn" onclick="addNumber('3')">3</button>
+                <button type="button" class="num-btn" onclick="addNumber('4')">4</button>
+                <button type="button" class="num-btn" onclick="addNumber('5')">5</button>
+                <button type="button" class="num-btn" onclick="addNumber('6')">6</button>
+                <button type="button" class="num-btn" onclick="addNumber('7')">7</button>
+                <button type="button" class="num-btn" onclick="addNumber('8')">8</button>
+                <button type="button" class="num-btn" onclick="addNumber('9')">9</button>
+                <button type="button" class="num-btn" onclick="clearPin()">✖</button>
+                <button type="button" class="num-btn" onclick="addNumber('0')">0</button>
+                <button type="button" class="num-btn" onclick="backspacePin()">⌫</button>
             </div>
+            <p style="text-align:center;color:#a9b6c0;font-size:12px;margin-top:10px">Vierstellige PIN · Gerät wird zusätzlich per Zertifikat geschützt</p>
         </div>
 
-        <div class="loader-status" id="status-text">AWAITING INPUT...</div>
+        <div class="loader-status" id="status-text">PIN EINGEBEN</div>
     </div>
 
     <script src="login.js"></script>

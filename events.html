@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <script>if (!sessionStorage.getItem('authKey')) { window.location.replace('index.html'); }</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Agenda 2050 | Event Core</title>
     <link rel="stylesheet" href="style.css">
     
+    <script src="server-sync.js" defer></script>
     <script src="app.js" defer></script>
     <script src="events.js" defer></script>
     
@@ -23,6 +23,7 @@
         
         .btn-status { font-size: 0.7rem; padding: 5px 8px; background: rgba(0,0,0,0.5); border: 1px solid #666; color: #fff; border-radius: 4px; cursor: pointer; }
     </style>
+    <script src="webmeldungen.js" defer></script>
 </head>
 <body>
 

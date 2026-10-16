@@ -13,97 +13,7 @@ const DEFAULTS = {
 
 let currentEditId = null; 
 
-/* ==========================================================================
-   >>> SUPABASE ANBINDUNG (DIRECT DATABASE CONNECTION) <<<
-   ========================================================================== */
-const SUPABASE_URL = 'https://xdynlrghhnxbmcylafxg.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhkeW5scmdoaG54Ym1jeWxhZnhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQzNDcxMzgsImV4cCI6MjA4OTkyMzEzOH0.Zre-Vv5MElN3q6-R804ZrhYxnvEwhB0b3f8_ohFoe3A';
-
-let isCloudConnected = false; 
-let isSyncingFromCloud = false;
-let syncTimeout = null;
-
-// Überschreiben der Speicherfunktion, damit JEDE Änderung (Eintragen/Löschen) sofort hochlädt
-const originalSetItem = localStorage.setItem;
-
-localStorage.setItem = function(key, value) {
-    originalSetItem.call(localStorage, key, value);
-
-    // Wenn die App gerade selber Daten aus der Cloud lädt, nicht sofort wieder hochladen!
-    if (isSyncingFromCloud) return; 
-
-    if (["appTermine", "appKunden", "appEinstellungen", "appPin", "appEvents", "appSperrzeiten"].includes(key)) {
-        clearTimeout(syncTimeout);
-        syncTimeout = setTimeout(pushToSupabase, 400); // 400ms Puffer, bündelt schnelle Klicks
-    }
-};
-
-// Die Funktion schießt den aktuellen Stand HART in die Datenbank
-async function pushToSupabase() {
-    const payload = {
-        id: 1, 
-        termine: JSON.parse(localStorage.getItem('appTermine') || '[]'),
-        kunden: JSON.parse(localStorage.getItem('appKunden') || '[]'),
-        einstellungen: JSON.parse(localStorage.getItem('appEinstellungen') || '{}'),
-        pin: localStorage.getItem('appPin') || "0000",
-        events: JSON.parse(localStorage.getItem('appEvents') || '[]'), 
-        sperrzeiten: JSON.parse(localStorage.getItem('appSperrzeiten') || '[]'),
-        last_update: new Date().toISOString()
-    };
-
-    try {
-        await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1`, {
-            method: 'PATCH', 
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(payload)
-        });
-        console.log("☁️ Auto-Upload: Datenbank aktualisiert!");
-    } catch(e) { 
-        console.error("☁️ Upload Fehler:", e); 
-    }
-}
-
-// LÄDT HART AUS DER CLOUD (Ignoriert jeden Cache!)
-async function fetchFromSupabase() {
-    try {
-        // Ein dynamischer Header zwingt iPhone/Safari dazu, die Datenbank live anzufragen
-        const response = await fetch(`${SUPABASE_URL}/rest/v1/systemdaten?id=eq.1&select=*`, {
-            method: 'GET',
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Cache-Control': 'no-store, max-age=0',
-                'X-Buster': Date.now().toString() 
-            }
-        });
-
-        if (!response.ok) return;
-        const data = await response.json();
-        
-        if(data && data.length > 0) {
-            isSyncingFromCloud = true; // Blockiert den Upload, während wir runterladen
-            
-            const dbData = data[0];
-            originalSetItem.call(localStorage, 'appTermine', JSON.stringify(dbData.termine || []));
-            originalSetItem.call(localStorage, 'appKunden', JSON.stringify(dbData.kunden || []));
-            originalSetItem.call(localStorage, 'appEinstellungen', JSON.stringify(dbData.einstellungen || {}));
-            originalSetItem.call(localStorage, 'appPin', dbData.pin || "0000");
-            originalSetItem.call(localStorage, 'appEvents', JSON.stringify(dbData.events || [])); 
-            originalSetItem.call(localStorage, 'appSperrzeiten', JSON.stringify(dbData.sperrzeiten || [])); 
-            
-            isSyncingFromCloud = false;
-            console.log("☁️ Sync: Lokale Daten mit Cloud überschrieben.");
-        }
-    } catch(e) { 
-        console.error("☁️ Sync Fehler:", e); 
-        isSyncingFromCloud = false;
-    }
-}
+/* Datenbank-Anbindung erfolgt durch server-sync.js (vor app.js laden). */
 
 // Aktualisiert alle Ansichten nach einem Sync
 function refreshAllViews() {
@@ -729,46 +639,23 @@ function renderWeek() {
     });
 }
 
-// ============================================================================
-// 🚀 CLOUD-FIRST INITIALISIERUNG
-// ============================================================================
-document.addEventListener('DOMContentLoaded', async () => {
-    if (!sessionStorage.getItem('authKey')) {
-        window.location.href = 'index.html';
-        return; 
-    }
-
-    // 1. Ladebildschirm STARR anzeigen, bis die Datenbank geantwortet hat!
-    const loader = document.getElementById('app-loader');
-    if (loader) {
-        loader.style.opacity = '1';
-        loader.style.display = 'flex';
-    }
-
-    // 2. WARTEN auf die aktuellsten Daten aus der Datenbank
+// Browseranzeige erst nach sicherem Serverabruf aktualisieren.
+document.addEventListener('DOMContentLoaded',async()=>{
+    const loader=document.getElementById('app-loader');
+    if(loader){loader.style.opacity='1';loader.style.display='flex';}
     await fetchFromSupabase();
-
-    // 3. ERST JETZT den Kalender zeichnen (kein Flimmern, keine alten Daten)
     refreshAllViews();
-
-    // 4. Ladebildschirm ausblenden
-    if (loader) {
-        loader.style.opacity = '0';
-        setTimeout(() => loader.remove(), 500);
+    if(loader){loader.style.opacity='0';setTimeout(()=>loader.remove(),500);}
+    const row=document.querySelector('.tag-zeile.heute');
+    if(row){
+        row.scrollIntoView({behavior:'smooth',block:'center'});
+        row.style.transition='background-color 0.8s ease-out';
+        row.style.backgroundColor='rgba(5,217,232,.15)';
+        setTimeout(()=>{row.style.backgroundColor='transparent'},1200);
     }
-
-    // 5. Heute-Zeile zentrieren (für woche.html)
-    const heuteZeile = document.querySelector('.tag-zeile.heute');
-    if (heuteZeile) {
-        heuteZeile.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        heuteZeile.style.transition = "background-color 0.8s ease-out";
-        heuteZeile.style.backgroundColor = "rgba(5, 217, 232, 0.15)";
-        setTimeout(() => { heuteZeile.style.backgroundColor = "transparent"; }, 1200);
-    }
-
-    // 6. Ab jetzt im Hintergrund alle 5 Sekunden auf Updates lauschen
-    setInterval(async () => {
+    setInterval(async()=>{
+        const last=syncRevision;
         await fetchFromSupabase();
-        refreshAllViews();
-    }, 5000);
+        if(last!==syncRevision&&!dirty)refreshAllViews();
+    },12000);
 });

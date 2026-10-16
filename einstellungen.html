@@ -1,16 +1,11 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <script>
-        // HÄRTESTER TÜRSTEHER DER WELT
-        if (!sessionStorage.getItem('authKey')) {
-            window.location.replace('index.html');
-        }
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Agenda 2050 | Setup</title>
     <link rel="stylesheet" href="style.css">
+    <script src="server-sync.js" defer></script>
     <script src="app.js" defer></script>
     <style>
         .sperr-liste {
@@ -48,6 +43,7 @@
             font-weight: bold;
         }
     </style>
+    <script src="webmeldungen.js" defer></script>
 </head>
 <body>
 
@@ -65,37 +61,29 @@
         <div style="width: 44px;"></div> </div>
 
     <div class="settings-container">
-        
         <div class="settings-card">
-            <div class="setting-title">Sicherheits-Protokoll (PIN)</div>
-            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Ändere den 4-stelligen Zugangscode für die App.</p>
-            
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <div class="form-group">
-                    <label class="input-label">Aktuelle PIN</label>
-                    <input type="password" id="oldPin" class="cyber-input-full" placeholder="****" inputmode="numeric" maxlength="4">
-                </div>
-                
-                <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label class="input-label">Neue PIN</label>
-                        <input type="password" id="newPin" class="cyber-input-full" placeholder="****" inputmode="numeric" maxlength="4">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label class="input-label">Bestätigen</label>
-                        <input type="password" id="confirmPin" class="cyber-input-full" placeholder="****" inputmode="numeric" maxlength="4">
-                    </div>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 10px; margin-top: -5px;">
-                    <input type="checkbox" id="showPin" onchange="togglePinVisibility()" style="accent-color: var(--neon-cyan); width: 18px; height: 18px;">
-                    <label for="showPin" style="color: #aaa; font-size: 0.85rem; cursor: pointer;">PIN anzeigen</label>
-                </div>
+            <div class="setting-title">🔐 PIN-Anmeldung</div>
+            <p style="color:#a6b2bf">Der vierstellige Code wird verschlüsselt auf dem Server geprüft. Dein Gerätezertifikat bleibt aktiv.</p>
+            <div class="form-group">
+                <label class="input-label" for="oldPin">Aktuelle PIN</label>
+                <input type="password" id="oldPin" class="cyber-input-full" autocomplete="off" inputmode="numeric" maxlength="4">
             </div>
-
-            <button onclick="changeSystemPin(this)" class="btn-save" style="margin-top: 15px; padding: 15px; font-size: 1rem;">PIN Aktualisieren</button>
+            <div class="form-group">
+                <label class="input-label" for="newPin">Neue PIN</label>
+                <input type="password" id="newPin" class="cyber-input-full" autocomplete="off" inputmode="numeric" maxlength="4">
+            </div>
+            <div class="form-group">
+                <label class="input-label" for="confirmPin">Neue PIN wiederholen</label>
+                <input type="password" id="confirmPin" class="cyber-input-full" autocomplete="off" inputmode="numeric" maxlength="4">
+            </div>
+            <button type="button" class="btn-save" onclick="changeSystemPin(this)">PIN ÄNDERN</button>
+            <button type="button" class="btn-save" style="margin-top:10px" onclick="logoutKalender()">ABMELDEN</button>
         </div>
 
+        <div class="settings-card">
+            <div class="setting-title">Zugriffsschutz: Gerätezertifikat</div>
+            <p>Keine PIN oder Passwort-Anmeldung. Der Server akzeptiert ausschließlich Geräte, deren Zertifikate du selbst freigegeben hast. Neue Geräte werden auf dem Server eingerichtet.</p>
+        </div>
         <div class="settings-card" style="border-left: 4px solid var(--neon-green);">
             <div class="setting-title" style="color: var(--neon-green); border-bottom-color: rgba(57, 255, 20, 0.3);">Medizinisches Inventar</div>
             <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Trage hier deinen aktuellen Bestand an Tests ein. Das System zieht automatisch 1 Test ab, wenn ein Termin mit der Präferenz "AO" erfolgreich abgerechnet wird.</p>
@@ -284,52 +272,29 @@
             }, 400);
         });
 
-        // PIN SICHTBARKEIT UMSCHALTEN
-        function togglePinVisibility() {
-            const type = document.getElementById('showPin').checked ? 'text' : 'password';
-            document.getElementById('oldPin').type = type;
-            document.getElementById('newPin').type = type;
-            document.getElementById('confirmPin').type = type;
+        async function changeSystemPin(btn) {
+            const current=document.getElementById('oldPin').value;
+            const next=document.getElementById('newPin').value;
+            const repeat=document.getElementById('confirmPin').value;
+            if(!/^[0-9]{4}$/.test(current)||!/^[0-9]{4}$/.test(next)) {alert('Bitte genau vier Ziffern eingeben.');return;}
+            if(next!==repeat){alert('Neue PIN stimmt nicht überein.');return;}
+            btn.disabled=true;
+            try {
+                const response=await fetch('/api/change-pin',{
+                    method:'POST',credentials:'same-origin',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({current,new:next})
+                });
+                const data=await response.json();
+                if(!response.ok)throw Error(data.error||'PIN-Änderung fehlgeschlagen');
+                alert('PIN geändert! Bitte erneut anmelden.');
+                location.replace('index.html');
+            }catch(e){alert(e.message);btn.disabled=false;}
         }
-
-        function changeSystemPin(btnElement) {
-            const oldInput = document.getElementById('oldPin').value;
-            const newInput = document.getElementById('newPin').value;
-            const confirmInput = document.getElementById('confirmPin').value;
-            const currentPin = localStorage.getItem('appPin') || "0000";
-
-            if (oldInput !== currentPin) {
-                alert("❌ Die aktuelle PIN ist falsch!");
-                return;
-            }
-            if (newInput.length !== 4 || isNaN(newInput)) {
-                alert("⚠️ Die neue PIN muss genau 4 Ziffern lang sein (nur Zahlen erlaubt)!");
-                return;
-            }
-            if (newInput !== confirmInput) {
-                alert("❌ Die neuen PINs stimmen nicht überein!");
-                return;
-            }
-
-            localStorage.setItem('appPin', newInput);
-            
-            const originalText = btnElement.innerText;
-            btnElement.innerText = "SPEICHERT IN CLOUD...";
-            btnElement.style.background = "var(--neon-green)";
-            btnElement.style.color = "#000";
-
-            setTimeout(() => {
-                alert("✅ System-PIN wurde erfolgreich aktualisiert!");
-                document.getElementById('oldPin').value = '';
-                document.getElementById('newPin').value = '';
-                document.getElementById('confirmPin').value = '';
-                document.getElementById('showPin').checked = false;
-                togglePinVisibility();
-                
-                btnElement.innerText = originalText;
-                btnElement.style.background = "";
-                btnElement.style.color = "";
-            }, 800);
+        async function logoutKalender(){
+            try{
+                await fetch('/api/logout',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});
+            }finally{location.replace('index.html');}
         }
 
         // --- SPERRZEITEN LOGIK ---
@@ -483,6 +448,7 @@
                 kunden: JSON.parse(localStorage.getItem('appKunden')) || [],
                 einstellungen: JSON.parse(localStorage.getItem('appEinstellungen')) || {},
                 sperrzeiten: JSON.parse(localStorage.getItem('appSperrzeiten')) || [],
+                events: JSON.parse(localStorage.getItem('appEvents')) || [],
                 exportDate: new Date().toISOString()
             };
 
@@ -498,32 +464,31 @@
             downloadAnchorNode.remove();
         }
 
-        function importDatabase(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    
-                    if (confirm("SYSTEM-WARNUNG: Möchtest du deine aktuellen Daten wirklich mit diesem Backup überschreiben?")) {
-                        
-                        if (importedData.termine) localStorage.setItem('appTermine', JSON.stringify(importedData.termine));
-                        if (importedData.kunden) localStorage.setItem('appKunden', JSON.stringify(importedData.kunden));
-                        if (importedData.einstellungen) localStorage.setItem('appEinstellungen', JSON.stringify(importedData.einstellungen));
-                        if (importedData.sperrzeiten) localStorage.setItem('appSperrzeiten', JSON.stringify(importedData.sperrzeiten));
-                        
-                        alert("✅ SYNC ERFOLGREICH: Alle Daten wurden wiederhergestellt!");
-                        location.reload(); 
-                    }
-                } catch (err) {
-                    alert("❌ FEHLER: Ungültige oder beschädigte Backup-Datei!");
+        async function importDatabase(event) {
+            const file=event.target.files[0];
+            if(!file)return;
+            try{
+                const imported=JSON.parse(await file.text());
+                const oldData=imported.data || imported;
+                const data=kalenderData();
+                for(const key of ['termine','kunden','einstellungen','sperrzeiten','events']){
+                    if(Object.prototype.hasOwnProperty.call(oldData,key))data[key]=oldData[key];
                 }
-                event.target.value = ''; 
-            };
-            reader.readAsText(file);
+                if(!confirm('Das JSON-Backup wird in die SERVER-Datenbank importiert. Alle bisherigen Serverdaten werden ersetzt. Fortfahren?'))return;
+                if(dirty||syncBlocked||syncRevision===null)throw Error('Ungespeicherte Daten oder Konflikt erkannt. Vorher bitte Backup erstellen.');
+                const response=await fetch('/api/data',{
+                    method:'POST',credentials:'same-origin',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({version:syncRevision,data})
+                });
+                const result=await response.json();
+                if(!response.ok)throw Error(result.error||'Import fehlgeschlagen');
+                alert('Backup erfolgreich auf dem Server wiederhergestellt.');
+                location.reload();
+            }catch(err){alert('Import fehlgeschlagen: '+err.message);}
+            finally{event.target.value='';}
         }
+
     </script>
 </body>
 </html>

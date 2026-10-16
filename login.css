@@ -230,3 +230,11 @@ html, body {
 
 .ring-error { border-color: var(--neon-pink) !important; animation: shake 0.3s ease infinite !important; box-shadow: 0 0 40px var(--neon-pink) !important; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-15px); } 75% { transform: translateX(15px); } }
+
+/* Self-hosted authentication form */
+#login-form{display:flex;flex-direction:column;gap:15px;width:min(340px,85vw);margin:0 auto;position:relative;z-index:5}
+.login-label{letter-spacing:.17em;font-size:.85rem;text-align:center;color:var(--neon-cyan,#05d9e8)}
+#login-password{width:100%;box-sizing:border-box;padding:16px;background:rgba(6,16,25,.94);border:1px solid var(--neon-cyan,#05d9e8);border-radius:8px;color:white;font-size:1.05rem;outline-offset:3px}
+.login-submit{cursor:pointer;padding:15px 12px;color:#081017;background:var(--neon-cyan,#05d9e8);border:0;border-radius:8px;font-weight:800;letter-spacing:.1em}
+.login-submit:disabled{opacity:.5;cursor:wait}
+.login-help{font-size:.8rem;line-height:1.45;color:#b1bcc5;text-align:center}

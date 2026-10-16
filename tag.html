@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <script>
-        if (!sessionStorage.getItem('authKey')) {
-            window.location.replace('index.html');
-        }
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Agenda 2050 | Taktische Timeline</title>
@@ -15,6 +10,7 @@
     <link rel="apple-touch-icon" href="icon.png">
 
     <link rel="stylesheet" href="style.css">
+    <script src="server-sync.js" defer></script>
     <script src="app.js" defer></script>
 
     <style>
@@ -101,6 +97,7 @@
         .vorschlag-item { padding: 15px; cursor: pointer; border-bottom: 1px solid rgba(5, 217, 232, 0.1); color: var(--neon-cyan); transition: 0.2s; }
         .vorschlag-item:hover { background: rgba(5, 217, 232, 0.15); }
     </style>
+    <script src="webmeldungen.js" defer></script>
 </head>
 <body>
 

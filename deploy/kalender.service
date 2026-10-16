@@ -1,0 +1,27 @@
+[Unit]
+Description=Kalender Bytevo (private SQLite application)
+After=network.target
+
+[Service]
+Type=simple
+User=kalender
+Group=kalender
+WorkingDirectory=/var/www/kalender
+Environment=KALENDER_DATA_DIR=/var/lib/kalender
+Environment=KALENDER_ORIGIN=https://kalender.bytevo.de
+Environment=KALENDER_HOST=127.0.0.1
+Environment=KALENDER_PORT=3102
+Environment=KALENDER_REQUIRE_DEVICE_CERT=0
+ExecStart=/usr/bin/python3 /var/www/kalender/server.py serve
+Restart=on-failure
+RestartSec=3
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/kalender
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

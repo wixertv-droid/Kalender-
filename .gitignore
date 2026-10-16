@@ -1,0 +1,10 @@
+# Private Daten niemals in Git committen
+.private-data/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+.env
+.env.*
+__pycache__/
+*.pyc
+*.log

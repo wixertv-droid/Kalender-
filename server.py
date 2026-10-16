@@ -13,7 +13,7 @@ HOST=os.getenv("KALENDER_HOST","127.0.0.1")
 PORT=int(os.getenv("KALENDER_PORT","3102"))
 KEYS={"termine":list,"kunden":list,"einstellungen":dict,"events":list,"sperrzeiten":list}
 EMPTY={"termine":[],"kunden":[],"einstellungen":{},"events":[],"sperrzeiten":[]}
-FILES=set("index.html woche.html jahr.html tag.html kunden.html events.html einstellungen.html stats.html loader.html app.js events.js login.js style.css login.css manifest.json sw.js favicon.ico favicon-32.png apple-touch-icon.png apple-touch-icon-1.png icon.png icon-192.png icon-single.png 1774360504505.png".split())
+FILES=set("index.html woche.html jahr.html tag.html kunden.html events.html einstellungen.html stats.html loader.html app.js events.js login.js webmeldungen.js style.css login.css manifest.json sw.js favicon.ico favicon-32.png apple-touch-icon.png apple-touch-icon-1.png icon.png icon-192.png icon-single.png 1774360504505.png".split())
 PUBLIC=set("index.html login.js login.css manifest.json sw.js favicon.ico favicon-32.png apple-touch-icon.png apple-touch-icon-1.png icon.png icon-192.png icon-single.png".split())
 
 def dbopen():

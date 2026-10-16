@@ -60,38 +60,10 @@
         <div style="width: 44px;"></div> </div>
 
     <div class="settings-container">
-        <button type="button" class="btn-save" onclick="logoutKalender()" style="margin-bottom:20px">SICHER ABMELDEN</button>
-        
         <div class="settings-card">
-            <div class="setting-title">Sicherheits-Protokoll (Passwort)</div>
-            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Ändere dein Server-Passwort (mindestens 12 Zeichen).</p>
-            
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <div class="form-group">
-                    <label class="input-label">Aktuelles Passwort</label>
-                    <input type="password" id="oldPin" class="cyber-input-full" placeholder="Mindestens 12 Zeichen" minlength="12" maxlength="1024" autocomplete="off">
-                </div>
-                
-                <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="flex: 1;">
-                        <label class="input-label">Neues Passwort</label>
-                        <input type="password" id="newPin" class="cyber-input-full" placeholder="Mindestens 12 Zeichen" minlength="12" maxlength="1024" autocomplete="off">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label class="input-label">Bestätigen</label>
-                        <input type="password" id="confirmPin" class="cyber-input-full" placeholder="Mindestens 12 Zeichen" minlength="12" maxlength="1024" autocomplete="off">
-                    </div>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 10px; margin-top: -5px;">
-                    <input type="checkbox" id="showPin" onchange="togglePinVisibility()" style="accent-color: var(--neon-cyan); width: 18px; height: 18px;">
-                    <label for="showPin" style="color: #aaa; font-size: 0.85rem; cursor: pointer;">Passwort anzeigen</label>
-                </div>
-            </div>
-
-            <button onclick="changeSystemPin(this)" class="btn-save" style="margin-top: 15px; padding: 15px; font-size: 1rem;">Passwort aktualisieren</button>
+            <div class="setting-title">Zugriffsschutz: Gerätezertifikat</div>
+            <p>Keine PIN oder Passwort-Anmeldung. Der Server akzeptiert ausschließlich Geräte, deren Zertifikate du selbst freigegeben hast. Neue Geräte werden auf dem Server eingerichtet.</p>
         </div>
-
         <div class="settings-card" style="border-left: 4px solid var(--neon-green);">
             <div class="setting-title" style="color: var(--neon-green); border-bottom-color: rgba(57, 255, 20, 0.3);">Medizinisches Inventar</div>
             <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Trage hier deinen aktuellen Bestand an Tests ein. Das System zieht automatisch 1 Test ab, wenn ein Termin mit der Präferenz "AO" erfolgreich abgerechnet wird.</p>
@@ -286,31 +258,6 @@
             document.getElementById('oldPin').type = type;
             document.getElementById('newPin').type = type;
             document.getElementById('confirmPin').type = type;
-        }
-
-        async function changeSystemPin(btnElement) {
-            const current=document.getElementById('oldPin').value;
-            const next=document.getElementById('newPin').value;
-            const confirm=document.getElementById('confirmPin').value;
-            if(next.length<12){alert('Das neue Passwort benötigt mindestens 12 Zeichen.');return;}
-            if(next!==confirm){alert('Neue Passwörter stimmen nicht überein.');return;}
-            btnElement.disabled=true;
-            try{
-                const res=await fetch('/api/change-password',{
-                    method:'POST',credentials:'same-origin',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({current,new:next})
-                });
-                const result=await res.json();
-                if(!res.ok)throw Error(result.error||'Passwortwechsel fehlgeschlagen');
-                sessionStorage.removeItem('authKey');
-                alert('Passwort geändert. Bitte mit dem neuen Passwort anmelden.');
-                location.replace('index.html');
-            }catch(e){alert(e.message);btnElement.disabled=false;}
-        }
-        async function logoutKalender() {
-            try{await fetch('/api/logout',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});}
-            finally{sessionStorage.removeItem('authKey');location.replace('index.html');}
         }
 
         // --- SPERRZEITEN LOGIK ---

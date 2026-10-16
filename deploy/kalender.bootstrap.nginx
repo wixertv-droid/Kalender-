@@ -1,0 +1,12 @@
+# Zunächst nur Let's Encrypt, Kalender selbst nicht öffentlich.
+server {
+ listen 80;
+ listen [::]:80;
+ server_name kalender.bytevo.de;
+ location ^~ /.well-known/acme-challenge/ {
+     root /var/www/letsencrypt;
+     default_type text/plain;
+     try_files $uri =404;
+ }
+ location / { return 503 "Kalender wird eingerichtet.\n"; }
+}

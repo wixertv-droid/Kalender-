@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """One-time import from the original Supabase systemdaten into private SQLite.
 
-Reads the legacy URL + public ANON key from the last original main-branch code
-already present in local Git history; never logs credentials or personal data.
+Reads the legacy URL + public ANON key from the exact pinned original main-branch
+file on GitHub. Works even with single-branch checkouts and as the calendar
+system user; never logs credentials or personal data.
 Default checks counts only. --apply requires typed confirmation and backs up
 the current SQLite DB; refuses to overwrite any nonempty/newer snapshot.
 """
@@ -13,7 +14,6 @@ import os
 from pathlib import Path
 import re
 import sqlite3
-import subprocess
 import sys
 import time
 import urllib.error
@@ -23,6 +23,10 @@ ROOT = Path(__file__).resolve().parent
 DATA_DIR = Path(os.getenv("KALENDER_DATA_DIR", "/var/lib/kalender"))
 BACKUP_DIR = Path(os.getenv("KALENDER_BACKUP_DIR", "/var/backups/kalender"))
 OLD_MAIN_SHA = "7b1854554732005226c927a7817c499efa08c6c4"
+LEGACY_SOURCE_URL = (
+    "https://raw.githubusercontent.com/wixertv-droid/Kalender-/"
+    + OLD_MAIN_SHA + "/app.js"
+)
 
 def server():
     spec = importlib.util.spec_from_file_location("kalender_backend", ROOT / "server.py")
@@ -31,14 +35,29 @@ def server():
     return module
 
 def load_legacy_connection():
-    source = subprocess.run(
-        ["git", "-C", str(ROOT), "show", OLD_MAIN_SHA + ":app.js"],
-        capture_output=True, text=True, check=True, timeout=15
-    ).stdout
-    u = re.search(r"const SUPABASE_URL\s*=\s*['\"](https://[a-z0-9-]+\.supabase\.co)['\"]", source)
-    k = re.search(r"const SUPABASE_KEY\s*=\s*['\"]([^'\"]+)['\"]", source)
+    # The VPS was cloned using --single-branch, and /var/www/kalender is
+    # owned by root. The unprivileged calendar user therefore cannot reliably
+    # run git show against the old main commit. Retrieve the exact pinned
+    # public source file over HTTPS instead (never print its contents).
+    try:
+        request = urllib.request.Request(
+            LEGACY_SOURCE_URL,
+            headers={"Accept": "text/plain", "User-Agent": "Kalender-Migration/1.1"},
+        )
+        with urllib.request.urlopen(request, timeout=20) as response:
+            raw = response.read(256 * 1024 + 1)
+        if len(raw) > 256 * 1024:
+            raise RuntimeError("Alte GitHub-Datei ist zu groß.")
+        source = raw.decode("utf-8")
+    except (urllib.error.URLError, UnicodeError) as error:
+        raise RuntimeError(
+            "Alte GitHub-Datei nicht erreichbar. Netzwerkzugriff pruefen oder "
+            "stattdessen Daten aus dem alten Browser exportieren."
+        ) from None
+    u = re.search(r"const SUPABASE_URL\\s*=\\s*['\\\"](https://[a-z0-9-]+\\.supabase\\.co)['\\\"]", source)
+    k = re.search(r"const SUPABASE_KEY\\s*=\\s*['\\\"]([^'\\\"]+)['\\\"]", source)
     if not u or not k:
-        raise RuntimeError("Alte Supabase-Verbindung nicht im Git-Verlauf gefunden.")
+        raise RuntimeError("Alte Supabase-Verbindung nicht in der Originaldatei gefunden.")
     return u.group(1), k.group(1)
 
 def fetch_legacy():
@@ -134,6 +153,6 @@ def main():
 
 if __name__=="__main__":
     try: main()
-    except (RuntimeError, ValueError, OSError, subprocess.CalledProcessError) as ex:
+    except (RuntimeError, ValueError, OSError) as ex:
         print("STOP:",ex,file=sys.stderr)
         sys.exit(1)

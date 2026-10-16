@@ -54,8 +54,8 @@ def load_legacy_connection():
             "Alte GitHub-Datei nicht erreichbar. Netzwerkzugriff pruefen oder "
             "stattdessen Daten aus dem alten Browser exportieren."
         ) from None
-    u = re.search(r"const SUPABASE_URL\\s*=\\s*['\\\"](https://[a-z0-9-]+\\.supabase\\.co)['\\\"]", source)
-    k = re.search(r"const SUPABASE_KEY\\s*=\\s*['\\\"]([^'\\\"]+)['\\\"]", source)
+    u = re.search(r"const SUPABASE_URL\s*=\s*['\"](https://[a-z0-9-]+\.supabase\.co)['\"]", source)
+    k = re.search(r"const SUPABASE_KEY\s*=\s*['\"]([^'\"]+)['\"]", source)
     if not u or not k:
         raise RuntimeError("Alte Supabase-Verbindung nicht in der Originaldatei gefunden.")
     return u.group(1), k.group(1)

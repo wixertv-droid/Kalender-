@@ -17,8 +17,6 @@ class CalendarAPITests(unittest.TestCase):
         cls.app=importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.app)
         cls.app.initdb()
-        with cls.app.dbopen() as db:
-            db.execute("INSERT INTO admin VALUES(1,?)",(cls.app.digest_password("very-secure-test-password"),))
         cls.server=cls.app.ThreadingHTTPServer(("127.0.0.1",0),cls.app.Handler)
         cls.port=cls.server.server_address[1]
         cls.thread=threading.Thread(target=cls.server.serve_forever,daemon=True)
@@ -31,49 +29,45 @@ class CalendarAPITests(unittest.TestCase):
         cls.thread.join(timeout=3)
         cls.temp.cleanup()
 
-    def request(self,method,path,body=None,cookie=None,origin=True):
+    def request(self,method,path,body=None,verified=False,origin=True):
         conn=http.client.HTTPConnection("127.0.0.1",self.port,timeout=5)
         headers={}
         if body is not None:
-            body=json.dumps(body).encode("utf-8")
+            body=json.dumps(body).encode()
             headers["Content-Type"]="application/json"
         if origin:headers["Origin"]="http://127.0.0.1"
-        if cookie:headers["Cookie"]=cookie
+        if verified:headers["X-Kalender-Verified"]="SUCCESS"
         conn.request(method,path,body=body,headers=headers)
         response=conn.getresponse()
         status=response.status
-        setcookie=response.getheader("Set-Cookie")
         raw=response.read()
         conn.close()
-        return status,json.loads(raw) if raw and response.getheader("Content-Type","").startswith("application/json") else None,setcookie
+        data=json.loads(raw) if raw and response.getheader("Content-Type","").startswith("application/json") else None
+        return status,data
 
-    def test_login_data_conflicts_and_origin(self):
-        status,_,_=self.request("GET","/api/data")
-        self.assertEqual(status,401)
-        status,_,_=self.request("POST","/api/login",{"password":"not-password"},origin=False)
-        self.assertEqual(status,403)
-        status,_,_=self.request("POST","/api/login",{"password":"incorrect"})
-        self.assertEqual(status,401)
-        status,_,header=self.request("POST","/api/login",{"password":"very-secure-test-password"})
-        self.assertEqual(status,200)
-        self.assertIn("HttpOnly",header)
-        self.assertIn("Secure",header)
-        cookie=header.split(";",1)[0]
-        status,data,_=self.request("GET","/api/data",cookie=cookie)
-        self.assertEqual((status,data["version"]),(200,0))
-        data["data"]["termine"]=[{"name":"Test","id":1}]
-        status,saved,_=self.request("POST","/api/data",{"version":0,"data":data["data"]},cookie)
-        self.assertEqual((status,saved["version"]),(200,1))
-        status,_,_=self.request("POST","/api/data",{"version":0,"data":data["data"]},cookie)
-        self.assertEqual(status,409)
-        status,_,_=self.request("GET","/api/export",cookie=cookie)
-        self.assertEqual(status,200)
-        status,_,_=self.request("POST","/api/logout",{},cookie)
-        self.assertEqual(status,200)
-        status,_,_=self.request("GET","/api/data",cookie=cookie)
-        self.assertEqual(status,401)
+    def test_mtls_proxy_gate_and_conflict(self):
+        self.assertEqual(self.request("GET","/api/data")[0],403)
+        self.assertEqual(self.request("GET","/api/session")[1]["authenticated"],False)
+        self.assertEqual(self.request("GET","/api/session",verified=True)[1]["authenticated"],True)
+        self.assertEqual(self.request("POST","/api/data",{},verified=True,origin=False)[0],403)
+        self.assertEqual(self.request("POST","/api/data",{})[0],403)
+        status,loaded=self.request("GET","/api/data",verified=True)
+        self.assertEqual((status,loaded["version"]),(200,0))
+        loaded["data"]["termine"]=[{"name":"Beispiel","id":1}]
+        result=self.request("POST","/api/data",{"version":0,"data":loaded["data"]},verified=True)
+        self.assertEqual((result[0],result[1]["version"]),(200,1))
+        self.assertEqual(self.request("POST","/api/data",{"version":0,"data":loaded["data"]},verified=True)[0],409)
+        self.assertEqual(self.request("GET","/api/export",verified=True)[0],200)
+        self.assertEqual(self.request("POST","/api/login",{"password":"dummy"},verified=True)[0],404)
 
-    def test_html_requires_login(self):
+    def test_reject_html_payload_and_nonnumeric_ids(self):
+        data=self.request("GET","/api/data",verified=True)[1]["data"]
+        data["kunden"]=[{"id":123,"name":"<script>alert(1)</script>"}]
+        self.assertEqual(self.request("POST","/api/data",{"version":1,"data":data},verified=True)[0],400)
+        data["kunden"]=[{"id":"unsafe onclick","name":"Test"}]
+        self.assertEqual(self.request("POST","/api/data",{"version":1,"data":data},verified=True)[0],400)
+
+    def test_html_requires_proxy_verification(self):
         conn=http.client.HTTPConnection("127.0.0.1",self.port,timeout=5)
         conn.request("GET","/woche.html")
         response=conn.getresponse()
@@ -82,5 +76,4 @@ class CalendarAPITests(unittest.TestCase):
         response.read()
         conn.close()
 
-if __name__=="__main__":
-    unittest.main()
+if __name__=="__main__":unittest.main()

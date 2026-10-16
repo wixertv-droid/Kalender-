@@ -65,11 +65,23 @@ def provision(reset=False):
         db.commit()
     print("Admin eingerichtet, bisherige Sitzungen abgemeldet.")
 
-def safe(value,depth=0):
+def safe(value,depth=0,key=""):
+    """Conservative validation for legacy pages that still use HTML templates."""
     if depth>32:return False
-    if isinstance(value,str):return len(value)<=100000 and not any(c in value for c in ("<",">","\x00"))
-    if isinstance(value,list):return len(value)<=100000 and all(safe(v,depth+1) for v in value)
-    if isinstance(value,dict):return len(value)<=100000 and all(isinstance(k,str) and len(k)<=200 and safe(v,depth+1) for k,v in value.items())
+    key=key.lower()
+    if isinstance(value,str):
+        if len(value)>100000 or any(c in value for c in ("<",">","\x00")):return False
+        if key in ("id","kunde_id","event_id","termin_id"):
+            return value.isascii() and value.isdigit() and len(value)<=24
+        if key in ("bild1","bild2","profilLink".lower(),"profillink","link","farbe","color") or key.endswith("_farbe"):
+            if any(c in value for c in ('"', "'", "\u0060", "(", ")", "\\", "\r", "\n", " ")):return False
+        return True
+    if isinstance(value,list):
+        return len(value)<=100000 and all(safe(v,depth+1,key) for v in value)
+    if isinstance(value,dict):
+        return len(value)<=100000 and all(isinstance(k,str) and len(k)<=200 and safe(v,depth+1,k) for k,v in value.items())
+    if key in ("id","kunde_id","event_id","termin_id"):
+        return type(value) is int and 0<=value<=10**24
     return value is None or isinstance(value,(int,float,bool))
 
 class Handler(BaseHTTPRequestHandler):

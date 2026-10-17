@@ -38,7 +38,7 @@ def remove_selected(snapshot, category, ids):
     found = [item for item in existing if isinstance(item, dict) and id_value(item.get("id")) in wanted]
     if len(found) != len(wanted):
         raise SelectionError("Einträge nicht eindeutig gefunden oder mehrfach vorhanden. Bitte neu laden.")
-    remaining = [item for item in existing if id_value(item.get("id")) not in wanted]
+    remaining = [item for item in existing if not isinstance(item, dict) or id_value(item.get("id")) not in wanted]
     new_data = deepcopy(snapshot)
     new_data[category] = remaining
     linked = 0
@@ -46,12 +46,18 @@ def remove_selected(snapshot, category, ids):
         # Never delete historical bookings or payments just because a linked
         # customer profile was removed. Keep names and prices unchanged.
         for item in new_data["termine"]:
+            if not isinstance(item, dict):
+                continue
             for key in ("kunde_id", "kundeId"):
                 if id_value(item.get(key)) in wanted:
                     item.pop(key)
                     linked += 1
         for event in new_data["events"]:
+            if not isinstance(event, dict) or not isinstance(event.get("guests", []), list):
+                continue
             for guest in event.get("guests", []):
+                if not isinstance(guest, dict):
+                    continue
                 for key in ("kundeId", "kunde_id"):
                     if id_value(guest.get(key)) in wanted:
                         guest.pop(key)

@@ -34,6 +34,95 @@
         .event-mini-finance>div{background:#140f13;border:1px solid #513536;border-radius:8px;padding:9px;color:#e4e7e8}
         .event-mini-finance strong{color:var(--neon-gold);display:block;font-size:1.2rem}
 
+
+        /* Event Setup / iPhone responsive: scoped so the existing neon UI stays intact. */
+        #eventSetupModal { z-index:12000; box-sizing:border-box; padding:12px;
+            padding-top:max(12px,env(safe-area-inset-top));
+            padding-bottom:max(12px,env(safe-area-inset-bottom));
+            align-items:center; justify-content:center; overscroll-behavior:contain; }
+        #eventSetupModal .event-setup-content {
+            box-sizing:border-box; width:min(100%,680px); max-width:680px;
+            max-height:calc(100dvh - 24px); overflow-y:auto; overscroll-behavior:contain;
+            -webkit-overflow-scrolling:touch; padding:clamp(16px,4vw,30px);
+            background:rgba(5,15,25,.98); min-width:0;
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+            font-size:15px; line-height:1.5; -webkit-text-size-adjust:100%; }
+        #eventSetupModal .event-setup-content * { box-sizing:border-box; }
+        #eventSetupModal .event-setup-head {border-bottom:1px solid #4d2222; padding-bottom:14px;margin-bottom:20px; }
+        #eventSetupModal .event-setup-head h2 {font:800 clamp(20px,5vw,25px)/1.3 "Courier New",monospace;
+            color:#ff4522;letter-spacing:1.5px; margin:0 0 3px; }
+        #eventSetupModal .event-setup-head p {font-size:13px;color:#a9bbc5;margin:0; }
+        #eventSetupModal .event-form-grid {display:grid;grid-template-columns:minmax(0,1fr);gap:12px 16px;
+            width:100%;min-width:0;align-items:start;margin-bottom:14px; }
+        #eventSetupModal .event-form-grid > .form-group {min-width:0;width:100%; }
+        #eventSetupModal .form-group {margin:0 0 14px;min-width:0;width:100%;}
+        #eventSetupModal .event-form-grid .form-group {margin:0; }
+        #eventSetupModal .form-group label {display:block;max-width:100%;overflow-wrap:break-word;
+            font-family:"Courier New",monospace;font-size:12px;font-weight:700;color:var(--neon-cyan);
+            line-height:1.4;letter-spacing:.7px;text-transform:uppercase;margin:0 0 8px; }
+        #eventSetupModal .cyber-input-full,
+        #eventSetupModal .cyber-select {display:block;width:100%;max-width:100%;min-width:0;min-height:52px;
+            margin:0;padding:12px 14px;border-radius:10px;
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+            font-size:16px;line-height:1.4;letter-spacing:0; text-align:left; }
+        #eventSetupModal .cyber-select {white-space:normal;padding-right:28px; }
+        #eventSetupModal .event-picker {position:relative;min-width:0;width:100%;cursor:pointer; }
+        #eventSetupModal .event-picker-face {display:flex;align-items:center;justify-content:space-between;gap:8px;
+            width:100%;min-width:0;min-height:52px;padding:12px 14px;border:1px solid rgba(5,217,232,.3);
+            border-radius:10px;background:rgba(0,0,0,.5);color:var(--neon-cyan);pointer-events:none;
+            font-size:16px;line-height:1.4; }
+        #eventSetupModal .event-picker-value {flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;
+            text-overflow:ellipsis;text-align:left; }
+        #eventSetupModal .event-picker-value.is-empty {color:rgba(5,217,232,.6); }
+        #eventSetupModal .event-picker-symbol {flex:0 0 auto;color:rgba(5,217,232,.7);font-size:18px; }
+        #eventSetupModal .event-native-picker {position:absolute;inset:0;width:100%;height:100%;margin:0;
+            padding:0;min-width:0;max-width:100%;border:0;opacity:0;cursor:pointer;font-size:16px; }
+        #eventSetupModal .event-picker:focus-within .event-picker-face {border-color:var(--neon-cyan);
+            background:rgba(5,217,232,.1);box-shadow:0 0 12px rgba(5,217,232,.14);}
+        #eventSetupModal .event-color-shell {display:flex;align-items:center;gap:12px;min-height:52px;
+            width:100%;padding:6px 12px;border:1px solid rgba(5,217,232,.3);border-radius:10px;
+            background:rgba(0,0,0,.5);color:#bccdd8;font-size:14px; }
+        #eventSetupModal .event-color-shell .cyber-color {flex:0 0 66px;display:block;width:66px;
+            height:39px;min-height:39px;margin:0;padding:3px;border:1px solid rgba(255,255,255,.24);
+            border-radius:8px;background:#07121c;box-shadow:none;cursor:pointer; }
+        #eventSetupModal .event-color-shell span {font-size:13px;overflow-wrap:anywhere; }
+        #eventSetupModal .event-form-section {border-top:1px solid #2c3640;padding-top:17px;margin-top:18px; }
+        #eventSetupModal .event-section-heading {font-family:"Courier New",monospace;
+            color:var(--neon-cyan);font-size:16px;line-height:1.4;letter-spacing:1px;
+            margin:0 0 15px;text-transform:uppercase;overflow-wrap:break-word; }
+        #eventSetupModal .event-section-gold {color:var(--neon-gold); }
+        #eventSetupModal .wa-box {font-size:13px;overflow-wrap:anywhere; }
+        #eventSetupModal .btn-save {min-height:46px;padding:11px 14px;border-radius:9px;
+            font-size:14px;line-height:1.35;letter-spacing:.5px;white-space:normal; }
+        #eventSetupModal .event-grid-primary {grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); }
+        #eventSetupModal .event-grid-schedule {grid-template-columns:repeat(3,minmax(0,1fr)); }
+        #eventSetupModal .event-grid-location {grid-template-columns:minmax(0,1fr) minmax(0,1.6fr); }
+        #eventSetupModal .event-grid-finances {grid-template-columns:repeat(3,minmax(0,1fr)); }
+        #eventSetupModal .event-grid-performer {grid-template-columns:minmax(0,2fr) minmax(0,1fr); }
+        #eventSetupModal .event-grid-measurements, #eventSetupModal .event-grid-details {
+            grid-template-columns:repeat(2,minmax(0,1fr)); }
+        @media(max-width:640px) {
+            #eventSetupModal {padding:8px;padding-top:max(8px,env(safe-area-inset-top));
+                padding-bottom:max(8px,env(safe-area-inset-bottom));}
+            #eventSetupModal .event-setup-content {max-height:calc(100dvh - 16px);padding:18px 14px;
+                border-radius:14px; }
+            #eventSetupModal .event-grid-primary,
+            #eventSetupModal .event-grid-schedule,
+            #eventSetupModal .event-grid-location,
+            #eventSetupModal .event-grid-finances,
+            #eventSetupModal .event-grid-performer,
+            #eventSetupModal .event-grid-measurements,
+            #eventSetupModal .event-grid-details {grid-template-columns:minmax(0,1fr); }
+        }
+        @media(min-width:480px) and (max-width:640px) {
+            #eventSetupModal .event-grid-schedule,
+            #eventSetupModal .event-grid-finances,
+            #eventSetupModal .event-grid-performer,
+            #eventSetupModal .event-grid-measurements,
+            #eventSetupModal .event-grid-details {grid-template-columns:repeat(2,minmax(0,1fr));}
+            #eventSetupModal .event-grid-schedule > :last-child,
+            #eventSetupModal .event-grid-finances > :last-child {grid-column:1/-1;}
+        }
     </style>
     <script src="webmeldungen.js" defer></script>
 </head>
@@ -112,88 +201,138 @@
     </div>
 
 
-    <div class="modal-overlay" id="eventSetupModal">
-        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
-            <div class="form-title" style="color: #ff3300; border-bottom-color: #ff3300;">Event Setup</div>
-            
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 2;"><label>Event Art (z.B. GB)</label><input type="text" id="evName" class="cyber-input-full" placeholder="z.B. GB"></div>
-                <div class="form-group" style="flex: 1;"><label>Datum</label><input type="date" id="evDatum" class="cyber-input-full"></div>
+    <div class="modal-overlay" id="eventSetupModal" role="presentation">
+        <div class="modal-content event-setup-content" role="dialog" aria-modal="true" aria-labelledby="eventSetupHeading">
+            <div class="event-setup-head">
+                <h2 id="eventSetupHeading">EVENT SETUP</h2>
+                <p>Veranstaltung planen &amp; verwalten</p>
             </div>
 
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 1;"><label>Startzeit</label><input type="time" id="evStart" class="cyber-input-full"></div>
-                <div class="form-group" style="flex: 1;"><label>Endzeit</label><input type="time" id="evEnde" class="cyber-input-full"></div>
-                <div class="form-group" style="flex: 1;"><label>Farbe</label><input type="color" id="evColor" class="cyber-color" value="#ff3300"></div>
-            </div>
-
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 1;"><label>Stadt</label><input type="text" id="evStadt" class="cyber-input-full" placeholder="z.B. Leipzig"></div>
-                <div class="form-group" style="flex: 2;"><label>Location</label><input type="text" id="evLocation" class="cyber-input-full" placeholder="Hotel / Privat"></div>
-                <div class="form-group" style="flex: 1;"><label>Preis p.P. (€)</label><input type="number" id="evPreis" class="cyber-input-full" placeholder="z.B. 80"></div>
-                <div class="form-group" style="flex: 1;"><label>Max. Gäste (0 = offen)</label><input type="number" min="0" step="1" id="evCapacity" class="cyber-input-full" value="0"></div>
-                <div class="form-group" style="flex: 1;"><label>Ausgaben (€)</label><input type="number" min="0" step="0.01" id="evKosten" class="cyber-input-full" value="0"></div>
-            </div>
-
-            <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
-                <div style="color: var(--neon-cyan); font-weight: bold; text-transform: uppercase; margin-bottom: 10px;">Die Darstellerin</div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 2;"><label>Name</label><input type="text" id="evGirlName" class="cyber-input-full" placeholder="z.B. Susi"></div>
-                    <div class="form-group" style="flex: 1;"><label>Alter</label><input type="number" id="evGirlAge" class="cyber-input-full" placeholder="35"></div>
-                </div>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <div class="form-group" style="flex: 1;"><label>Größe (cm)</label><input type="number" id="evGirlHeight" class="cyber-input-full" placeholder="165"></div>
-                    <div class="form-group" style="flex: 1;"><label>Gewicht (kg)</label><input type="number" id="evGirlWeight" class="cyber-input-full" placeholder="64"></div>
+            <div class="event-form-grid event-grid-primary">
+                <div class="form-group">
+                    <label for="evName">Event-Art / Bezeichnung</label>
+                    <input type="text" id="evName" class="cyber-input-full" placeholder="z. B. privates Event" autocomplete="off">
                 </div>
                 <div class="form-group">
-                    <label>Typ / Beschreibung</label>
-                    <input type="text" id="evGirlType" class="cyber-input-full" placeholder="z.B.naturgeile Creampie-Bitch">
+                    <label for="evDatum">Datum</label>
+                    <div class="event-picker">
+                        <div class="event-picker-face" aria-hidden="true"><span class="event-picker-value" data-for="evDatum">Datum auswählen</span><span class="event-picker-symbol">▦</span></div>
+                        <input type="date" id="evDatum" class="event-native-picker" aria-label="Datum des Events">
+                    </div>
                 </div>
             </div>
 
-            <div style="margin-top: 10px; border-top: 1px solid #333; padding-top: 15px;">
-                <div style="color: var(--neon-gold); font-weight: bold; text-transform: uppercase; margin-bottom: 10px;">Details & Specials</div>
-                
-                <div class="form-group"><label>Gewollt (Vorlieben)</label><input type="text" id="evVorlieben" class="cyber-input-full" placeholder="GV, anal, lecken..."></div>
-                <div class="form-group"><label>Tabus</label><input type="text" id="evTabus" class="cyber-input-full" placeholder="Keine Gewalt, kein KV"></div>
+            <div class="event-form-grid event-grid-schedule">
+                <div class="form-group">
+                    <label for="evStart">Startzeit</label>
+                    <div class="event-picker">
+                        <div class="event-picker-face" aria-hidden="true"><span class="event-picker-value" data-for="evStart">Uhrzeit auswählen</span><span class="event-picker-symbol">◷</span></div>
+                        <input type="time" id="evStart" class="event-native-picker" aria-label="Event-Startzeit">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="evEnde">Endzeit</label>
+                    <div class="event-picker">
+                        <div class="event-picker-face" aria-hidden="true"><span class="event-picker-value" data-for="evEnde">Uhrzeit auswählen</span><span class="event-picker-symbol">◷</span></div>
+                        <input type="time" id="evEnde" class="event-native-picker" aria-label="Event-Endzeit">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="evColor">Kalenderfarbe</label>
+                    <div class="event-color-shell">
+                        <input type="color" id="evColor" class="cyber-color" value="#ff3300" aria-label="Kalenderfarbe wählen">
+                        <span>Farbe wählen</span>
+                    </div>
+                </div>
+            </div>
 
-                <div style="display: flex; gap: 15px; flex-wrap: wrap; background: rgba(255,51,0,0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(255,51,0,0.3); margin-bottom: 15px;">
-                    <div class="form-group" style="flex: 1; margin-bottom:0;"><label>AO / Safe</label>
+            <div class="event-form-grid event-grid-location">
+                <div class="form-group">
+                    <label for="evStadt">Stadt</label>
+                    <input type="text" id="evStadt" class="cyber-input-full" placeholder="z. B. Leipzig">
+                </div>
+                <div class="form-group">
+                    <label for="evLocation">Location</label>
+                    <input type="text" id="evLocation" class="cyber-input-full" placeholder="Hotel / Privat">
+                </div>
+            </div>
+
+            <div class="event-form-grid event-grid-finances">
+                <div class="form-group">
+                    <label for="evPreis">Preis pro Gast (€)</label>
+                    <input type="number" id="evPreis" class="cyber-input-full" min="0" step="0.01" inputmode="decimal" placeholder="z. B. 80">
+                </div>
+                <div class="form-group">
+                    <label for="evCapacity">Max. Gäste (0 = offen)</label>
+                    <input type="number" id="evCapacity" class="cyber-input-full" min="0" step="1" inputmode="numeric" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="evKosten">Ausgaben (€)</label>
+                    <input type="number" id="evKosten" class="cyber-input-full" min="0" step="0.01" inputmode="decimal" value="0">
+                </div>
+            </div>
+
+            <div class="event-form-section">
+                <h3 class="event-section-heading">Die Darstellerin</h3>
+                <div class="event-form-grid event-grid-performer">
+                    <div class="form-group">
+                        <label for="evGirlName">Name</label>
+                        <input type="text" id="evGirlName" class="cyber-input-full" placeholder="Name">
+                    </div>
+                    <div class="form-group">
+                        <label for="evGirlAge">Alter</label>
+                        <input type="number" id="evGirlAge" class="cyber-input-full" inputmode="numeric" min="18" placeholder="35">
+                    </div>
+                </div>
+                <div class="event-form-grid event-grid-measurements">
+                    <div class="form-group">
+                        <label for="evGirlHeight">Größe (cm)</label>
+                        <input type="number" id="evGirlHeight" class="cyber-input-full" inputmode="numeric" placeholder="165">
+                    </div>
+                    <div class="form-group">
+                        <label for="evGirlWeight">Gewicht (kg)</label>
+                        <input type="number" id="evGirlWeight" class="cyber-input-full" inputmode="numeric" placeholder="64">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="evGirlType">Typ / Beschreibung</label>
+                    <input type="text" id="evGirlType" class="cyber-input-full" placeholder="Beschreibung">
+                </div>
+            </div>
+
+            <div class="event-form-section event-section-details">
+                <h3 class="event-section-heading event-section-gold">Details &amp; Specials</h3>
+                <div class="form-group">
+                    <label for="evVorlieben">Gewollt (Vorlieben)</label>
+                    <input type="text" id="evVorlieben" class="cyber-input-full" placeholder="Details eintragen">
+                </div>
+                <div class="form-group">
+                    <label for="evTabus">Tabus</label>
+                    <input type="text" id="evTabus" class="cyber-input-full" placeholder="Grenzen eintragen">
+                </div>
+                <div class="event-form-grid event-grid-details">
+                    <div class="form-group">
+                        <label for="evPraef">AO / Safe</label>
                         <select id="evPraef" class="cyber-select">
                             <option value="AO">AO (Alles ohne)</option>
                             <option value="Safe">Safe</option>
-                            <option value="AO & Safe möglich">AO & Safe möglich</option>
+                            <option value="AO & Safe möglich">AO &amp; Safe möglich</option>
                         </select>
                     </div>
-                    <div class="form-group" style="flex: 1; margin-bottom:0;"><label>Handtücher</label>
+                    <div class="form-group">
+                        <label for="evTowels">Handtücher</label>
                         <select id="evTowels" class="cyber-select">
                             <option value="Werden gestellt">Werden gestellt</option>
                             <option value="Bitte mitbringen">Bitte mitbringen</option>
                         </select>
                     </div>
                 </div>
-
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-    <div class="form-group" style="flex: 1;"><label>Schnelltest</label>
-        <select id="evNS" class="cyber-select">
-            <option value="Ja Hiv Schnelltest wird vor Ort gemacht " selected>Hiv Schnelltest vor Ort</option>
-            <option value="Aktueller Gesundheitsnachweis erforderlich">mit Gesundheitsnachweis</option>
-            <option value="ohne Test">ohne Test</option>
-        </select>
-    </div>
-
-                    <div class="form-group" style="flex: 1;"><label>Bilder verfügbar?</label>
-                        <select id="evBilder" class="cyber-select">
-                            <option value="Ja">Ja (auf Anfrage)</option>
-                            <option value="Nein">Nein</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="form-group"><label>Videos (Optional)</label>
-                    <select id="evVideo" class="cyber-select">
-                        <option value="Keine">Keine</option>
-                        <option value="macht sie auch gerne Bilder Videos, entweder einzeln oder wo sie von mehreren gefickt wird. Dies einfach vor Ort ansprechen. (Auch mit Maske möglich, ansonsten würden auch keine Gesichter gefilmt werden).">Optional vor Ort ansprechen (auch mit Maske)</option>
+                <div class="form-group">
+                    <label for="evNS">Schnelltest</label>
+                    <select id="evNS" class="cyber-select">
+                        <option value="Ja Hiv Schnelltest wird vor Ort gemacht ">HIV-Schnelltest vor Ort</option>
+                        <option value="Aktueller Gesundheitsnachweis erforderlich">Mit Gesundheitsnachweis</option>
+                        <option value="ohne Test">Ohne Test</option>
                     </select>
                 </div>
             </div>

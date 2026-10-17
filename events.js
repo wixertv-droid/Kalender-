@@ -557,6 +557,29 @@ function saveEvent() {
         return; 
     }
 
+    const eventItems=JSON.parse(localStorage.getItem('appEvents')||'[]');
+    const original=currentEditEventId?eventItems.find(e=>e.id===currentEditEventId):null;
+    const scheduleUnchanged=original&&original.datum===datum&&original.start===start&&original.ende===ende;
+    if(!scheduleUnchanged){
+        const conflicting=eventItems.find(e=>{
+            if(e.id===currentEditEventId||e.datum!==datum)return false;
+            const otherStart=parseTimeStr(e.start,'00:00');
+            let otherEnd=parseTimeStr(e.ende,'23:59');
+            if(otherEnd===0)otherEnd=1440;
+            return nStartMin<otherEnd&&nEndeMin>otherStart;
+        });
+        if(conflicting){alert('⛔ Event überschneidet sich mit '+conflicting.name+'. Bitte Zeiten ändern.');return;}
+        const blocked=JSON.parse(localStorage.getItem('appSperrzeiten')||'[]');
+        const conflictBlock=blocked.find(b=>{
+            if(datum<b.startDatum||datum>b.endDatum)return false;
+            const bs=datum===b.startDatum?parseTimeStr(b.startZeit,'00:00'):0;
+            let be=datum===b.endDatum?parseTimeStr(b.endZeit,'23:59'):1440;
+            if(be===0)be=1440;
+            return nStartMin<be&&nEndeMin>bs;
+        });
+        if(conflictBlock){alert('⛔ Sperrzeit: '+conflictBlock.name+'. Bitte Zeiten ändern.');return;}
+    }
+
     const capNum=Number(document.getElementById('evCapacity').value);
     const costNum=Number(document.getElementById('evKosten').value);
     if(!Number.isSafeInteger(capNum)||capNum<0||!Number.isFinite(costNum)||costNum<0){

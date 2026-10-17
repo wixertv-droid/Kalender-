@@ -75,7 +75,7 @@ test('opening saved event refreshes picker text from existing date/time',()=>{
     };
     vm.createContext(context);
     vm.runInContext(js,context);
-    context.currentEditEventId=55;
+    vm.runInContext('currentEditEventId=55',context);
     context.openEventSetup(false);
     assert.equal(inputs.get('evStart').value,'16:00');
     assert.equal(inputs.get('evDatum').value,'2026-12-21');

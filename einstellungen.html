@@ -84,6 +84,29 @@
             <div class="setting-title">Zugriffsschutz: Gerätezertifikat</div>
             <p>Keine PIN oder Passwort-Anmeldung. Der Server akzeptiert ausschließlich Geräte, deren Zertifikate du selbst freigegeben hast. Neue Geräte werden auf dem Server eingerichtet.</p>
         </div>
+        <div class="settings-card" id="reminderSettings" style="border-left:4px solid var(--neon-cyan);">
+            <div class="setting-title" style="color:var(--neon-cyan)">🔔 Terminerinnerungen</div>
+            <p style="color:#aabac5;font-size:.9rem;margin-bottom:16px">Erinnerungen für Termine und Events. Sie erscheinen, solange der Kalender auf diesem Gerät geöffnet ist. Diese Einstellungen gelten für dieses Gerät.</p>
+            <label for="reminderEnabled" style="display:flex;align-items:center;gap:12px;margin:12px 0;color:#fff;font-weight:600">
+                <input type="checkbox" id="reminderEnabled" style="width:21px;height:21px;accent-color:#05d9e8">
+                Erinnerungen aktiv
+            </label>
+            <div class="form-group">
+                <label class="input-label" for="reminderLead">Vorwarnzeit</label>
+                <select id="reminderLead" class="cyber-select" style="width:100%">
+                    <option value="5">5 Minuten vorher</option>
+                    <option value="15">15 Minuten vorher</option>
+                    <option value="30">30 Minuten vorher</option>
+                    <option value="60">60 Minuten vorher</option>
+                    <option value="120">120 Minuten vorher</option>
+                </select>
+            </div>
+            <button type="button" class="btn-save" id="reminderPermissionBtn" style="width:100%;margin-top:6px">Systembenachrichtigungen aktivieren</button>
+            <p id="reminderPermissionInfo" role="status" style="font-size:.79rem;line-height:1.5;color:#aabac5;margin:10px 0 18px"></p>
+            <div class="setting-title" style="font-size:.95rem;color:var(--neon-cyan)">Bald anstehende Termine &amp; Events</div>
+            <div id="reminderUpcoming" aria-live="polite" style="font-size:.83rem;line-height:1.5;color:#ccd4df;margin-top:10px">Wird geladen …</div>
+        </div>
+
         <div class="settings-card" style="border-left: 4px solid var(--neon-green);">
             <div class="setting-title" style="color: var(--neon-green); border-bottom-color: rgba(57, 255, 20, 0.3);">Medizinisches Inventar</div>
             <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Trage hier deinen aktuellen Bestand an Tests ein. Das System zieht automatisch 1 Test ab, wenn ein Termin mit der Präferenz "AO" erfolgreich abgerechnet wird.</p>

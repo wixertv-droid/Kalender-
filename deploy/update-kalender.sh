@@ -35,12 +35,13 @@ git pull --ff-only
 UPDATED=1
 
 echo "3/6 Syntax und Server-Sicherheitstests"
-python3 -m compileall -q server.py backup.py schedule_validation.py import_backup_json.py
+python3 -m compileall -q server.py backup.py schedule_validation.py import_backup_json.py selective_delete.py
 python3 -m unittest discover -s tests -v
 if command -v node >/dev/null 2>&1; then
     node --check events.js
     node --check app.js
     node --check webmeldungen.js
+    node --check datenverwaltung.js
     node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs
 fi
 

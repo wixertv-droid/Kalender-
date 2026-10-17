@@ -42,7 +42,7 @@ if command -v node >/dev/null 2>&1; then
     node --check app.js
     node --check webmeldungen.js
     node --check datenverwaltung.js
-    node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs
+    node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs tests/test_event_form_mobile.cjs
 fi
 
 echo "4/6 Gesicherte Backup-Automatik aktivieren (03:15, 30 Tage)"

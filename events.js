@@ -456,7 +456,7 @@ function addGuest(){
         name:customer?customer.name:name,
         kundeId:customer?customer.id:null,
         status,
-        preis:customer&&customer.preis?asMoney(customer.preis):asMoney(event&&event.preis),
+        preis:asMoney(event&&event.preis), // Event entrance, not customer appointment tariff
         anzahlung:0,
         restzahlung:0
     });

@@ -117,6 +117,12 @@
             info.textContent = 'Hier sind nur Erinnerungen in der geöffneten Kalender-App möglich. ' +
                 'Auf dem iPhone lassen sich Systemmitteilungen gegebenenfalls über eine zum Home-Bildschirm hinzugefügte App aktivieren.';
         } else if (Notification.permission === 'granted') {
+            // A user may have already allowed notifications in iOS Settings.
+            // Keep the stored per-device preference in sync with that permission.
+            if (!pref.browser) {
+                pref.browser = true;
+                savePrefs();
+            }
             status.dataset.state = 'allowed';
             status.textContent = '✓ Systemmitteilungen erlaubt';
             info.textContent = 'Die Berechtigung ist erteilt. Erinnerungen werden derzeit trotzdem nur zugestellt, ' +

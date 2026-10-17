@@ -28,7 +28,7 @@ PORT = int(os.getenv("KALENDER_PORT", "3102"))
 REQUIRE_DEVICE_CERT = os.getenv("KALENDER_REQUIRE_DEVICE_CERT", "1") == "1"
 FIELDS = {"termine": list, "kunden": list, "einstellungen": dict, "events": list, "sperrzeiten": list}
 EMPTY = {"termine": [], "kunden": [], "einstellungen": {}, "events": [], "sperrzeiten": []}
-FILES = set("index.html woche.html monat.html jahr.html tag.html kunden.html events.html einstellungen.html stats.html loader.html app.js events.js login.js server-sync.js webmeldungen.js style.css login.css manifest.json sw.js favicon.ico favicon-32.png apple-touch-icon.png apple-touch-icon-1.png icon.png icon-192.png icon-single.png 1774360504505.png".split())
+FILES = set("index.html woche.html monat.html jahr.html tag.html kunden.html events.html einstellungen.html stats.html loader.html app.js events.js login.js server-sync.js webmeldungen.js datenverwaltung.js style.css login.css manifest.json sw.js favicon.ico favicon-32.png apple-touch-icon.png apple-touch-icon-1.png icon.png icon-192.png icon-single.png 1774360504505.png".split())
 PUBLIC = set("index.html login.js login.css manifest.json sw.js favicon.ico favicon-32.png apple-touch-icon.png apple-touch-icon-1.png icon.png icon-192.png icon-single.png".split())
 COOKIE = "kalender_session"
 SESSION_AGE = 24 * 60 * 60

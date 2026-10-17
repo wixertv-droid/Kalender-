@@ -81,6 +81,7 @@
                 <input type="text" id="newGuestName" class="cyber-input-full" placeholder="Neuer Name / Nickname" style="flex:2;min-width:160px">
                 <button class="btn-save" onclick="addGuest()" style="flex:1;min-width:76px;padding:8px;background:var(--neon-cyan);color:#000">Gast +</button>
             </div>
+            <label class="event-info-note" style="display:block"><input type="checkbox" id="guestCreateCustomer"> Neuen Gast zusätzlich in der Kundenkartei anlegen</label>
             <input id="guestSearch" class="cyber-input-full" style="margin-bottom:10px" placeholder="Teilnehmer suchen ..." oninput="renderGuests()">
             <div id="gaesteListe"></div>
 

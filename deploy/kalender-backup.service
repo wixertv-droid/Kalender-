@@ -1,0 +1,21 @@
+[Unit]
+Description=Kalender – konsistentes taegliches SQLite-Backup
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=kalender
+Group=kalender
+WorkingDirectory=/var/www/kalender
+Environment=KALENDER_DATA_DIR=/var/lib/kalender
+Environment=KALENDER_BACKUP_DIR=/var/backups/kalender
+Environment=KALENDER_BACKUP_KEEP_DAYS=30
+UMask=0077
+ExecStart=/usr/bin/python3 /var/www/kalender/backup.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/var/lib/kalender
+ReadWritePaths=/var/backups/kalender
+RestrictSUIDSGID=true

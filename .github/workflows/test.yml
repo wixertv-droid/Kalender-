@@ -14,13 +14,14 @@ jobs:
         with:
           python-version: "3.12"
       - name: Python Syntax
-        run: python3 -m compileall -q server.py backup.py schedule_validation.py import_backup_json.py
+        run: python3 -m compileall -q server.py backup.py schedule_validation.py import_backup_json.py selective_delete.py
       - name: JavaScript Syntax
         run: |
           node --check app.js
           node --check server-sync.js
           node --check login.js
           node --check webmeldungen.js
+          node --check datenverwaltung.js
           node --check events.js
       - name: Event Business Tests
         run: node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs

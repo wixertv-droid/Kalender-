@@ -84,6 +84,85 @@ class CalendarAPITests(unittest.TestCase):
         self.assertEqual(self.request("POST","/api/data",{"version":version,"data":loaded["data"]},verified=True,cookie=cookie)[0],409)
         self.assertEqual(self.request("GET","/api/export",verified=True,cookie=cookie)[0],200)
 
+    def test_selective_delete_creates_backup_and_only_changes_requested_items(self):
+        import sqlite3
+        from pathlib import Path
+        backup_dir=Path(self.temp.name)/"secure-backups"
+        previous=os.environ.get("KALENDER_BACKUP_DIR")
+        os.environ["KALENDER_BACKUP_DIR"]=str(backup_dir)
+        cookie=self.login()
+        try:
+            _,old,_,_=self.request("GET","/api/data",verified=True,cookie=cookie)
+            version=old["version"]
+            data=old["data"]
+            test_customer={"id":91810001,"name":"Testkunde"}
+            other_customer={"id":91810002,"name":"Bleibt erhalten"}
+            data["kunden"].extend([test_customer,other_customer])
+            data["termine"].extend([
+                {"id":91810003,"name":"Löschtermin","kunde_id":91810001,"status":"done","umsatz":"120"},
+                {"id":91810004,"name":"Behalten","kunde_id":91810001,"status":"done","umsatz":"220"}
+            ])
+            data["events"].append({"id":91810005,"name":"Testevent","kosten":40,"guests":[
+                {"id":91810006,"name":"Testgast","kundeId":91810001,"anzahlung":30,"restzahlung":25}
+            ]})
+            status,save,_,_=self.request("POST","/api/data",
+                 {"version":version,"data":data},verified=True,cookie=cookie)
+            self.assertEqual(status,200)
+            current=save["version"]
+            operation={"version":current,"category":"termine",
+                       "ids":["91810003"],"confirmation":"LOESCHEN"}
+            self.assertEqual(self.request("POST","/api/delete-selected",operation,verified=True)[0],401)
+            self.assertEqual(self.request("POST","/api/delete-selected",operation,verified=True,cookie=cookie,origin=False)[0],403)
+            invalid=dict(operation,confirmation="FALSE")
+            self.assertEqual(self.request("POST","/api/delete-selected",invalid,verified=True,cookie=cookie)[0],400)
+            self.assertEqual(self.request("POST","/api/delete-selected",
+                dict(operation,ids=["1234567812345678"]),verified=True,cookie=cookie)[0],400)
+            status,result,_,_=self.request("POST","/api/delete-selected",operation,
+                                           verified=True,cookie=cookie)
+            self.assertEqual(status,200)
+            self.assertEqual((result["deleted"],result["unlinked"]),(1,0))
+            self.assertEqual(result["version"],current+1)
+            backups=list(backup_dir.glob("kalender-vor-loeschen-*.sqlite3"))
+            self.assertEqual(len(backups),1)
+            with sqlite3.connect(backups[0]) as db:
+                self.assertEqual(db.execute("PRAGMA integrity_check").fetchone()[0],"ok")
+                old_data=json.loads(db.execute("SELECT content FROM snapshot WHERE id=1").fetchone()[0])
+                self.assertTrue(any(x["id"]==91810003 for x in old_data["termine"]))
+            _,new,_,_=self.request("GET","/api/data",verified=True,cookie=cookie)
+            self.assertFalse(any(x["id"]==91810003 for x in new["data"]["termine"]))
+            self.assertTrue(any(x["id"]==91810004 for x in new["data"]["termine"]))
+            self.assertEqual(new["data"]["events"][-1]["guests"][0]["restzahlung"],25)
+            self.assertEqual(self.request("POST","/api/delete-selected",operation,
+                                           verified=True,cookie=cookie)[0],409)
+            # Customer removal retains appointment and event receipts.
+            version=new["version"]
+            status,result,_,_=self.request("POST","/api/delete-selected",
+                {"version":version,"category":"kunden","ids":["91810001"],
+                 "confirmation":"LOESCHEN"},verified=True,cookie=cookie)
+            self.assertEqual(status,200)
+            self.assertEqual(result["unlinked"],2)
+            _,after,_,_=self.request("GET","/api/data",verified=True,cookie=cookie)
+            self.assertFalse(any(k["id"]==91810001 for k in after["data"]["kunden"]))
+            self.assertTrue(any(k["id"]==91810002 for k in after["data"]["kunden"]))
+            retained=next(x for x in after["data"]["termine"] if x["id"]==91810004)
+            self.assertEqual(retained["umsatz"],"220")
+            self.assertNotIn("kunde_id",retained)
+            guest=after["data"]["events"][-1]["guests"][0]
+            self.assertEqual(guest["anzahlung"],30)
+            self.assertNotIn("kundeId",guest)
+            # Event removal has no effect on other financial records.
+            status,result,_,_=self.request("POST","/api/delete-selected",
+                {"version":after["version"],"category":"events","ids":["91810005"],
+                 "confirmation":"LOESCHEN"},verified=True,cookie=cookie)
+            self.assertEqual(status,200)
+            _,last,_,_=self.request("GET","/api/data",verified=True,cookie=cookie)
+            self.assertFalse(any(e["id"]==91810005 for e in last["data"]["events"]))
+            self.assertEqual(next(x for x in last["data"]["termine"] if x["id"]==91810004)["umsatz"],"220")
+            self.assertEqual(len(list(backup_dir.glob("kalender-vor-loeschen-*.sqlite3"))),3)
+        finally:
+            if previous is None:os.environ.pop("KALENDER_BACKUP_DIR",None)
+            else:os.environ["KALENDER_BACKUP_DIR"]=previous
+
     def test_xss_guard(self):
         cookie=self.login()
         data=self.request("GET","/api/data",verified=True,cookie=cookie)[1]

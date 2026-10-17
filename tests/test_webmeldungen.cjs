@@ -46,6 +46,7 @@ function setup(initial={}, notificationPermission=null) {
       permission:notificationPermission,
       requestPermission:async()=>notificationPermission
     };
+    sandbox.window.Notification=sandbox.Notification;
   }
   vm.runInNewContext(js,sandbox);
   listeners.DOMContentLoaded();

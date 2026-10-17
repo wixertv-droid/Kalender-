@@ -9,6 +9,7 @@ import os
 import re
 import secrets
 import sqlite3
+import tempfile
 import sys
 import time
 from http import cookies
@@ -16,6 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from schedule_validation import introduced_conflicts
+from selective_delete import remove_selected, SelectionError
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.getenv("KALENDER_DATA_DIR", str(ROOT / ".private-data"))).resolve()
@@ -101,6 +103,28 @@ def safe(value, depth=0, key=""):
     if isinstance(value, dict): return len(value) <= 100000 and all(isinstance(k, str) and len(k) <= 200 and safe(v, depth+1, k) for k,v in value.items())
     if key in ("id", "kunde_id", "event_id", "termin_id"): return type(value) is int and 0 <= value <= 10**24
     return value is None or isinstance(value, (int, float, bool))
+
+def backup_before_delete():
+    """Full consistent WAL-aware SQLite backup, readable only by kalender."""
+    target = Path(os.getenv("KALENDER_BACKUP_DIR", "/var/backups/kalender"))
+    target.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(target, 0o700)
+    # Prefix intentionally matches the 30-day rotation in backup.py.
+    fd, name = tempfile.mkstemp(
+        prefix="kalender-vor-loeschen-", suffix=".sqlite3", dir=target
+    )
+    os.close(fd)
+    try:
+        with sqlite3.connect("file:" + str(DB) + "?mode=ro", uri=True, timeout=15) as source:
+            with sqlite3.connect(name) as destination:
+                source.backup(destination)
+                if destination.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                    raise RuntimeError("Die Sicherung ist nicht konsistent.")
+        os.chmod(name, 0o600)
+        return name
+    except Exception:
+        Path(name).unlink(missing_ok=True)
+        raise
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "Kalender/2.0"
@@ -261,6 +285,38 @@ class Handler(BaseHTTPRequestHandler):
                 db.execute("DELETE FROM sessions")
                 db.commit()
             return self.output(200, {"ok": True}, {"Set-Cookie": self.cookie()})
+        if path == "/api/delete-selected":
+            # Dedicated server-side mutation: never replace an entire local
+            # snapshot based on an outdated browser view.
+            version = body.get("version")
+            if type(version) is not int or version < 0:
+                return self.output(400, {"error": "Serverversion fehlt."})
+            if set(body) != {"version", "category", "ids", "confirmation"} or body.get("confirmation") != "LOESCHEN":
+                return self.output(400, {"error": "Explizite Löschbestätigung fehlt."})
+            with dbopen() as db:
+                db.execute("BEGIN IMMEDIATE")
+                current_version, current_json = db.execute("SELECT version,content FROM snapshot WHERE id=1").fetchone()
+                if current_version != version:
+                    db.rollback()
+                    return self.output(409, {"error": "Daten wurden auf einem anderen Gerät verändert. Bitte Liste neu laden.", "serverVersion": current_version})
+                try:
+                    old_data = json.loads(current_json)
+                    new_data, amount, unlinked = remove_selected(old_data, body.get("category"), body.get("ids"))
+                    if not safe(new_data):
+                        raise SelectionError("Ungültige Datenstruktur. Keine Daten gelöscht.")
+                    payload = json.dumps(new_data, ensure_ascii=False, allow_nan=False)
+                except (SelectionError, ValueError, TypeError) as error:
+                    db.rollback()
+                    return self.output(400, {"error": str(error)})
+                try:
+                    backup_before_delete()
+                except (OSError, sqlite3.Error, RuntimeError) as error:
+                    db.rollback()
+                    return self.output(503, {"error": "Sicherung vor dem Löschen fehlgeschlagen. Es wurde nichts gelöscht."})
+                db.execute("UPDATE snapshot SET version=?, content=? WHERE id=1",
+                           (version+1, payload))
+                db.commit()
+            return self.output(200, {"ok": True, "version": version+1, "deleted": amount, "unlinked": unlinked})
         if path == "/api/data":
             version, content = body.get("version"), body.get("data")
             if type(version) is not int or version < 0 or not isinstance(content, dict) or any(not isinstance(content.get(k), cls) for k, cls in FIELDS.items()):

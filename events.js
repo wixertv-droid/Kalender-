@@ -621,8 +621,16 @@ function deleteEvent() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Resolve deep links only after loading the latest server snapshot.
+    await fetchFromSupabase();
     renderEvents();
+    const requested=new URLSearchParams(location.search).get('event');
+    if(requested && /^\d+$/.test(requested)){
+        const id=Number(requested);
+        const events=JSON.parse(localStorage.getItem('appEvents')||'[]');
+        if(events.some(e=>e.id===id))openEventDashboard(id);
+    }
     setTimeout(() => {
         const loader = document.getElementById('app-loader');
         if (loader) {

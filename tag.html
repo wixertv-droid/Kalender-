@@ -633,7 +633,7 @@
                         const f = t.color || '#ff3300';
                         block.style.borderLeftColor = f;
                         block.style.background = `linear-gradient(90deg, rgba(255, 51, 0, 0.15) 0%, rgba(10, 15, 20, 0.8) 40%)`;
-                        block.onclick = () => location.href = 'events.html';
+                        block.onclick = () => location.href = 'events.html?event=' + encodeURIComponent(String(t.id));
                         
                         block.innerHTML = `
                             <div class="cyber-node" style="border-color:${f};"></div>

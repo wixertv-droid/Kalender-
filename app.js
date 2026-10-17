@@ -606,7 +606,7 @@ function renderWeek() {
                         `;
                         segment.onclick = (e) => {
                             e.stopPropagation();
-                            window.location.href = 'events.html';
+                            window.location.href = 'events.html?event=' + encodeURIComponent(String(t.id));
                         };
                         segment.style.pointerEvents = 'auto'; 
                     } else {

@@ -29,8 +29,9 @@ erreichbar. Die PIN bleibt aktiv, Geräte-Zertifikate weiterhin optional.
 
     ssh root@159.195.157.24
     cd /var/www/kalender
-    git pull --ff-only
-    bash deploy/update-kalender.sh
+    git fetch origin feature/secure-selfhosted-kalender
+    git show origin/feature/secure-selfhosted-kalender:deploy/update-kalender.sh > /root/kalender-update-v2.sh
+    bash /root/kalender-update-v2.sh
 
 Der Updatehelfer erstellt zuerst eine Online-Sicherung, überprüft den Code,
 installiert den isolierten Backup-Timer und startet nur \`kalender.service\`

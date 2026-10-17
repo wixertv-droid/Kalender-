@@ -190,7 +190,7 @@
     <div class="settings-container">
         <div class="settings-card">
             <div class="setting-title">🔐 PIN-Anmeldung</div>
-            <p style="color:#a6b2bf">Der vierstellige Code wird verschlüsselt auf dem Server geprüft. Dein Gerätezertifikat bleibt aktiv.</p>
+            <p style="color:#a6b2bf">Die vierstellige PIN wird auf dem Server geprüft und nicht im Klartext gespeichert. Der zusätzliche Gerätezertifikat-Schutz ist derzeit ausgeschaltet.</p>
             <div class="form-group">
                 <label class="input-label" for="oldPin">Aktuelle PIN</label>
                 <input type="password" id="oldPin" class="cyber-input-full" autocomplete="off" inputmode="numeric" maxlength="4">
@@ -208,8 +208,8 @@
         </div>
 
         <div class="settings-card">
-            <div class="setting-title">Zugriffsschutz: Gerätezertifikat</div>
-            <p>Keine PIN oder Passwort-Anmeldung. Der Server akzeptiert ausschließlich Geräte, deren Zertifikate du selbst freigegeben hast. Neue Geräte werden auf dem Server eingerichtet.</p>
+            <div class="setting-title">Zusätzlicher Geräteschutz</div>
+            <p>Aktuell ist die Anmeldung per PIN aktiv; ein Gerätezertifikat wird nicht benötigt. Zusätzliche Gerätezertifikate können später auf dem Server wieder aktiviert werden.</p>
         </div>
         <div class="settings-card" id="reminderSettings" style="border-left:4px solid var(--neon-cyan);">
             <div class="setting-title" style="color:var(--neon-cyan)">🔔 Terminerinnerungen</div>

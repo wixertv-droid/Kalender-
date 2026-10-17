@@ -48,6 +48,11 @@ async function pushToSupabase() {
         });
         if(response.status===401||response.status===403){location.replace('index.html');return;}
         const result=await response.json();
+        if(response.status===422){
+            syncBlocked=true;
+            kalenderNotice(result.error||'Zeitkonflikt: Daten wurden nicht gespeichert. Prüfe den Kalender und exportiere ggf. deine Änderungen.');
+            return;
+        }
         if(response.status===409){
             syncBlocked=true;
             kalenderNotice('SPEICHERKONFLIKT: Anderes Gerät hat Daten geändert. Deine lokalen Änderungen bleiben erhalten. Exportiere ein Backup, bevor du die Seite neu lädst.');

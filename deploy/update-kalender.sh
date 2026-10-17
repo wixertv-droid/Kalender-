@@ -40,7 +40,8 @@ python3 -m unittest discover -s tests -v
 if command -v node >/dev/null 2>&1; then
     node --check events.js
     node --check app.js
-    node --test tests/test_event_core.cjs
+    node --check webmeldungen.js
+    node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs
 fi
 
 echo "4/6 Gesicherte Backup-Automatik aktivieren (03:15, 30 Tage)"

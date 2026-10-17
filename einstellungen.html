@@ -42,6 +42,133 @@
             font-size: 0.8rem;
             font-weight: bold;
         }
+        /* Erinnerungen: kompakt auf iPhone/iPad, ohne globale Neon-Buttons. */
+        #reminderSettings {
+            min-width: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 15px;
+            line-height: 1.5;
+            overflow-wrap: break-word;
+            -webkit-text-size-adjust: 100%;
+        }
+        #reminderSettings .setting-title {
+            font-family: "Courier New", monospace;
+            letter-spacing: 1px;
+            font-size: clamp(15px, 3.7vw, 19px);
+            line-height: 1.4;
+            margin-bottom: 16px;
+            overflow-wrap: anywhere;
+        }
+        #reminderSettings .reminder-intro,
+        #reminderSettings .reminder-note {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #aabac5;
+            margin: 0 0 16px;
+        }
+        #reminderSettings .reminder-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 14px 0 20px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+        }
+        #reminderSettings .reminder-toggle input {
+            width: 21px;
+            height: 21px;
+            flex: 0 0 21px;
+            margin: 0;
+            accent-color: #05d9e8;
+        }
+        #reminderSettings .reminder-label {
+            color: var(--neon-cyan);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        #reminderSettings #reminderLead {
+            box-sizing: border-box;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            margin-top: 8px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 16px;
+            line-height: 1.4;
+            letter-spacing: 0;
+        }
+        #reminderSettings .reminder-permission {
+            min-width: 0;
+            margin: 18px 0 22px;
+            padding: 12px 13px;
+            border: 1px solid rgba(5, 217, 232, .28);
+            border-radius: 10px;
+            background: rgba(5, 217, 232, .045);
+        }
+        #reminderSettings .reminder-status {
+            display: inline-block;
+            max-width: 100%;
+            box-sizing: border-box;
+            border: 1px solid rgba(5, 217, 232, .45);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            letter-spacing: 0;
+            color: #91e8f1;
+            overflow-wrap: anywhere;
+            white-space: normal;
+        }
+        #reminderSettings .reminder-status[data-state="allowed"] {
+            color: #8fe0bd;
+            border-color: rgba(76, 214, 157, .48);
+            background: rgba(76, 214, 157, .08);
+        }
+        #reminderSettings .reminder-status[data-state="unavailable"],
+        #reminderSettings .reminder-status[data-state="blocked"] {
+            color: #e5c392;
+            border-color: rgba(229, 176, 92, .45);
+            background: rgba(229, 176, 92, .07);
+        }
+        #reminderSettings #reminderPermissionBtn {
+            display: block;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            margin: 10px 0 0;
+            padding: 11px 12px;
+            border: 1px solid var(--neon-cyan);
+            border-radius: 8px;
+            background: rgba(5, 217, 232, .13);
+            color: var(--neon-cyan);
+            font: 600 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            letter-spacing: 0;
+            text-transform: none;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            cursor: pointer;
+        }
+        #reminderSettings [hidden] { display: none !important; }
+        #reminderSettings #reminderPermissionInfo {
+            font-size: 13px;
+            line-height: 1.55;
+            color: #aabac5;
+            margin: 10px 0 0;
+            overflow-wrap: anywhere;
+        }
+        #reminderSettings #reminderUpcoming {
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+        #reminderSettings .reminder-upcoming-title { margin-top: 20px; }
+        @media (max-width: 480px) {
+            #reminderSettings { padding: 18px 16px; }
+        }
     </style>
     <script src="webmeldungen.js" defer></script>
 </head>
@@ -86,14 +213,14 @@
         </div>
         <div class="settings-card" id="reminderSettings" style="border-left:4px solid var(--neon-cyan);">
             <div class="setting-title" style="color:var(--neon-cyan)">🔔 Terminerinnerungen</div>
-            <p style="color:#aabac5;font-size:.9rem;margin-bottom:16px">Erinnerungen für Termine und Events. Sie erscheinen, solange der Kalender auf diesem Gerät geöffnet ist. Diese Einstellungen gelten für dieses Gerät.</p>
-            <label for="reminderEnabled" style="display:flex;align-items:center;gap:12px;margin:12px 0;color:#fff;font-weight:600">
-                <input type="checkbox" id="reminderEnabled" style="width:21px;height:21px;accent-color:#05d9e8">
-                Erinnerungen aktiv
+            <p class="reminder-intro">Erinnerungen für Termine und Events, während der Kalender geöffnet ist. Die Auswahl gilt für dieses Gerät.</p>
+            <label for="reminderEnabled" class="reminder-toggle">
+                <input type="checkbox" id="reminderEnabled">
+                <span>Erinnerungen aktiv</span>
             </label>
             <div class="form-group">
-                <label class="input-label" for="reminderLead">Vorwarnzeit</label>
-                <select id="reminderLead" class="cyber-select" style="width:100%">
+                <label class="reminder-label" for="reminderLead">Vorwarnzeit</label>
+                <select id="reminderLead" class="cyber-select">
                     <option value="5">5 Minuten vorher</option>
                     <option value="15">15 Minuten vorher</option>
                     <option value="30">30 Minuten vorher</option>
@@ -101,10 +228,13 @@
                     <option value="120">120 Minuten vorher</option>
                 </select>
             </div>
-            <button type="button" class="btn-save" id="reminderPermissionBtn" style="width:100%;margin-top:6px">Systembenachrichtigungen aktivieren</button>
-            <p id="reminderPermissionInfo" role="status" style="font-size:.79rem;line-height:1.5;color:#aabac5;margin:10px 0 18px"></p>
-            <div class="setting-title" style="font-size:.95rem;color:var(--neon-cyan)">Bald anstehende Termine &amp; Events</div>
-            <div id="reminderUpcoming" aria-live="polite" style="font-size:.83rem;line-height:1.5;color:#ccd4df;margin-top:10px">Wird geladen …</div>
+            <div class="reminder-permission">
+                <div id="reminderPermissionStatus" class="reminder-status" role="status" aria-live="polite">Mitteilungen werden geprüft …</div>
+                <button type="button" id="reminderPermissionBtn" hidden>Mitteilungen erlauben</button>
+                <p id="reminderPermissionInfo"></p>
+            </div>
+            <div class="setting-title reminder-upcoming-title" style="font-size:15px;color:var(--neon-cyan)">Bald anstehende Termine &amp; Events</div>
+            <div id="reminderUpcoming" aria-live="polite">Wird geladen …</div>
         </div>
 
         <div class="settings-card" style="border-left: 4px solid var(--neon-green);">

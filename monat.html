@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Agenda 2050 | Monatskalender</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<script src="server-sync.js" defer></script>
+<script src="webmeldungen.js" defer></script>
+<style>
+.month-shell{max-width:1500px;margin:0 auto;padding:10px 12px 108px}
+.month-controls{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px}
+.month-controls button{background:#091820;border:1px solid var(--neon-cyan);border-radius:9px;color:var(--neon-cyan);padding:10px 14px;cursor:pointer;min-height:42px}
+#monthTitle{color:var(--neon-cyan);font-weight:bold;text-align:center;font-size:1.17rem;letter-spacing:.05em}
+.month-weekday{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;text-align:center;color:#9fb8be;font-size:.75rem;margin-bottom:6px}
+.month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.month-day{display:flex;flex-direction:column;align-items:stretch;min-height:116px;min-width:0;padding:6px;background:rgba(10,20,27,.82);border:1px solid #24404b;border-radius:8px;color:#effbff;cursor:pointer;overflow:hidden}
+.month-day.today{border:2px solid var(--neon-cyan);box-shadow:0 0 13px #05d9e830}
+.month-day.not-current{opacity:.32}
+.month-day .date{font-weight:700;font-size:.9rem;color:var(--neon-cyan);text-align:right;margin-bottom:5px}
+.month-day .count{margin-left:auto;font-size:.66rem;color:#a6bed0}
+.month-chip{display:block;padding:3px 5px;margin:2px 0;border-radius:4px;border-left:3px solid #39ff14;background:rgba(57,255,20,.1);text-align:left;max-width:100%;min-height:22px;color:#e7f9ef;font:11px/1.4 system-ui;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.month-chip.event{border-color:#ff3300;background:#4d151a;color:#fff}
+.month-chip.block{border-color:#cf8500;background:#332713;color:#ffe6ad}
+.month-chip .time{color:#aebcc5;margin-right:4px}
+.month-more{color:#97cbd9;font-size:.67rem;margin:3px}
+.month-legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;color:#9fb7bf;font-size:12px;margin:13px}
+.month-legend span::before{content:"●";margin-right:4px;color:var(--neon-cyan)}
+.month-legend span:nth-child(2)::before{color:#ff3300}
+.month-legend span:nth-child(3)::before{color:#cf8500}
+@media(max-width:650px){
+ .month-shell{padding:6px 4px 100px}
+ .month-grid,.month-weekday{gap:2px}
+ .month-day{padding:3px;min-height:74px;border-radius:3px}
+ .month-day .date{font-size:.73rem}
+ .month-chip{font-size:9px;padding:2px;border-left-width:2px}
+ .month-chip .time{display:none}
+ .month-more{font-size:9px}
+ #monthTitle{font-size:1rem}
+ .month-controls button{padding:8px}
+}
+</style>
+</head>
+<body>
+<div class="loader-container" id="app-loader"><div class="cyber-spinner"></div><div class="loader-text">MONAT WIRD GELADEN ...</div></div>
+<div class="dashboard">
+ <div class="btn-cyber" onclick="location.href='woche.html'" title="Zur Wochenansicht">↩</div>
+ <div class="header-info"><div class="titel-neon">MONAT</div><div class="countdown-pulsing">Agenda 2050 · Übersicht</div></div>
+ <div class="btn-cyber" onclick="location.href='jahr.html'" title="Jahresansicht">📅</div>
+</div>
+<main class="month-shell">
+ <div class="month-controls">
+  <button type="button" onclick="moveMonth(-1)" aria-label="Vorheriger Monat">‹</button>
+  <span id="monthTitle"></span>
+  <button type="button" onclick="moveMonth(1)" aria-label="Nächster Monat">›</button>
+ </div>
+ <div class="month-controls" style="justify-content:center"><button type="button" onclick="goToToday()">Heute</button></div>
+ <div class="month-weekday"><span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span></div>
+ <div class="month-grid" id="monthGrid"></div>
+ <div class="month-legend"><span>Termin</span><span>Event</span><span>Sperrzeit</span></div>
+</main>
+<nav class="bottom-nav">
+ <a href="woche.html" class="nav-item"><div class="nav-icon" style="color:var(--neon-cyan)">🗂️</div><span>Woche</span></a>
+ <a href="kunden.html" class="nav-item"><div class="nav-icon" style="color:var(--neon-pink)">👥</div><span>Kunden</span></a>
+ <a href="events.html" class="nav-item"><div class="nav-icon" style="color:#ff3300">🔥</div><span>Events</span></a>
+ <a href="stats.html" class="nav-item"><div class="nav-icon" style="color:var(--neon-gold)">💰</div><span>Finance</span></a>
+ <a href="einstellungen.html" class="nav-item"><div class="nav-icon" style="color:#fff">⚙️</div><span>System</span></a>
+</nav>
+<script>
+(function(){
+"use strict";
+const t=new Date();let activeYear=t.getFullYear(),activeMonth=t.getMonth();
+const grid=document.getElementById('monthGrid');
+const stored=key=>{try{const v=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(v)?v:[];}catch{return[];}};
+const iso=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+const dayNo=s=>{if(!s)return NaN;const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d).getTime();};
+function itemsFor(date,appointments,events,blocked){
+ const items=[];
+ appointments.filter(x=>x.datum===date).forEach(x=>items.push({kind:'termin',id:x.id,start:x.start||'',name:x.name||'Termin'}));
+ events.filter(x=>x.datum===date).forEach(x=>items.push({kind:'event',id:x.id,start:x.start||'',name:x.name||'Event'}));
+ const day=dayNo(date);
+ blocked.filter(x=>day>=dayNo(x.startDatum)&&day<=dayNo(x.endDatum)).forEach(x=>items.push({kind:'block',start:x.startZeit||'',name:x.name||'Gesperrt'}));
+ return items.sort((a,b)=>String(a.start).localeCompare(String(b.start)));
+}
+function display(){
+ grid.replaceChildren();
+ const first=new Date(activeYear,activeMonth,1);
+ const title=first.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+ document.getElementById('monthTitle').textContent=title.toLocaleUpperCase('de-DE');
+ const start=(first.getDay()+6)%7;
+ const numberOfDays=new Date(activeYear,activeMonth+1,0).getDate();
+ const count=Math.ceil((start+numberOfDays)/7)*7;
+ const appointments=stored('appTermine'),events=stored('appEvents'),blocked=stored('appSperrzeiten');
+ const today=iso(new Date());
+ for(let index=0;index<count;index++){
+  const date=new Date(activeYear,activeMonth,1-start+index);
+  const dateText=iso(date),items=itemsFor(dateText,appointments,events,blocked);
+  const box=document.createElement('div');
+  box.className='month-day'+(date.getMonth()!==activeMonth?' not-current':'')+(dateText===today?' today':'');
+  box.setAttribute('role','button');box.tabIndex=0;
+  box.setAttribute('aria-label','Tag '+dateText+' öffnen');
+  box.onclick=()=>{location.href='tag.html?d='+encodeURIComponent(dateText);};
+  box.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();box.click();}};
+  const header=document.createElement('div');header.className='date';header.textContent=date.getDate();box.append(header);
+  for(const item of items.slice(0,3)){
+   const chip=document.createElement('button');chip.type='button';
+   chip.className='month-chip'+(item.kind==='event'?' event':item.kind==='block'?' block':'');
+   chip.title=(item.start?item.start+' · ':'')+item.name;
+   const tm=document.createElement('span');tm.className='time';tm.textContent=item.start;
+   const nm=document.createElement('span');nm.textContent=item.name;
+   chip.append(tm,nm);
+   chip.onclick=e=>{
+     e.stopPropagation();
+     if(item.kind==='event')location.href='events.html?event='+encodeURIComponent(String(item.id));
+     else location.href='tag.html?d='+encodeURIComponent(dateText);
+   };
+   box.append(chip);
+  }
+  if(items.length>3){const more=document.createElement('div');more.className='month-more';more.textContent='+'+(items.length-3)+' weitere';box.append(more);}
+  grid.append(box);
+ }
+}
+window.moveMonth=function(step){
+ const d=new Date(activeYear,activeMonth+step,1);activeYear=d.getFullYear();activeMonth=d.getMonth();display();
+};
+window.goToToday=function(){const d=new Date();activeYear=d.getFullYear();activeMonth=d.getMonth();display();};
+document.addEventListener('DOMContentLoaded',async()=>{
+ await fetchFromSupabase();
+ display();
+ const loader=document.getElementById('app-loader');
+ if(loader){loader.style.display='none';}
+ setInterval(async()=>{const was=syncRevision;await fetchFromSupabase();if(was!==syncRevision&&!dirty)display();},12000);
+});
+})();
+</script>
+</body>
+</html>

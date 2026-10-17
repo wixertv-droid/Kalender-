@@ -332,8 +332,74 @@
                 letter-spacing: 0;
             }
         }
+
+        /* Scoped mobile-safe selection dialog. The rest of the neon theme is unchanged. */
+        .dm-entry {font-size:clamp(14px,3.7vw,19px)!important;letter-spacing:.5px!important;
+            min-height:55px!important;line-height:1.45!important;white-space:normal!important;
+            overflow-wrap:anywhere!important;padding:13px!important}
+        .dm-overlay[hidden], .dm-step[hidden] {display:none!important}
+        .dm-overlay {position:fixed;inset:0;z-index:15000;display:flex;
+            align-items:center;justify-content:center;padding:12px;
+            padding-top:max(12px,env(safe-area-inset-top));
+            padding-bottom:max(12px,env(safe-area-inset-bottom));
+            background:rgba(0,0,0,.88);backdrop-filter:blur(7px)}
+        .dm-dialog {box-sizing:border-box;width:100%;max-width:620px;max-height:95dvh;
+            min-width:0;overflow-y:auto;overscroll-behavior:contain;
+            color:#fff;background:#08121d;border:1px solid var(--neon-cyan);border-radius:16px;
+            box-shadow:0 0 28px #05d9e825;padding:clamp(14px,4vw,24px);
+            font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+            font-size:14px;line-height:1.5;-webkit-text-size-adjust:100%}
+        .dm-dialog * {box-sizing:border-box}
+        .dm-head {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+            border-bottom:1px solid #214653;padding-bottom:13px;margin-bottom:18px}
+        .dm-head h2 {font:800 19px/1.35 "Courier New",monospace;color:var(--neon-cyan);
+            letter-spacing:1px;margin:0 0 2px}
+        .dm-head p {font-size:12px;color:#9eb4c2;margin:0}
+        .dm-close {flex:0 0 40px;height:40px;border-radius:9px;background:#101c29;
+            border:1px solid #38606b;color:#fff;font-size:21px}
+        .dm-dialog button {cursor:pointer}
+        .dm-message {font-size:13px;color:#ffbf84;margin:0 0 12px;min-height:0;overflow-wrap:anywhere}
+        .dm-message:empty {display:none}
+        .dm-prompt {color:#fff;font-weight:650;margin-bottom:12px;font-size:16px}
+        .dm-categories {display:grid;grid-template-columns:1fr;gap:10px}
+        .dm-categories button {display:flex;align-items:center;gap:12px;min-height:62px;
+            border:1px solid #136b7b;border-radius:10px;background:#0a2530;
+            color:#f6fdff;text-align:left;font-size:19px;padding:12px 16px}
+        .dm-categories strong {font-size:16px;flex:1}
+        .dm-categories small {font-size:12px;color:#9bd6df}
+        .dm-hint {font-size:12px;color:#afbfca;line-height:1.5;margin:13px 0}
+        .dm-dialog h3 {font-size:17px;color:var(--neon-cyan);margin:8px 0 14px;
+            overflow-wrap:anywhere}
+        .dm-label {display:block;color:#b8dfe5;font-size:13px;font-weight:600;margin:10px 0 8px}
+        .dm-search {display:block;width:100%;min-width:0;min-height:46px;
+            background:#040b12;border:1px solid #17758a;border-radius:8px;color:#fff;
+            padding:11px 12px;font-size:16px;font-family:inherit;letter-spacing:0}
+        .dm-list {max-height:min(44vh,380px);overflow:auto;margin-top:12px;border:1px solid #1b3a4a;
+            border-radius:10px;background:#07101b}
+        .dm-item {display:flex;align-items:flex-start;gap:10px;padding:13px 10px;
+            border-bottom:1px solid #203642;cursor:pointer;min-width:0}
+        .dm-item:last-child {border-bottom:0}
+        .dm-item input {width:21px;height:21px;flex:0 0 21px;accent-color:#05d9e8;margin:3px 0 0}
+        .dm-item-body {min-width:0;flex:1}
+        .dm-item-title {display:block;font-size:14px;font-weight:650;overflow-wrap:anywhere}
+        .dm-item-sub {display:block;font-size:12px;color:#a9bac8;overflow-wrap:anywhere}
+        .dm-selected-count {font-weight:650;color:var(--neon-cyan);font-size:13px;margin:12px 0}
+        .dm-link {display:inline-block;padding:8px 0;margin-bottom:6px;border:0;background:none;
+            color:#9bdae6;font-size:13px}
+        .dm-action {display:block;width:100%;min-height:48px;border-radius:9px;border:1px solid #04d3e4;
+            background:#063442;color:#d9ffff;font-size:14px;font-weight:700;padding:12px;
+            overflow-wrap:anywhere;white-space:normal}
+        .dm-action:disabled {opacity:.42;cursor:default}
+        .dm-destructive {border-color:#ff2a6d;color:#fff;background:#611628;margin-top:13px}
+        .dm-confirm-title {color:#ff5980!important}
+        #dmConfirmSummary {overflow-wrap:anywhere}
+        @media(max-width:480px) {
+            .dm-dialog {max-height:calc(100dvh - 24px);border-radius:12px}
+            .dm-list {max-height:40vh}
+        }
     </style>
     <script src="webmeldungen.js" defer></script>
+    <script src="datenverwaltung.js" defer></script>
 </head>
 <body>
 
@@ -523,10 +589,46 @@
         <button class="btn-save" id="save-btn" onclick="saveSystemSettings()">KONFIGURATION SPEICHERN</button>
         
         <div class="danger-zone">
-            <div class="danger-title">Danger Zone</div>
-            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Löscht unwiderruflich alle Termine. (Kundendaten bleiben erhalten).</p>
-            <button class="btn-danger" onclick="resetAllData()">Alle Termine löschen</button>
+            <div class="danger-title">Datenverwaltung</div>
+            <p style="color:#aaa;font-size:.9rem;margin-bottom:16px">Testdaten oder einzelne Einträge gezielt entfernen – Termine, Kunden oder Events. Keine pauschale Löschung. Vor jeder Löschung wird die Serverdatenbank gesichert.</p>
+            <button type="button" class="btn-danger dm-entry" id="dmOpen">🗑️ Einträge auswählen und löschen</button>
         </div>
+    </div>
+    <div id="dmOverlay" class="dm-overlay" hidden aria-hidden="true">
+        <section class="dm-dialog" role="dialog" aria-modal="true" aria-labelledby="dmTitle">
+            <div class="dm-head">
+                <div><h2 id="dmTitle">DATENVERWALTUNG</h2><p>Gezielte Löschung mit Sicherung</p></div>
+                <button type="button" id="dmClose" class="dm-close" aria-label="Schließen">✕</button>
+            </div>
+            <p id="dmMessage" class="dm-message" role="status" aria-live="polite"></p>
+            <section id="dmCategories" class="dm-step">
+                <p class="dm-prompt">Was möchtest du löschen?</p>
+                <div class="dm-categories">
+                    <button type="button" data-dm-category="termine">📅 <strong>Termine</strong> <small id="dmCountTermine">–</small></button>
+                    <button type="button" data-dm-category="kunden">👤 <strong>Kunden</strong> <small id="dmCountKunden">–</small></button>
+                    <button type="button" data-dm-category="events">🔥 <strong>Events</strong> <small id="dmCountEvents">–</small></button>
+                </div>
+                <p class="dm-hint">Nur ausgewählte Einträge werden entfernt. Gespeicherte Einstellungen und Sperrzeiten bleiben erhalten.</p>
+            </section>
+            <section id="dmSelection" class="dm-step" hidden>
+                <button type="button" id="dmBack" class="dm-link">← Kategorie wählen</button>
+                <h3 id="dmSelectionTitle">Einträge auswählen</h3>
+                <label class="dm-label" for="dmSearch">Suchen nach Name, Datum oder Kontakt</label>
+                <input id="dmSearch" type="search" class="dm-search" placeholder="Eintrag suchen …" autocomplete="off">
+                <div id="dmList" class="dm-list" role="group" aria-label="Einträge zur Löschung"></div>
+                <p id="dmSelectedCount" class="dm-selected-count">0 Einträge ausgewählt</p>
+                <button type="button" class="dm-action" id="dmContinue" disabled>Ausgewählte Einträge prüfen</button>
+            </section>
+            <section id="dmConfirmStep" class="dm-step" hidden>
+                <button type="button" id="dmConfirmBack" class="dm-link">← Auswahl ändern</button>
+                <h3 class="dm-confirm-title">⚠️ Löschen bestätigen</h3>
+                <p id="dmConfirmSummary"></p>
+                <p class="dm-hint">Die ausgewählten Daten und deren zugehörige Bilanzwerte verschwinden aus den Auswertungen. Beim Löschen eines Kunden bleiben bereits gebuchte Termine und Eventzahlungen bestehen.</p>
+                <label class="dm-label" for="dmConfirmInput">Zum Bestätigen <strong>LÖSCHEN</strong> eingeben</label>
+                <input id="dmConfirmInput" class="dm-search" type="text" autocomplete="off" autocapitalize="characters" placeholder="LÖSCHEN">
+                <button type="button" class="dm-action dm-destructive" id="dmDelete" disabled>Ausgewählte Einträge endgültig löschen</button>
+            </section>
+        </section>
     </div>
 
 <nav class="bottom-nav">
@@ -768,22 +870,6 @@
                 btn.style.color = ""; 
                 btn.innerText = "KONFIGURATION SPEICHERN"; 
             }, 3000);
-        }
-
-        function resetAllData() {
-            if(confirm("SYSTEMWARNUNG: Alle TERMINE werden unwiderruflich gelöscht! (Kundendaten bleiben erhalten)")) {
-                const btn = document.querySelector('.btn-danger');
-                if(btn) {
-                    btn.innerText = "LÖSCHEN LÄUFT...";
-                    btn.style.opacity = "0.7";
-                }
-                
-                localStorage.setItem('appTermine', JSON.stringify([]));
-                
-                setTimeout(() => {
-                    window.location.href = 'woche.html';
-                }, 1500);
-            }
         }
 
         function exportDatabase() {

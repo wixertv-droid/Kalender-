@@ -24,6 +24,6 @@ jobs:
           node --check datenverwaltung.js
           node --check events.js
       - name: Event Business Tests
-        run: node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs
+        run: node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs tests/test_event_form_mobile.cjs
       - name: Server API Tests
         run: python3 -m unittest discover -s tests -v

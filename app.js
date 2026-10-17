@@ -302,6 +302,19 @@ function saveAppointment() {
             return; 
         }
 
+        // 3. Auch Events müssen vor dem Anlegen neuer Kunden kollisionsfrei sein.
+        const conflictingEvent=(JSON.parse(localStorage.getItem('appEvents')||'[]')||[]).find(e=>{
+            if(e.datum!==datum)return false;
+            const otherStart=parseTimeStr(e.start,'00:00');
+            const rawEnd=parseTimeStr(e.ende,'23:59');
+            const otherEnd=rawEnd===0?1440:rawEnd;
+            return nStartMin<otherEnd && nEndeMin>otherStart;
+        });
+        if(conflictingEvent){
+            alert('⚠️ Terminkonflikt mit Event: '+conflictingEvent.name+' ('+conflictingEvent.start+'–'+conflictingEvent.ende+'). Bitte andere Uhrzeit wählen.');
+            return;
+        }
+
         // 3. KUNDEN AUTO-FILL LOGIK
         let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
         let kundeGefunden = null;

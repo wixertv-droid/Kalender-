@@ -368,109 +368,148 @@ function autoSaveGuests() {
     }
 }
 
+function eventById(){
+    return (JSON.parse(localStorage.getItem('appEvents'))||[]).find(e=>e.id===currentEditEventId);
+}
 function renderGuests() {
-    const list = document.getElementById('gaesteListe');
-    list.innerHTML = '';
-    
-    if(currentGuests.length === 0) {
-        list.innerHTML = '<div style="color:#666; font-size:0.8rem; text-align:center;">Noch keine Gäste eingetragen.</div>';
+    const list=document.getElementById('gaesteListe');
+    if(!list)return;
+    list.replaceChildren();
+    const search=String(document.getElementById('guestSearch').value||'').trim().toLowerCase();
+    const filtered=currentGuests.filter(g=>String(g.name||'').toLowerCase().includes(search));
+    if(!filtered.length){
+        list.textContent=search?'Keine passenden Gäste':'Noch keine Gäste eingetragen.';
+        list.style.color='#aaa';
         return;
     }
-
-    currentGuests.forEach(g => {
-        let statusColor = '#aaa';
-        let actionBtns = '';
-        
-        if(g.status === 'angemeldet') {
-            statusColor = '#aaa';
-            actionBtns = `<button class="btn-status" style="border-color: var(--neon-cyan); color: var(--neon-cyan);" onclick="changeGuestStatus('${g.id}', 'bestaetigt')">Bestätigen</button>`;
-        } else if(g.status === 'bestaetigt') {
-            statusColor = 'var(--neon-cyan)';
-            actionBtns = `
-                <button class="btn-status" style="border-color: var(--neon-green); color: var(--neon-green);" onclick="changeGuestStatus('${g.id}', 'erschienen')">✓ Da</button>
-                <button class="btn-status" style="border-color: var(--neon-red); color: var(--neon-red);" onclick="changeGuestStatus('${g.id}', 'noshow')">❌ No-Show</button>
-            `;
-        } else if(g.status === 'erschienen') {
-            statusColor = 'var(--neon-green)';
-            actionBtns = `
-                <span style="color: var(--neon-green); font-size: 0.8rem; font-weight: bold; margin-right: 5px;">✓ Erschienen</span>
-                <button class="btn-status" style="color: #666; border-color: #666; padding: 2px 5px; font-size: 0.6rem;" onclick="changeGuestStatus('${g.id}', 'noshow')">Storno</button>
-            `;
-        } else if(g.status === 'noshow') {
-            statusColor = 'var(--neon-red)';
-            actionBtns = `<span style="color: var(--neon-red); font-size: 0.8rem; font-weight: bold; margin-right: 5px;">❌ No-Show</span>`;
-        }
-
-        list.innerHTML += `
-            <div class="attendee-row att-status-${g.status}">
-                <div style="flex-grow: 1;">
-                    <div style="color: #fff; font-weight: bold; font-size: 0.9rem;">${g.name}</div>
-                    <div style="color: ${statusColor}; font-size: 0.7rem; text-transform: uppercase;">${g.status}</div>
-                </div>
-                <div style="display:flex; gap:5px; align-items:center;">
-                    ${actionBtns}
-                    <button class="btn-status" style="color: #ff2a6d; border-color: #ff2a6d; padding: 5px; margin-left: 5px;" onclick="removeGuest('${g.id}')">🗑️</button>
-                </div>
-            </div>
-        `;
+    const event=eventById();
+    const eventPrice=asMoney(event&&event.preis);
+    const statuses=[
+        ['angemeldet','Angemeldet'],['bestaetigt','Bestätigt'],
+        ['erschienen','Erschienen'],['warteliste','Warteliste'],
+        ['abgesagt','Abgesagt'],['noshow','No-Show']
+    ];
+    filtered.forEach(g=>{
+        const id=String(g.id).replace(/[^0-9A-Za-z_-]/g,'');
+        const price=g.preis==null||g.preis===''?eventPrice:asMoney(g.preis);
+        const deposit=asMoney(g.anzahlung);
+        const rest=asMoney(g.restzahlung);
+        const row=document.createElement('div');
+        row.className='attendee-row att-status-'+(['angemeldet','bestaetigt','erschienen','warteliste','abgesagt','noshow'].includes(g.status)?g.status:'angemeldet');
+        row.innerHTML=
+            '<div style="width:100%;display:flex;justify-content:space-between;gap:8px;align-items:center;">'+
+            '<strong>'+escEvent(g.name)+'</strong>'+
+            '<span style="font-size:.78rem;color:var(--neon-gold)">'+escEvent(moneyLabel(deposit+rest))+' bezahlt</span></div>'+
+            '<div class="attendee-tools">'+
+            '<label>Status <select data-status="'+id+'">'+statuses.map(([v,label])=>'<option value="'+v+'"'+(g.status===v?' selected':'')+'>'+label+'</option>').join('')+'</select></label>'+
+            '<label>Preis € <input data-money="preis" data-id="'+id+'" type="number" min="0" step=".01" value="'+price+'"></label>'+
+            '<label>Anzahlung € <input data-money="anzahlung" data-id="'+id+'" type="number" min="0" step=".01" value="'+deposit+'"></label>'+
+            '<label>Rest bezahlt € <input data-money="restzahlung" data-id="'+id+'" type="number" min="0" step=".01" value="'+rest+'"></label>'+
+            (g.kundeId?'<span style="font-size:.7rem;color:var(--neon-cyan)">👤 Kundenakte</span>':'')+
+            (g.status!=='erschienen'&&g.status!=='abgesagt'&&g.status!=='noshow'?
+             '<button class="btn-status" data-checkin="'+id+'" style="border-color:var(--neon-green);color:var(--neon-green)">✓ Check-in</button>':'')+
+            '<button class="btn-status" data-remove="'+id+'" style="color:var(--neon-pink)">✖</button>'+
+            '</div>';
+        list.appendChild(row);
     });
+    // Use delegated DOM events (no untrusted guest values in inline handlers).
+    list.querySelectorAll('select[data-status]').forEach(el=>el.addEventListener('change',()=>{
+        const guest=currentGuests.find(g=>String(g.id)===el.dataset.status);
+        if(guest&&!changeGuestStatus(el.dataset.status,el.value))el.value=guest.status;
+    }));
+    list.querySelectorAll('input[data-money]').forEach(el=>el.addEventListener('change',()=>{
+        if(!updateGuestMoney(el.dataset.id,el.dataset.money,el.value))renderGuests();
+    }));
+    list.querySelectorAll('button[data-checkin]').forEach(el=>el.addEventListener('click',()=>changeGuestStatus(el.dataset.checkin,'erschienen')));
+    list.querySelectorAll('button[data-remove]').forEach(el=>el.addEventListener('click',()=>removeGuest(el.dataset.remove)));
 }
 
-function addGuest() {
-    const input = document.getElementById('newGuestName');
-    if(!input.value.trim()) return;
-    
-    currentGuests.push({ id: Date.now().toString(), name: input.value.trim(), status: 'angemeldet' });
-    
-    input.value = '';
-    updateDashboardStats();
-    renderGuests();
-    autoSaveGuests(); 
-}
-
-function changeGuestStatus(id, newStatus) {
-    const guest = currentGuests.find(g => g.id === id);
-    if(guest) {
-        const oldStatus = guest.status;
-        guest.status = newStatus;
-        
-        // --- INVENTAR ABBUCHUNG ---
-        const events = JSON.parse(localStorage.getItem('appEvents')) || [];
-        const ev = events.find(x => x.id === currentEditEventId);
-        const isAO = ev && ev.praef && ev.praef.toLowerCase().includes('ao');
-
-        if (isAO) {
-            let settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
-            let bestand = parseInt(settings.testBestand) || 0;
-            let changed = false;
-
-            if (oldStatus !== 'erschienen' && newStatus === 'erschienen') {
-                bestand = Math.max(0, bestand - 1);
-                changed = true;
-            } else if (oldStatus === 'erschienen' && newStatus !== 'erschienen') {
-                bestand += 1;
-                changed = true;
-            }
-
-            if (changed) {
-                settings.testBestand = bestand;
-                localStorage.setItem('appEinstellungen', JSON.stringify(settings)); 
-            }
+function addGuest(){
+    if(!currentEditEventId)return;
+    const input=document.getElementById('newGuestName');
+    const name=input.value.trim();
+    if(!name){alert('Bitte Namen oder Nickname eingeben.');return;}
+    const choose=document.getElementById('existingGuest');
+    let customer=choose.value?readEventCustomers().find(x=>String(x.id)===choose.value):null;
+    if(currentGuests.some(g=>customer&&String(g.kundeId)===String(customer.id))){
+        alert('Dieser Kunde ist bereits für das Event eingetragen.');return;
+    }
+    if(!customer && document.getElementById('guestCreateCustomer').checked){
+        const customers=readEventCustomers();
+        if(customers.some(c=>String(c.name).toLowerCase()===name.toLowerCase())){
+            alert('Ein Kunde mit diesem Namen existiert bereits. Wähle ihn oben aus.');return;
         }
-
-        updateDashboardStats();
-        renderGuests();
-        autoSaveGuests(); 
+        customer={id:Date.now()+1,name,status:'none',preis:'',noshows:0};
+        customers.push(customer);
+        localStorage.setItem('appKunden',JSON.stringify(customers));
+        loadEventCustomers();
     }
+    const event=eventById();
+    const cap=eventCapacity(event);
+    const status=cap&&currentGuests.filter(occupiesSeat).length>=cap?'warteliste':'angemeldet';
+    currentGuests.push({
+        id:String(Date.now())+String(Math.floor(Math.random()*1000)),
+        name:customer?customer.name:name,
+        kundeId:customer?customer.id:null,
+        status,
+        preis:customer&&customer.preis?asMoney(customer.preis):asMoney(event&&event.preis),
+        anzahlung:0,
+        restzahlung:0
+    });
+    input.value='';
+    choose.value='';
+    document.getElementById('guestCreateCustomer').checked=false;
+    updateDashboardStats();renderGuests();autoSaveGuests();
+    if(status==='warteliste')alert('Event ist voll: Gast wurde auf die Warteliste gesetzt.');
 }
 
-function removeGuest(id) {
-    if(confirm("Gast wirklich entfernen?")) {
-        currentGuests = currentGuests.filter(g => g.id !== id);
-        updateDashboardStats();
-        renderGuests();
-        autoSaveGuests(); 
+function changeGuestStatus(id,newStatus){
+    const g=currentGuests.find(x=>String(x.id)===String(id));
+    if(!g)return false;
+    const valid=['angemeldet','bestaetigt','erschienen','warteliste','abgesagt','noshow'];
+    if(!valid.includes(newStatus))return false;
+    const event=eventById();
+    const cap=eventCapacity(event);
+    if(!occupiesSeat(g)&&occupiesSeat({...g,status:newStatus})&&cap&&currentGuests.filter(occupiesSeat).length>=cap){
+        alert('Kapazität erreicht. Bitte zuerst einen Platz freigeben.');return false;
     }
+    const was=g.status;
+    if(was===newStatus)return true;
+    g.status=newStatus;
+    // Preserve the existing optional test-stock bookkeeping.
+    const isAO=event&&String(event.praef||'').toLowerCase().includes('ao');
+    if(isAO && (was==='erschienen'||newStatus==='erschienen')){
+        const settings=JSON.parse(localStorage.getItem('appEinstellungen')||'{}');
+        const oldAmount=Math.max(0,Number.parseInt(settings.testBestand,10)||0);
+        const newAmount=was!=='erschienen' ? Math.max(0,oldAmount-1) : oldAmount+1;
+        if(newAmount!==oldAmount){
+            settings.testBestand=newAmount;
+            localStorage.setItem('appEinstellungen',JSON.stringify(settings));
+        }
+    }
+    updateDashboardStats();renderGuests();autoSaveGuests();
+    return true;
+}
+function updateGuestMoney(id,field,raw){
+    const allowed=['preis','anzahlung','restzahlung'];
+    const guest=currentGuests.find(x=>String(x.id)===String(id));
+    const value=Number(raw);
+    if(!guest||!allowed.includes(field)||!Number.isFinite(value)||value<0||value>1000000){
+        alert('Ungültiger Betrag, bitte korrigieren.');return false;
+    }
+    guest[field]=Math.round(value*100)/100;
+    updateDashboardStats();autoSaveGuests();renderGuests();
+    return true;
+}
+function removeGuest(id){
+    const guest=currentGuests.find(g=>String(g.id)===String(id));
+    if(!guest||!confirm('Gast wirklich aus der Eventliste entfernen?'))return;
+    if(guest.status==='erschienen'){
+        // Reverse prior stock deduction (if applicable).
+        changeGuestStatus(id,'abgesagt');
+    }
+    currentGuests=currentGuests.filter(g=>String(g.id)!==String(id));
+    updateDashboardStats();renderGuests();autoSaveGuests();
 }
 
 // --- EVENT SPEICHERN & LÖSCHEN ---

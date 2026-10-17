@@ -47,7 +47,11 @@ function eventFinance(ev) {
     const received=gs.reduce((n,g)=>n+asMoney(g.anzahlung)+asMoney(g.restzahlung),0);
     const expected=gs.filter(occupiesSeat).reduce((n,g)=>n+asMoney(g.preis==null||g.preis===''?base:g.preis),0);
     const costs=asMoney(ev.kosten);
-    return {received,expected,costs,profit:received-costs,open:Math.max(0,expected-received)};
+    const open=gs.filter(occupiesSeat).reduce((n,g)=>{
+        const due=asMoney(g.preis==null||g.preis===''?base:g.preis);
+        return n+Math.max(0,due-asMoney(g.anzahlung)-asMoney(g.restzahlung));
+    },0);
+    return {received,expected,costs,profit:received-costs,open};
 }
 function renderEvents() {
     const container = document.getElementById('eventListe');

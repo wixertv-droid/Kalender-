@@ -53,7 +53,7 @@ test('opening saved event refreshes picker text from existing date/time',()=>{
      'evPreis','evCapacity','evKosten','evTowels','evGirlName','evGirlAge','evGirlHeight',
      'evGirlWeight','evGirlType','evVorlieben','evTabus','evNS','evPraef','btnDelete','promoBox',
      'eventDashboardModal','eventSetupModal']){
-       inputs.set(id,{value:'',style:{},innerText:'',scrollTop:9});
+       inputs.set(id,{value:'',type:id==='evDatum'?'date':(['evStart','evEnde'].includes(id)?'time':'text'),style:{},innerText:'',scrollTop:9});
     }
     const faces=['evDatum','evStart','evEnde'].map(id=>({
        dataset:{for:id},textContent:'',classList:{toggle(){}}

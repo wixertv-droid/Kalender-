@@ -324,6 +324,11 @@
                 </div>
             </div>
 
+            <div class="form-section" id="customerHistorySection" style="margin-bottom:20px;display:none">
+                <div class="section-title">📅 Termin- &amp; Eventhistorie</div>
+                <div id="customerHistorySummary" style="color:var(--neon-gold);font-weight:bold;font-size:.9rem;margin:10px 0"></div>
+                <div id="customerHistoryList" style="max-height:280px;overflow-y:auto"></div>
+            </div>
             <button class="btn-save" onclick="saveKunde()" style="width: 100%;">PROFIL SPEICHERN ✔️</button>
             <button onclick="closeKundeModal()" style="width:100%; background:none; border:none; color:#666; margin-top:15px; cursor:pointer; text-transform:uppercase; font-size:1rem; font-weight:bold;">Abbrechen</button>
         </div>
@@ -693,7 +698,58 @@
                 document.getElementById('kBild2').value = '';
                 updatePreviewVisuals(2, '');
             }
+            renderCustomerHistory(id);
             document.getElementById('kundeModal').style.display = 'flex';
+        }
+
+        function renderCustomerHistory(id) {
+            const section=document.getElementById('customerHistorySection');
+            const summary=document.getElementById('customerHistorySummary');
+            const list=document.getElementById('customerHistoryList');
+            list.replaceChildren();
+            section.style.display=id?'block':'none';
+            if(!id)return;
+            const kunden=JSON.parse(localStorage.getItem('appKunden')||'[]');
+            const customer=kunden.find(k=>String(k.id)===String(id));
+            if(!customer)return;
+            const name=String(customer.name||'').trim().toLowerCase();
+            const matching=Array.isArray(kunden)?kunden.filter(k=>String(k.name||'').trim().toLowerCase()===name):[];
+            const appointments=JSON.parse(localStorage.getItem('appTermine')||'[]');
+            const events=JSON.parse(localStorage.getItem('appEvents')||'[]');
+            const rows=[];
+            let completed=0,noshow=0,revenue=0;
+            appointments.forEach(t=>{
+                // Legacy entries without customer ID can only be matched on unique exact aliases.
+                const linked=String(t.kunde_id||t.kundeId||'')===String(id) ||
+                    (!t.kunde_id&&!t.kundeId&&matching.length===1&&String(t.name||'').trim().toLowerCase()===name);
+                if(!linked)return;
+                if(t.status==='done'){
+                    completed++;
+                    const amount=Number(t.umsatz!==undefined?t.umsatz:t.preis);
+                    if(Number.isFinite(amount))revenue+=amount;
+                }
+                if(t.status==='noshow')noshow++;
+                rows.push({date:t.datum||'',start:t.start||'',name:'Einzeltermin',status:t.status||'Geplant',url:'tag.html?d='+encodeURIComponent(t.datum||'')});
+            });
+            events.forEach(e=>{
+                (Array.isArray(e.guests)?e.guests:[]).forEach(g=>{
+                    if(String(g.kundeId||g.kunde_id||'')!==String(id))return;
+                    const amount=Number(g.anzahlung||0)+Number(g.restzahlung||0);
+                    if(Number.isFinite(amount))revenue+=amount;
+                    if(g.status==='noshow')noshow++;
+                    rows.push({date:e.datum||'',start:e.start||'',name:'Event: '+(e.name||'Event'),status:g.status||'Angemeldet',url:'events.html?event='+encodeURIComponent(e.id)});
+                });
+            });
+            rows.sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
+            summary.textContent=rows.length+' Buchungen · '+completed+' Einzeltermine abgeschlossen · '+noshow+' No-Shows · '+revenue.toLocaleString('de-DE',{style:'currency',currency:'EUR'})+' erhalten';
+            if(!rows.length){list.textContent='Noch keine verknüpften Buchungen.';return;}
+            rows.forEach(x=>{
+                const row=document.createElement('a');
+                row.href=x.url;
+                row.style.cssText='display:block;padding:9px 5px;border-bottom:1px solid #32444b;color:var(--neon-cyan);text-decoration:none;font-size:.83rem';
+                row.textContent=(x.date||'Ohne Datum')+' · '+x.start+' · '+x.name+' · '+x.status;
+                list.appendChild(row);
+            });
         }
 
         function closeKundeModal() { document.getElementById('kundeModal').style.display = 'none'; }

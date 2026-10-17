@@ -153,6 +153,19 @@
             </div>
         </div>
 
+        <div class="finance-card border-gold" style="background:rgba(229,176,92,.045)">
+            <div class="label" style="color:var(--neon-gold)">Termine &amp; Events // Finanzübersicht <span id="breakdownYear"></span></div>
+            <div class="grid-2" style="margin:14px 0">
+                <div><div class="label">Einzeltermine erhalten</div><div id="finAppointments" class="value" style="font-size:1.5rem">0 €</div></div>
+                <div><div class="label">Events erhalten</div><div id="finEvents" class="value" style="font-size:1.5rem">0 €</div></div>
+                <div><div class="label">Event-Ausgaben</div><div id="finCosts" class="value" style="font-size:1.5rem;color:var(--neon-red)">0 €</div></div>
+                <div><div class="label">Ergebnis (vor weiteren Kosten)</div><div id="finProfit" class="value" style="font-size:1.5rem;color:var(--neon-green)">0 €</div></div>
+                <div><div class="label">Offen bei Events</div><div id="finOpen" class="value" style="font-size:1.5rem">0 €</div></div>
+            </div>
+            <button type="button" onclick="exportFinanceCsv()" style="width:100%;background:rgba(5,217,232,.1);border:1px solid var(--neon-cyan);border-radius:7px;color:var(--neon-cyan);padding:12px;cursor:pointer">📄 Buchungen / Zahlungen als CSV exportieren</button>
+            <div style="color:#94a6ac;font-size:.72rem;margin-top:8px">Alle Beträge werden dem Event- bzw. Termindatum zugeordnet. Umsatz = erfasste Zahlung, keine Prognose.</div>
+        </div>
+
         <div class="finance-card border-violet">
             <div class="label" style="color: var(--neon-violet);">Monthly Breakdown // Analyse</div>
             <div class="stat-loader" id="loader-chart">
@@ -292,8 +305,35 @@
         }
 
         // 1. PHASE: Alles berechnen
+        function financeCurrency(amount){return (Math.round(amount*100)/100).toLocaleString('de-DE',{style:'currency',currency:'EUR'});}
+        function validMoney(n){const v=Number(n);return Number.isFinite(v)&&v>0?v:0;}
+        function attendeeActive(g){return !['warteliste','abgesagt','noshow'].includes(g.status);}
+        function exportFinanceCsv(){
+            const termine=JSON.parse(localStorage.getItem('appTermine')||'[]');
+            const events=JSON.parse(localStorage.getItem('appEvents')||'[]');
+            const lines=[['Datum','Art','Referenz','Status','Einnahmen EUR','Ausgaben EUR']];
+            for(const t of termine){
+                if(t.status!=='done')continue;
+                lines.push([t.datum||'', 'Einzeltermin',String(t.id||''),'Bezahlt',String(validMoney(t.umsatz===undefined?t.preis:t.umsatz).toFixed(2)),'0.00']);
+            }
+            for(const e of events){
+                for(const g of (e.guests||[])){
+                    const paid=validMoney(g.anzahlung)+validMoney(g.restzahlung);
+                    if(paid>0)lines.push([e.datum||'','Eventzahlung',String(e.id||''),g.status||'',paid.toFixed(2),'0.00']);
+                }
+                if(validMoney(e.kosten)>0)lines.push([e.datum||'','Event-Ausgaben',String(e.id||''),'Bezahlt','0.00',validMoney(e.kosten).toFixed(2)]);
+            }
+            const csv=lines.map(cols=>cols.map(val=>'"'+String(val).replace(/"/g,'""')+'"').join(';')).join('\r\n');
+            const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement('a');a.href=url;a.download='kalender-finanzen-'+new Date().toISOString().slice(0,10)+'.csv';
+            document.body.appendChild(a);a.click();a.remove();
+            setTimeout(()=>URL.revokeObjectURL(url),60000);
+        }
+
         function calculateStats() {
             const termine = JSON.parse(localStorage.getItem('appTermine')) || [];
+            const events = JSON.parse(localStorage.getItem('appEvents')) || [];
             const settings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
             
             const k1Name = settings.kat1_name || 'VIP';
@@ -317,6 +357,7 @@
             let revFuture = 0, countFuture = 0;
             let noShows = 0, completed = 0;
             let monthlyRev = new Array(12).fill(0);
+            let incomeAppointments=0, incomeEvents=0, costsEvents=0, outstandingEvents=0;
 
             let catData = {
                 kat1: { name: k1Name, color: k1Farbe, amount: 0 },
@@ -357,7 +398,7 @@
                 }
 
                 if (t.status === 'done' && tYear === currentYear) {
-                    revY += price; countY++;
+                    revY += price; incomeAppointments+=price; countY++;
                     if (catData[t.kat]) catData[t.kat].amount += price;
                     monthlyRev[tMonth] += price;
                     if(tMonth === currentMonth) { revM += price; countM++; }
@@ -365,6 +406,35 @@
                 }
             });
 
+            // Event accounting: never confuse expected price with money received.
+            events.forEach(e=>{
+                if(!e.datum)return;
+                const date=new Date(e.datum);
+                if(!Number.isFinite(date.getTime())||date.getFullYear()!==currentYear)return;
+                const month=date.getMonth();
+                const eventGuests=Array.isArray(e.guests)?e.guests:[];
+                const received=eventGuests.reduce((total,g)=>total+validMoney(g.anzahlung)+validMoney(g.restzahlung),0);
+                const outstanding=eventGuests.filter(attendeeActive).reduce((total,g)=>{
+                    const price=g.preis==null||g.preis===''?validMoney(e.preis):validMoney(g.preis);
+                    const paid=validMoney(g.anzahlung)+validMoney(g.restzahlung);
+                    return total+Math.max(0,price-paid);
+                },0);
+                const costs=validMoney(e.kosten);
+                incomeEvents+=received;
+                costsEvents+=costs;
+                outstandingEvents+=outstanding;
+                revY+=received;
+                monthlyRev[month]+=received;
+                if(month===currentMonth)revM+=received;
+                if(month===currentMonth && getWeek(date)===currentWeek)revW+=received;
+            });
+            document.getElementById('breakdownYear').textContent=currentYear;
+            document.getElementById('finAppointments').textContent=financeCurrency(incomeAppointments);
+            document.getElementById('finEvents').textContent=financeCurrency(incomeEvents);
+            document.getElementById('finCosts').textContent=financeCurrency(costsEvents);
+            document.getElementById('finOpen').textContent=financeCurrency(outstandingEvents);
+            document.getElementById('finProfit').textContent=financeCurrency(incomeAppointments+incomeEvents-costsEvents);
+            
             const totalPast = completed + noShows;
             let successRate = 0, noshowRate = 0;
             if (totalPast > 0) {

@@ -1,0 +1,11 @@
+[Unit]
+Description=Kalender – taegliches Backup um 03:15 Uhr
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+RandomizedDelaySec=2m
+Unit=kalender-backup.service
+
+[Install]
+WantedBy=timers.target

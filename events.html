@@ -22,6 +22,18 @@
         .att-status-noshow { border-color: var(--neon-red); background: rgba(255,42,109,0.05); }
         
         .btn-status { font-size: 0.7rem; padding: 5px 8px; background: rgba(0,0,0,0.5); border: 1px solid #666; color: #fff; border-radius: 4px; cursor: pointer; }
+        .attendee-row { flex-wrap:wrap; gap:10px; }
+        .attendee-tools {display:flex;gap:6px;align-items:center;flex-wrap:wrap;width:100%}
+        .attendee-tools label{color:#bbc;font-size:.71rem}
+        .attendee-tools input,.attendee-tools select{background:#101720;color:#fff;border:1px solid #40545c;border-radius:5px;padding:6px;font-size:14px;max-width:105px}
+        .attendee-tools .btn-status{min-height:32px}
+        .event-quickstats{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+        .event-quickstats .stat-badge{font-size:.69rem}
+        .event-info-note{color:#a8b4c6;font-size:.77rem;margin:8px 0 14px}
+        .event-mini-finance{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
+        .event-mini-finance>div{background:#140f13;border:1px solid #513536;border-radius:8px;padding:9px;color:#e4e7e8}
+        .event-mini-finance strong{color:var(--neon-gold);display:block;font-size:1.2rem}
+
     </style>
     <script src="webmeldungen.js" defer></script>
 </head>
@@ -61,11 +73,15 @@
 
             <div style="color: var(--neon-cyan); font-weight: bold; text-transform: uppercase; margin-bottom: 10px;">Gästeliste Verwalten</div>
             
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <input type="text" id="newGuestName" class="cyber-input-full" placeholder="Neuer Name / Nickname" style="flex: 2;">
-                <button class="btn-save" onclick="addGuest()" style="flex: 1; padding: 0; background: var(--neon-cyan); color: #000;">Gast +</button>
+            <div class="event-info-note" id="dashCapacity">Kapazität: unbegrenzt</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+                <select id="existingGuest" class="cyber-select" style="flex:1;min-width:180px" onchange="selectEventCustomer(this.value)">
+                    <option value="">Bestehenden Kunden auswählen ...</option>
+                </select>
+                <input type="text" id="newGuestName" class="cyber-input-full" placeholder="Neuer Name / Nickname" style="flex:2;min-width:160px">
+                <button class="btn-save" onclick="addGuest()" style="flex:1;min-width:76px;padding:8px;background:var(--neon-cyan);color:#000">Gast +</button>
             </div>
-            
+            <input id="guestSearch" class="cyber-input-full" style="margin-bottom:10px" placeholder="Teilnehmer suchen ..." oninput="renderGuests()">
             <div id="gaesteListe"></div>
 
             <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 15px;">
@@ -80,6 +96,12 @@
                         <div id="dashUmsatz" style="font-size: 2.2rem; font-weight: bold; color: var(--neon-gold); font-family: monospace; text-shadow: 0 0 15px rgba(229,176,92,0.4); line-height: 1;">0 €</div>
                     </div>
                     
+                    <div class="event-mini-finance">
+                        <div>Erhalten<strong id="dashReceived">0 €</strong></div>
+                        <div>Eventkosten<strong id="dashCosts">0 €</strong></div>
+                        <div>Offene Beträge<strong id="dashOpen">0 €</strong></div>
+                        <div>Gewinn<strong id="dashProfit">0 €</strong></div>
+                    </div>
                     <div id="dashGuestChart"></div>
                 </div>
             </div>
@@ -108,6 +130,8 @@
                 <div class="form-group" style="flex: 1;"><label>Stadt</label><input type="text" id="evStadt" class="cyber-input-full" placeholder="z.B. Leipzig"></div>
                 <div class="form-group" style="flex: 2;"><label>Location</label><input type="text" id="evLocation" class="cyber-input-full" placeholder="Hotel / Privat"></div>
                 <div class="form-group" style="flex: 1;"><label>Preis p.P. (€)</label><input type="number" id="evPreis" class="cyber-input-full" placeholder="z.B. 80"></div>
+                <div class="form-group" style="flex: 1;"><label>Max. Gäste (0 = offen)</label><input type="number" min="0" step="1" id="evCapacity" class="cyber-input-full" value="0"></div>
+                <div class="form-group" style="flex: 1;"><label>Ausgaben (€)</label><input type="number" min="0" step="0.01" id="evKosten" class="cyber-input-full" value="0"></div>
             </div>
 
             <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;">
@@ -178,6 +202,12 @@
                     <div style="color: #25D366; font-weight: bold; text-transform: uppercase;">WhatsApp Promo-Text</div>
                     <button class="btn-save" onclick="generatePromo()" style="background: #128C7E; padding: 5px 10px; font-size: 0.8rem; width: auto;">Generieren ♻️</button>
                 </div>
+                <select id="evPromoMode" class="cyber-select" style="width:100%;margin-top:12px">
+                    <option value="ankündigung">Ankündigung</option>
+                    <option value="plaetze">Noch freie Plätze</option>
+                    <option value="erinnerung">Erinnerung an angemeldete Gäste</option>
+                    <option value="ausgebucht">Ausgebucht / Warteliste</option>
+                </select>
                 <div id="promoBox" class="wa-box">Klicke auf Generieren...</div>
                 <button onclick="copyPromo()" style="width:100%; background:rgba(37,211,102,0.1); border:1px solid #25D366; color:#25D366; padding:8px; margin-top:5px; border-radius:6px; cursor:pointer;">Text Kopieren 📋</button>
             </div>

@@ -166,6 +166,88 @@
             overflow-wrap: anywhere;
         }
         #reminderSettings .reminder-upcoming-title { margin-top: 20px; }
+        /* Alle Setup-Eingaben bleiben auch in Safari innerhalb ihrer Karte. */
+        .settings-container .settings-card,
+        .settings-container .form-group {
+            min-width: 0;
+        }
+        .settings-container .settings-field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            column-gap: 15px;
+        }
+        .settings-container .settings-field-grid > .form-group {
+            min-width: 0;
+        }
+        .settings-container input.cyber-input-full,
+        .settings-container select.cyber-select {
+            display: block;
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            max-width: 100%;
+        }
+        .settings-container input[type="date"],
+        .settings-container input[type="time"] {
+            color-scheme: dark;
+        }
+        /* Mobil: native Datum-/Uhrzeit-Eingaben brauchen mehr Platz als Flex erlaubt. */
+        @media (max-width: 600px) {
+            .settings-container {
+                padding: 20px 14px 110px;
+            }
+            .settings-container .settings-card {
+                padding: 20px 16px;
+                border-radius: 16px;
+                margin-bottom: 20px;
+            }
+            .settings-container .setting-title {
+                font-size: clamp(16px, 4.5vw, 20px);
+                letter-spacing: 1.4px;
+                line-height: 1.4;
+                overflow-wrap: anywhere;
+                padding-bottom: 12px;
+                margin-bottom: 20px;
+            }
+            .settings-container .settings-field-grid {
+                grid-template-columns: minmax(0, 1fr);
+                column-gap: 0;
+            }
+            .settings-container .form-group {
+                margin-bottom: 16px;
+            }
+            .settings-container .form-group label {
+                font-size: 12px;
+                line-height: 1.4;
+                letter-spacing: 1px;
+                margin-bottom: 8px;
+            }
+            .settings-container input.cyber-input-full,
+            .settings-container select.cyber-select {
+                min-height: 48px;
+                padding: 12px 14px;
+                border-radius: 10px;
+                font-size: 16px;
+                line-height: 1.3;
+                letter-spacing: 0;
+            }
+            .settings-container .btn-save {
+                min-height: 48px;
+                padding: 12px;
+                font-size: 14px;
+                letter-spacing: 1px;
+            }
+            .settings-container .kat-setup-row,
+            .settings-container .kat-row {
+                min-width: 0;
+                padding: 12px;
+                gap: 12px;
+            }
+            .settings-container .kat-setup-row > div,
+            .settings-container .kat-row > div {
+                min-width: 0;
+            }
+        }
         @media (max-width: 480px) {
             #reminderSettings { padding: 18px 16px; }
         }
@@ -249,13 +331,13 @@
         <div class="settings-card">
             <div class="setting-title">Zeit-Matrix (Arbeitszeit)</div>
             <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Definiert die Breite der Timeline in der Wochen- und Tagesansicht.</p>
-            <div style="display: flex; gap: 15px;">
-                <div class="form-group" style="flex: 1;">
-                    <label class="input-label">Tagesbeginn</label>
+            <div class="settings-field-grid">
+                <div class="form-group">
+                    <label class="input-label" for="arbeitsStart">Tagesbeginn</label>
                     <input type="time" id="arbeitsStart" class="cyber-input-full">
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label class="input-label">Tagesende</label>
+                <div class="form-group">
+                    <label class="input-label" for="arbeitsEnde">Tagesende</label>
                     <input type="time" id="arbeitsEnde" class="cyber-input-full">
                 </div>
             </div>
@@ -270,24 +352,24 @@
                 <input type="text" id="sperrName" class="cyber-input-full" placeholder="z.B. Urlaub, Arzt, Periode...">
             </div>
 
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 1; min-width: 130px;">
-                    <label class="input-label">Start Datum</label>
+            <div class="settings-field-grid">
+                <div class="form-group">
+                    <label class="input-label" for="sperrStartDatum">Start Datum</label>
                     <input type="date" id="sperrStartDatum" class="cyber-input-full">
                 </div>
-                <div class="form-group" style="flex: 1; min-width: 130px;">
-                    <label class="input-label">Start Uhrzeit</label>
+                <div class="form-group">
+                    <label class="input-label" for="sperrStartZeit">Start Uhrzeit</label>
                     <input type="time" id="sperrStartZeit" class="cyber-input-full" value="00:00">
                 </div>
             </div>
             
-            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                <div class="form-group" style="flex: 1; min-width: 130px;">
-                    <label class="input-label">End Datum</label>
+            <div class="settings-field-grid">
+                <div class="form-group">
+                    <label class="input-label" for="sperrEndDatum">End Datum</label>
                     <input type="date" id="sperrEndDatum" class="cyber-input-full">
                 </div>
-                <div class="form-group" style="flex: 1; min-width: 130px;">
-                    <label class="input-label">End Uhrzeit</label>
+                <div class="form-group">
+                    <label class="input-label" for="sperrEndZeit">End Uhrzeit</label>
                     <input type="time" id="sperrEndZeit" class="cyber-input-full" value="23:59">
                 </div>
             </div>

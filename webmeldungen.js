@@ -1,104 +1,225 @@
-/* Browser-Webmeldungen, nur wenn die Kalenderseite geöffnet ist. */
-(function(){
-'use strict';
-var KEY='kalender-webmeldungen';
-var pref={active:true,lead:30,browser:false};
-try{Object.assign(pref,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){}
-var seenKey='kalender-webmeldungen-gesehen';
-var seen=new Set();
-try{JSON.parse(localStorage.getItem(seenKey)||'[]').forEach(function(x){seen.add(x);});}catch(e){}
-var list,badge;
-function read(key){
-  try{var d=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(d)?d:[];}catch(e){return [];}
-}
-function soon(){
-  var now=Date.now();
-  return read('appTermine').map(function(x){return Object.assign({},x,{kind:'Termin'});})
-  .concat(read('appEvents').map(function(x){return Object.assign({},x,{kind:'Event'});}))
-  .map(function(x){
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(x.datum||''))||!/^\d{1,2}:\d{2}$/.test(String(x.start||'')))return null;
-    var d=new Date(x.datum+'T'+x.start.padStart(5,'0')+':00');
-    return Object.assign({},x,{when:d.getTime()});
-  }).filter(function(x){return x&&Number.isFinite(x.when)&&x.when>=now&&x.when-now<=pref.lead*60000;})
-  .sort(function(a,b){return a.when-b.when;});
-}
-function toast(message){
-  var box=document.createElement('div');
-  box.setAttribute('role','status');
-  box.style.cssText='position:fixed;bottom:18px;right:18px;z-index:100000;background:#191b27;color:#fff;border:1px solid #05d9e8;padding:12px 16px;border-radius:10px;max-width:min(90vw,400px);box-shadow:0 6px 30px #0009;font:14px system-ui';
-  box.textContent=message;
-  document.body.append(box);
-  setTimeout(function(){box.remove();},6500);
-}
-window.webmeldung=toast;
-function refresh(){
-  if(!list)return;
-  list.replaceChildren();
-  var entries=pref.active?soon():[];
-  badge.textContent=String(entries.length);
-  badge.hidden=!entries.length;
-  entries.slice(0,35).forEach(function(x){
-    var line=document.createElement('div');
-    line.textContent=x.kind+': '+(x.name||'Ohne Name')+' · '+x.datum+' · '+x.start+' Uhr';
-    line.style.cssText='padding:9px 0;border-bottom:1px solid #353c4a;font-size:13px';
-    list.append(line);
-    var key=[x.kind,x.id||x.name,x.datum,x.start].join(':');
-    if(seen.has(key))return;
-    seen.add(key);
-    localStorage.setItem(seenKey,JSON.stringify(Array.from(seen).slice(-300)));
-    toast(x.kind+' beginnt bald um '+x.start+' Uhr');
-    if(pref.browser&&'Notification' in window&&Notification.permission==='granted'){
-      try{new Notification('Kalender-Erinnerung',{body:'Ein '+x.kind+' beginnt um '+x.start+' Uhr.',tag:'kalender-'+key,icon:'/icon-192.png'});}catch(e){}
+/* Agenda 2050 – Erinnerungen ohne schwebende Glocke.
+   Die Bedienelemente befinden sich ausschließlich unter SYSTEM.
+   In-App-Erinnerungen funktionieren nur solange eine Kalenderseite geöffnet ist. */
+(function () {
+    'use strict';
+
+    const KEY = 'kalender-webmeldungen';
+    const seenKey = 'kalender-webmeldungen-gesehen';
+    const validLeads = [5, 15, 30, 60, 120];
+    let pref = {active: true, lead: 30, browser: false};
+
+    try {
+        const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+            pref.active = saved.active !== false;
+            if (validLeads.includes(Number(saved.lead))) pref.lead = Number(saved.lead);
+            pref.browser = saved.browser === true;
+        }
+    } catch (error) {
+        // Damaged optional preferences must never disrupt appointments.
     }
-  });
-  if(!entries.length){
-    var no=document.createElement('p');
-    no.textContent=pref.active?'Keine bald anstehenden Termine.':'Erinnerungen sind deaktiviert.';
-    no.style.color='#b5b6c2';list.append(no);
-  }
-}
-function init(){
-  if(document.getElementById('kalender-webmeldungen'))return;
-  var root=document.createElement('div');
-  root.id='kalender-webmeldungen';
-  root.style.cssText='position:fixed;right:12px;top:12px;z-index:99999;font-family:system-ui,sans-serif';
-  var trigger=document.createElement('button');
-  trigger.type='button';trigger.title='Webmeldungen öffnen';
-  trigger.setAttribute('aria-label','Webmeldungen');
-  trigger.style.cssText='position:relative;background:#0e1624;border:1px solid #05d9e8;color:#fff;border-radius:99px;padding:10px 13px;cursor:pointer;font-size:21px';
-  trigger.textContent='🔔';
-  badge=document.createElement('span');badge.hidden=true;
-  badge.style.cssText='font-size:11px;background:#ff4268;border-radius:40px;position:absolute;top:-5px;right:-5px;padding:2px 5px';
-  trigger.append(badge);
-  var panel=document.createElement('div');panel.hidden=true;
-  panel.style.cssText='width:min(350px,calc(100vw - 24px));max-height:70vh;overflow:auto;margin-top:8px;padding:15px;border:1px solid #05d9e8;background:#111621;color:#fff;border-radius:13px;box-shadow:0 12px 35px #000a';
-  var title=document.createElement('strong');title.textContent='🔔 Webmeldungen';
-  var help=document.createElement('p');help.textContent='Termine und Events: Meldungen erscheinen, solange die Kalenderseite geöffnet ist.';
-  help.style.cssText='font-size:12px;line-height:1.4;color:#bcc5d2';
-  var label=document.createElement('label');label.style.cssText='display:block;margin:12px 0;font-size:13px';
-  var checked=document.createElement('input');checked.type='checkbox';checked.checked=!!pref.active;
-  checked.addEventListener('change',function(){pref.active=checked.checked;localStorage.setItem(KEY,JSON.stringify(pref));refresh();});
-  label.append(checked,document.createTextNode(' Erinnerungen aktiv'));
-  var select=document.createElement('select');select.setAttribute('aria-label','Vorwarnzeit');
-  select.style.cssText='width:100%;padding:9px;background:#191d29;color:#fff;border:1px solid #536173;border-radius:7px;margin:0 0 12px';
-  [5,15,30,60,120].forEach(function(minutes){var o=document.createElement('option');o.value=minutes;o.textContent=minutes+' Minuten vorher';select.append(o);});
-  select.value=String(pref.lead);
-  select.addEventListener('change',function(){pref.lead=Number(select.value);localStorage.setItem(KEY,JSON.stringify(pref));refresh();});
-  var enable=document.createElement('button');enable.type='button';enable.textContent='Browser-Benachrichtigungen aktivieren';
-  enable.style.cssText='width:100%;padding:10px;background:#05d9e8;color:#050711;border:0;border-radius:8px;cursor:pointer';
-  enable.addEventListener('click',async function(){
-    if(!('Notification' in window)){toast('Browser-Benachrichtigungen werden auf diesem Gerät nicht unterstützt.');return;}
-    var allowed=await Notification.requestPermission();
-    pref.browser=allowed==='granted';localStorage.setItem(KEY,JSON.stringify(pref));
-    toast(pref.browser?'Browser-Benachrichtigungen aktiviert.':'Browser-Benachrichtigungen nicht erlaubt.');
-  });
-  list=document.createElement('div');list.style.marginTop='12px';
-  panel.append(title,help,label,select,enable,list);
-  trigger.addEventListener('click',function(){panel.hidden=!panel.hidden;});
-  root.append(trigger,panel);document.body.append(root);
-  refresh();
-  setInterval(refresh,60000);
-  window.addEventListener('storage',function(e){if(e.key==='appTermine'||e.key==='appEvents')refresh();});
-}
-document.addEventListener('DOMContentLoaded',function(){setTimeout(init,1400);});
+
+    const seen = new Set();
+    try {
+        const values = JSON.parse(localStorage.getItem(seenKey) || '[]');
+        if (Array.isArray(values)) values.forEach(value => {
+            if (typeof value === 'string') seen.add(value);
+        });
+    } catch (error) {
+        // Do not stop the app if an old dismissed-reminder list is corrupt.
+    }
+
+    function savePrefs() {
+        try { localStorage.setItem(KEY, JSON.stringify(pref)); } catch (error) {}
+    }
+
+    function read(key) {
+        try {
+            const data = JSON.parse(localStorage.getItem(key) || '[]');
+            return Array.isArray(data) ? data : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function upcoming() {
+        if (!pref.active) return [];
+        const now = Date.now();
+        const appointments = read('appTermine').map(item => ({...item, kind: 'Termin'}));
+        const events = read('appEvents').map(item => ({...item, kind: 'Event'}));
+
+        return appointments.concat(events).map(item => {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(String(item.datum || '')) ||
+                !/^\d{1,2}:\d{2}$/.test(String(item.start || ''))) return null;
+            const date = new Date(item.datum + 'T' + String(item.start).padStart(5, '0') + ':00');
+            const when = date.getTime();
+            return Number.isFinite(when) ? {...item, when} : null;
+        }).filter(item => item && item.when >= now && item.when - now <= pref.lead * 60000)
+          .sort((a, b) => a.when - b.when);
+    }
+
+    function toast(message) {
+        const el = document.createElement('div');
+        el.setAttribute('role', 'status');
+        el.style.cssText = 'position:fixed;bottom:96px;left:12px;right:12px;' +
+            'z-index:1000;pointer-events:none;margin:auto;max-width:420px;' +
+            'background:#101824;color:#fff;border:1px solid #05d9e8;' +
+            'padding:12px 16px;border-radius:10px;box-shadow:0 7px 28px #000a;' +
+            'font:14px system-ui,sans-serif';
+        el.textContent = message;
+        document.body.append(el);
+        setTimeout(() => el.remove(), 6500);
+    }
+    window.webmeldung = toast;
+
+    function refreshList() {
+        const list = document.getElementById('reminderUpcoming');
+        if (!list) return;
+        list.replaceChildren();
+
+        if (!pref.active) {
+            list.textContent = 'Erinnerungen sind ausgeschaltet.';
+            return;
+        }
+        const entries = upcoming();
+        if (!entries.length) {
+            list.textContent = 'Keine bald anstehenden Termine oder Events.';
+            return;
+        }
+        entries.slice(0, 35).forEach(item => {
+            const row = document.createElement('div');
+            row.style.cssText = 'padding:9px 0;border-bottom:1px solid #35404c';
+            row.textContent = item.kind + ': ' + (item.name || 'Ohne Name') +
+                ' · ' + item.datum + ' · ' + item.start + ' Uhr';
+            list.append(row);
+        });
+    }
+
+    function supportedNotifications() {
+        return 'Notification' in window && typeof Notification.requestPermission === 'function';
+    }
+
+    function refreshPermissionUI() {
+        const button = document.getElementById('reminderPermissionBtn');
+        const info = document.getElementById('reminderPermissionInfo');
+        if (!button || !info) return;
+
+        if (!supportedNotifications()) {
+            button.disabled = true;
+            button.textContent = 'Systembenachrichtigungen nicht verfügbar';
+            button.style.opacity = '.55';
+            info.textContent = 'Dieser Browser unterstützt hier keine Systembenachrichtigungen. ' +
+                'Die Erinnerungen innerhalb der geöffneten Kalender-App bleiben nutzbar. ' +
+                'Auf dem iPhone können Systemmitteilungen eine zum Home-Bildschirm hinzugefügte App voraussetzen.';
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            button.disabled = true;
+            button.textContent = 'Systembenachrichtigungen erlaubt ✓';
+            info.textContent = 'Hinweis: Ohne einen separaten Push-Dienst kommen Erinnerungen ' +
+                'weiterhin nur, solange der Kalender geöffnet ist.';
+        } else if (Notification.permission === 'denied') {
+            button.disabled = true;
+            button.textContent = 'Systembenachrichtigungen blockiert';
+            info.textContent = 'Bitte erlaube Mitteilungen in den Browser- bzw. Geräteeinstellungen. ' +
+                'In-App-Erinnerungen funktionieren weiterhin.';
+        } else {
+            button.disabled = false;
+            button.textContent = 'Systembenachrichtigungen aktivieren';
+            info.textContent = 'Systemmitteilungen werden nur angefragt, wenn du hier tippst. ' +
+                'Eine dauerhafte Hintergrundzustellung ist noch nicht eingerichtet.';
+        }
+    }
+
+    function initSettings() {
+        const enabled = document.getElementById('reminderEnabled');
+        const lead = document.getElementById('reminderLead');
+        const request = document.getElementById('reminderPermissionBtn');
+        if (!enabled || !lead || !request) return;
+
+        enabled.checked = pref.active;
+        lead.value = String(pref.lead);
+        lead.disabled = !pref.active;
+
+        enabled.addEventListener('change', () => {
+            pref.active = enabled.checked;
+            lead.disabled = !pref.active;
+            savePrefs();
+            refreshList();
+        });
+        lead.addEventListener('change', () => {
+            const number = Number(lead.value);
+            if (!validLeads.includes(number)) return;
+            pref.lead = number;
+            savePrefs();
+            refreshList();
+        });
+        request.addEventListener('click', async () => {
+            if (!supportedNotifications()) return;
+            try {
+                const permission = await Notification.requestPermission();
+                pref.browser = permission === 'granted';
+                savePrefs();
+                refreshPermissionUI();
+            } catch (error) {
+                const info = document.getElementById('reminderPermissionInfo');
+                if (info) info.textContent = 'Die Mitteilungsfreigabe ist hier nicht möglich.';
+            }
+        });
+        refreshPermissionUI();
+        refreshList();
+    }
+
+    function notify() {
+        const entries = upcoming();
+        entries.slice(0, 35).forEach(item => {
+            const key = [item.kind, item.id || item.name, item.datum, item.start].join(':');
+            if (seen.has(key)) return;
+            seen.add(key);
+            try { localStorage.setItem(seenKey, JSON.stringify([...seen].slice(-300))); }
+            catch (error) {}
+            toast(item.kind + ' beginnt bald um ' + item.start + ' Uhr');
+            if (pref.browser && supportedNotifications() && Notification.permission === 'granted') {
+                try {
+                    new Notification('Kalender-Erinnerung', {
+                        body: 'Ein ' + item.kind + ' beginnt um ' + item.start + ' Uhr.',
+                        tag: 'kalender-' + key,
+                        icon: '/icon-192.png'
+                    });
+                } catch (error) {}
+            }
+        });
+        refreshList();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initSettings();
+        // No fixed-position bell or popover. The rest of the app stays unobstructed.
+        setTimeout(notify, 2000);
+        setInterval(notify, 60000);
+        window.addEventListener('storage', event => {
+            if (event.key === KEY) {
+                try {
+                    const next = JSON.parse(event.newValue || '{}');
+                    if (next && typeof next === 'object') {
+                        pref.active = next.active !== false;
+                        if (validLeads.includes(Number(next.lead))) pref.lead = Number(next.lead);
+                        pref.browser = next.browser === true;
+                    }
+                } catch (error) {}
+                const enabled = document.getElementById('reminderEnabled');
+                const lead = document.getElementById('reminderLead');
+                if (enabled) enabled.checked = pref.active;
+                if (lead) {
+                    lead.value = String(pref.lead);
+                    lead.disabled = !pref.active;
+                }
+            }
+            if (event.key === 'appTermine' || event.key === 'appEvents' || event.key === KEY) {
+                refreshList();
+            }
+        });
+    });
 })();

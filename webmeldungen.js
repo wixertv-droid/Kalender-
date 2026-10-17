@@ -103,33 +103,36 @@
     function refreshPermissionUI() {
         const button = document.getElementById('reminderPermissionBtn');
         const info = document.getElementById('reminderPermissionInfo');
-        if (!button || !info) return;
+        const status = document.getElementById('reminderPermissionStatus');
+        if (!button || !info || !status) return;
+
+        // Show a real action button only while permission can be requested.
+        // An allowed, blocked or unsupported state is INFORMATION, not a huge button.
+        button.hidden = true;
+        button.disabled = true;
+        status.dataset.state = 'unavailable';
 
         if (!supportedNotifications()) {
-            button.disabled = true;
-            button.textContent = 'Systembenachrichtigungen nicht verfügbar';
-            button.style.opacity = '.55';
-            info.textContent = 'Dieser Browser unterstützt hier keine Systembenachrichtigungen. ' +
-                'Die Erinnerungen innerhalb der geöffneten Kalender-App bleiben nutzbar. ' +
-                'Auf dem iPhone können Systemmitteilungen eine zum Home-Bildschirm hinzugefügte App voraussetzen.';
-            return;
-        }
-
-        if (Notification.permission === 'granted') {
-            button.disabled = true;
-            button.textContent = 'Systembenachrichtigungen erlaubt ✓';
-            info.textContent = 'Hinweis: Ohne einen separaten Push-Dienst kommen Erinnerungen ' +
-                'weiterhin nur, solange der Kalender geöffnet ist.';
+            status.textContent = 'ⓘ Systemmitteilungen nicht verfügbar';
+            info.textContent = 'Hier sind nur Erinnerungen in der geöffneten Kalender-App möglich. ' +
+                'Auf dem iPhone lassen sich Systemmitteilungen gegebenenfalls über eine zum Home-Bildschirm hinzugefügte App aktivieren.';
+        } else if (Notification.permission === 'granted') {
+            status.dataset.state = 'allowed';
+            status.textContent = '✓ Systemmitteilungen erlaubt';
+            info.textContent = 'Die Berechtigung ist erteilt. Erinnerungen werden derzeit trotzdem nur zugestellt, ' +
+                'solange der Kalender geöffnet ist. Hintergrund-Push ist noch nicht eingerichtet.';
         } else if (Notification.permission === 'denied') {
-            button.disabled = true;
-            button.textContent = 'Systembenachrichtigungen blockiert';
-            info.textContent = 'Bitte erlaube Mitteilungen in den Browser- bzw. Geräteeinstellungen. ' +
-                'In-App-Erinnerungen funktionieren weiterhin.';
+            status.dataset.state = 'blocked';
+            status.textContent = 'ⓘ Systemmitteilungen blockiert';
+            info.textContent = 'Mitteilungen kannst du in den Geräte- bzw. Browsereinstellungen erlauben. ' +
+                'Erinnerungen im geöffneten Kalender funktionieren weiterhin.';
         } else {
+            status.dataset.state = 'available';
+            status.textContent = 'Mitteilungen noch nicht aktiviert';
+            info.textContent = 'Optional: Systemmitteilungen auf diesem Gerät erlauben. ' +
+                'Dauerhafte Hintergrundmeldungen benötigen später einen Push-Dienst.';
+            button.hidden = false;
             button.disabled = false;
-            button.textContent = 'Systembenachrichtigungen aktivieren';
-            info.textContent = 'Systemmitteilungen werden nur angefragt, wenn du hier tippst. ' +
-                'Eine dauerhafte Hintergrundzustellung ist noch nicht eingerichtet.';
         }
     }
 

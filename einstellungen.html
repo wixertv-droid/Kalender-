@@ -579,7 +579,7 @@
             refreshStyledPickers();
         });
         // Zeit-Matrix-Werte werden in dieser Datei erst bei window.load gesetzt.
-        window.addEventListener('load', refreshStyledPickers);
+        window.addEventListener('load', function() { setTimeout(refreshStyledPickers, 0); });
         window.addEventListener('load', () => {
             const saved = localStorage.getItem('appEinstellungen');
             const d = {

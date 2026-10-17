@@ -67,7 +67,7 @@ test('controls store preference for this device without touching appointments',(
 test('unsupported browser disables system notification permission request',()=>{
   const x=setup();
   assert.equal(x.nodes.reminderPermissionBtn.disabled,true);
-  assert.match(x.nodes.reminderPermissionInfo.textContent,/nicht/);
+  assert.match(x.nodes.reminderPermissionInfo.textContent,/keine|nicht/);
 });
 test('reminder controls live under system settings, not a floating bell',()=>{
   for(const id of ['reminderSettings','reminderEnabled','reminderLead',

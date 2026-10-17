@@ -15,6 +15,7 @@ from http import cookies
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
+from schedule_validation import introduced_conflicts
 
 ROOT = Path(__file__).resolve().parent
 DATA = Path(os.getenv("KALENDER_DATA_DIR", str(ROOT / ".private-data"))).resolve()
@@ -269,11 +270,16 @@ class Handler(BaseHTTPRequestHandler):
             except ValueError: return self.output(400, {"error": "Ungültige Zahlen"})
             with dbopen() as db:
                 db.execute("BEGIN IMMEDIATE")
-                cur = db.execute("UPDATE snapshot SET version=version+1,content=? WHERE id=1 AND version=?", (payload, version))
-                if cur.rowcount != 1:
-                    current = db.execute("SELECT version FROM snapshot WHERE id=1").fetchone()[0]
+                current_version, current_json = db.execute("SELECT version,content FROM snapshot WHERE id=1").fetchone()
+                if current_version != version:
                     db.rollback()
-                    return self.output(409, {"error": "Änderungskonflikt", "serverVersion": current})
+                    return self.output(409, {"error": "Änderungskonflikt", "serverVersion": current_version})
+                # Also validate server-side: an outdated tab or a second device
+                # must not introduce overlaps across bookings, events and blocks.
+                if introduced_conflicts(json.loads(current_json), content):
+                    db.rollback()
+                    return self.output(422, {"error": "Doppelbuchung: Termin, Event oder Sperrzeit überschneiden sich. Nicht gespeichert."})
+                db.execute("UPDATE snapshot SET version=version+1,content=? WHERE id=1", (payload,))
                 db.commit()
             return self.output(200, {"ok": True, "version": version+1})
         return self.output(404, {"error": "Nicht gefunden"})

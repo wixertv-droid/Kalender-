@@ -106,6 +106,21 @@ class CalendarAPITests(unittest.TestCase):
         finally:
             self.app.REQUIRE_DEVICE_CERT = old
 
+    def test_server_rejects_new_event_booking_overlap_and_keeps_revision(self):
+        cookie=self.login()
+        _,snapshot,_,_=self.request("GET","/api/data",verified=True,cookie=cookie)
+        version=snapshot["version"]
+        data=snapshot["data"]
+        data["termine"].append({"id":99887766101,"name":"Termin A","datum":"2041-05-12",
+                                "start":"12:00","ende":"14:00"})
+        data["events"].append({"id":99887766102,"name":"Event B","datum":"2041-05-12",
+                               "start":"13:00","ende":"15:00","guests":[]})
+        result=self.request("POST","/api/data",{"version":version,"data":data},verified=True,cookie=cookie)
+        self.assertEqual(result[0],422)
+        _,after,_,_=self.request("GET","/api/data",verified=True,cookie=cookie)
+        self.assertEqual(after["version"],version)
+        self.assertEqual(after["data"]["termine"],snapshot["data"]["termine"][:-1])
+
     def test_rate_limit_and_login_page(self):
         ip="192.0.2.88"
         for _ in range(5):

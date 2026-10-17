@@ -53,6 +53,21 @@ function eventFinance(ev) {
     },0);
     return {received,expected,costs,profit:received-costs,open};
 }
+function refreshEventPickerFaces() {
+    // Native iOS pickers stay accessible; only the visible layout is styled.
+    document.querySelectorAll('#eventSetupModal .event-picker-value[data-for]').forEach(face => {
+        const input=document.getElementById(face.dataset.for);
+        if(!input)return;
+        let value=input.value;
+        if(input.type==='date' && /^\d{4}-\d{2}-\d{2}$/.test(value)){
+            const parts=value.split('-');
+            value=parts[2]+'.'+parts[1]+'.'+parts[0];
+        }
+        const empty=!value;
+        face.textContent=empty?(input.type==='date'?'Datum auswählen':'Uhrzeit auswählen'):value;
+        face.classList.toggle('is-empty',empty);
+    });
+}
 function renderEvents() {
     const container = document.getElementById('eventListe');
     if (!container) return;
@@ -227,8 +242,6 @@ function openEventSetup(isNew = false) {
             document.getElementById('evVorlieben').value = e.vorlieben || '';
             document.getElementById('evTabus').value = e.tabus || '';
             document.getElementById('evNS').value = e.ns || 'Ja Hiv Schnelltest wird vor Ort gemacht ';
-            document.getElementById('evVideo').value = e.video || 'Keine';
-            document.getElementById('evBilder').value = e.bilder || 'Ja';
             document.getElementById('evPraef').value = e.praef || 'AO';
             
             document.getElementById('btnDelete').style.display = 'block';
@@ -260,15 +273,16 @@ function openEventSetup(isNew = false) {
         document.getElementById('evVorlieben').value = '';
         document.getElementById('evTabus').value = '';
         document.getElementById('evNS').value = 'Ja Hiv Schnelltest wird vor Ort gemacht ';
-        document.getElementById('evVideo').value = 'Keine';
-        document.getElementById('evBilder').value = 'Ja';
         document.getElementById('evPraef').value = 'AO';
         
         document.getElementById('btnDelete').style.display = 'none';
     }
     
     document.getElementById('eventDashboardModal').style.display = 'none';
+    refreshEventPickerFaces();
     document.getElementById('eventSetupModal').style.display = 'flex';
+    // Always begin at the top when reopening on a small phone.
+    document.querySelector('#eventSetupModal .event-setup-content').scrollTop=0;
 }
 
 function closeEventSetup() { 
@@ -300,8 +314,6 @@ function generatePromo() {
     const towels = document.getElementById('evTowels').value || 'Werden gestellt';
     
     const nsOpt = document.getElementById('evNS').value;
-    const vidOpt = document.getElementById('evVideo').value;
-    const bilderOpt = document.getElementById('evBilder').value;
     
     let dateStr = "TBA";
     let weekdayStr = "";
@@ -327,10 +339,6 @@ function generatePromo() {
 text += `Ich will eure gemeinsame Creampie "${name}" Schlampe sein. Nehmt mich ran, bis ich überlaufe! 🔥💦\n\n`;
     
     text += `💦 *Gewollt:* ${vorlieben}\n`;
-    if (vidOpt !== 'Keine') {
-        text += `📸 *Videos:* Optional ${vidOpt}\n`;
-    }
-    
     text += `🚫 *Tabus:* ${tabus}\n`;
     text += `💊 *Sex:* ${praef}\n`;
     if (nsOpt !== 'Nein') {
@@ -338,10 +346,6 @@ text += `Ich will eure gemeinsame Creampie "${name}" Schlampe sein. Nehmt mich r
     }
     text += `💸 *Kosten:* ${preis} € p.P.\n`;
     text += `🧖‍♀️ *Handtücher:* ${towels}\n`;
-    
-    if (bilderOpt === 'Ja') {
-        text += `\nHeiße Bilder von mir schicke ich euch bei Interesse sehr gerne auf Anfrage! 😏\n`;
-    }
     
     text += `\nDie Plätze sind limitiert. Wenn du mich als deine Gangbang-Schlampe benutzen willst, melde dich verbindlich. Ich kann es kaum erwarten, von euch gefickt zu werden! 🔥🔞`;
     
@@ -593,6 +597,9 @@ function saveEvent() {
     let events = JSON.parse(localStorage.getItem('appEvents')) || [];
     
     const data = {
+        // Retain any older optional metadata while editing existing events.
+        // The removed photo/video fields are neither displayed nor generated.
+        ...(original || {}),
         id: currentEditEventId || Date.now(),
         name: name,
         datum: datum,
@@ -612,8 +619,6 @@ function saveEvent() {
         gType: document.getElementById('evGirlType').value,
         
         ns: document.getElementById('evNS').value,
-        video: document.getElementById('evVideo').value,
-        bilder: document.getElementById('evBilder').value,
         vorlieben: document.getElementById('evVorlieben').value,
         tabus: document.getElementById('evTabus').value,
         praef: document.getElementById('evPraef').value,
@@ -649,6 +654,11 @@ function deleteEvent() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    document.querySelectorAll('#eventSetupModal input.event-native-picker').forEach(input => {
+        input.addEventListener('input', refreshEventPickerFaces);
+        input.addEventListener('change', refreshEventPickerFaces);
+    });
+    refreshEventPickerFaces();
     // Resolve deep links only after loading the latest server snapshot.
     await fetchFromSupabase();
     renderEvents();

@@ -28,7 +28,6 @@ jobs:
       - name: Safe VPS updater syntax
         run: |
           bash -n deploy/update-kalender.sh
-          grep -q '^ReadWritePaths=/var/backups/kalender/pre-delete
- deploy/kalender-predelete-backup.conf
+          grep -Fxq 'ReadWritePaths=/var/backups/kalender/pre-delete' deploy/kalender-predelete-backup.conf
       - name: Server API Tests
         run: python3 -m unittest discover -s tests -v

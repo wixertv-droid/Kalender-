@@ -25,5 +25,10 @@ jobs:
           node --check events.js
       - name: Event Business Tests
         run: node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs tests/test_event_form_mobile.cjs
+      - name: Safe VPS updater syntax
+        run: |
+          bash -n deploy/update-kalender.sh
+          grep -q '^ReadWritePaths=/var/backups/kalender/pre-delete
+ deploy/kalender-predelete-backup.conf
       - name: Server API Tests
         run: python3 -m unittest discover -s tests -v

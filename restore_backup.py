@@ -27,7 +27,8 @@ def app():
 def validated_backup(requested,app_module):
     filename=Path(requested).resolve()
     directory=BACKUP_DIR.resolve()
-    if filename.parent!=directory or filename.suffix!=".sqlite3" or not filename.is_file():
+    if (filename.parent not in (directory, directory/"pre-delete") or
+            filename.suffix!=".sqlite3" or not filename.is_file()):
         raise RuntimeError("Nur .sqlite3 Dateien aus dem geschützten Backup-Verzeichnis erlaubt.")
     db=sqlite3.connect("file:"+str(filename)+"?mode=ro",uri=True,timeout=15)
     try:

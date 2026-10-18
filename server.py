@@ -106,10 +106,13 @@ def safe(value, depth=0, key=""):
 
 def backup_before_delete():
     """Full consistent WAL-aware SQLite backup, readable only by kalender."""
-    target = Path(os.getenv("KALENDER_BACKUP_DIR", "/var/backups/kalender"))
+    # Main server is sandboxed with ProtectSystem=strict. Only this dedicated
+    # subdirectory is writable by the API; daily full backups stay read-only.
+    target = Path(os.getenv("KALENDER_PREDELETE_BACKUP_DIR",
+                           "/var/backups/kalender/pre-delete"))
     target.mkdir(parents=True, exist_ok=True, mode=0o700)
     os.chmod(target, 0o700)
-    # Prefix intentionally matches the 30-day rotation in backup.py.
+    # Daily timer expires pre-delete copies after the retention period.
     fd, name = tempfile.mkstemp(
         prefix="kalender-vor-loeschen-", suffix=".sqlite3", dir=target
     )
@@ -312,6 +315,10 @@ class Handler(BaseHTTPRequestHandler):
                     backup_before_delete()
                 except (OSError, sqlite3.Error, RuntimeError) as error:
                     db.rollback()
+                    # Log details to the protected service journal, never
+                    # expose filesystem paths or customer data to clients.
+                    print("Kalender Pre-delete Backup fehlgeschlagen:",
+                          type(error).__name__, str(error), file=sys.stderr, flush=True)
                     return self.output(503, {"error": "Sicherung vor dem Löschen fehlgeschlagen. Es wurde nichts gelöscht."})
                 db.execute("UPDATE snapshot SET version=?, content=? WHERE id=1",
                            (version+1, payload))

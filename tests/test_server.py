@@ -84,12 +84,33 @@ class CalendarAPITests(unittest.TestCase):
         self.assertEqual(self.request("POST","/api/data",{"version":version,"data":loaded["data"]},verified=True,cookie=cookie)[0],409)
         self.assertEqual(self.request("GET","/api/export",verified=True,cookie=cookie)[0],200)
 
+    def test_predelete_backup_failure_does_not_modify_snapshot(self):
+        from unittest.mock import patch
+        cookie=self.login()
+        _,loaded,_,_=self.request("GET","/api/data",verified=True,cookie=cookie)
+        version=loaded["version"]
+        data=loaded["data"]
+        data["events"].append({"id":92710007,"name":"Nicht loeschen","datum":"2049-06-21",
+                               "start":"14:00","ende":"16:00","guests":[]})
+        status,result,_,_=self.request("POST","/api/data",
+              {"version":version,"data":data},verified=True,cookie=cookie)
+        self.assertEqual(status,200)
+        with patch.object(self.app,"backup_before_delete",side_effect=PermissionError("sandbox restriction")):
+            status,reason,_,_=self.request("POST","/api/delete-selected",{
+                "version":result["version"],"category":"events","ids":["92710007"],"confirmation":"LOESCHEN"
+            },verified=True,cookie=cookie)
+        self.assertEqual(status,503)
+        self.assertIn("nichts gelöscht",reason["error"])
+        _,after,_,_=self.request("GET","/api/data",verified=True,cookie=cookie)
+        self.assertEqual(after["version"],result["version"])
+        self.assertTrue(any(e["id"]==92710007 for e in after["data"]["events"]))
+
     def test_selective_delete_creates_backup_and_only_changes_requested_items(self):
         import sqlite3
         from pathlib import Path
-        backup_dir=Path(self.temp.name)/"secure-backups"
-        previous=os.environ.get("KALENDER_BACKUP_DIR")
-        os.environ["KALENDER_BACKUP_DIR"]=str(backup_dir)
+        backup_dir=Path(self.temp.name)/"secure-backups"/"pre-delete"
+        previous=os.environ.get("KALENDER_PREDELETE_BACKUP_DIR")
+        os.environ["KALENDER_PREDELETE_BACKUP_DIR"]=str(backup_dir)
         cookie=self.login()
         try:
             _,old,_,_=self.request("GET","/api/data",verified=True,cookie=cookie)
@@ -160,8 +181,8 @@ class CalendarAPITests(unittest.TestCase):
             self.assertEqual(next(x for x in last["data"]["termine"] if x["id"]==91810004)["umsatz"],"220")
             self.assertEqual(len(list(backup_dir.glob("kalender-vor-loeschen-*.sqlite3"))),3)
         finally:
-            if previous is None:os.environ.pop("KALENDER_BACKUP_DIR",None)
-            else:os.environ["KALENDER_BACKUP_DIR"]=previous
+            if previous is None:os.environ.pop("KALENDER_PREDELETE_BACKUP_DIR",None)
+            else:os.environ["KALENDER_PREDELETE_BACKUP_DIR"]=previous
 
     def test_xss_guard(self):
         cookie=self.login()

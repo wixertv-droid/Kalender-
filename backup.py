@@ -26,4 +26,11 @@ from time import time
 for old in target.glob("kalender-*.sqlite3"):
     if old!=filename and old.stat().st_mtime < time()-keep*86400:
         old.unlink()
+# Keep pre-deletion recoverable for the same period, but do not expose the
+# rest of the daily backup directory as writable to the web service.
+pre_delete=target/"pre-delete"
+if pre_delete.is_dir():
+    for old in pre_delete.glob("kalender-vor-loeschen-*.sqlite3"):
+        if old.stat().st_mtime < time()-keep*86400:
+            old.unlink()
 print("Backup erstellt:",filename)

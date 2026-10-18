@@ -5,9 +5,21 @@ set -Eeuo pipefail
 APP=/var/www/kalender
 PREVIOUS=""
 UPDATED=0
+DROPIN_CHANGED=0
+DROPIN=/etc/systemd/system/kalender.service.d/20-predelete-backup.conf
+OLD_DROPIN=""
 rollback() {
   local code=$?
   trap - ERR
+  if [[ "$DROPIN_CHANGED" == "1" ]]; then
+    echo "Stelle vorherige Kalender-Backup-Berechtigung wieder her ..." >&2
+    if [[ -n "$OLD_DROPIN" ]]; then
+      cp -p "$OLD_DROPIN" "$DROPIN"
+    else
+      rm -f "$DROPIN"
+    fi
+    systemctl daemon-reload || true
+  fi
   if [[ "$UPDATED" == "1" && -n "$PREVIOUS" ]]; then
     echo "FEHLER: Stelle vorherige Kalender-Codeversion wieder her ..." >&2
     cd "$APP"
@@ -45,7 +57,17 @@ if command -v node >/dev/null 2>&1; then
     node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs tests/test_event_form_mobile.cjs
 fi
 
-echo "4/6 Gesicherte Backup-Automatik aktivieren (03:15, 30 Tage)"
+echo "4/6 Backup-Verzeichnis & enge Service-Berechtigung vorbereiten"
+install -d -o kalender -g kalender -m 0700 /var/backups/kalender/pre-delete
+install -d -o root -g root -m 0755 /etc/systemd/system/kalender.service.d
+if [[ -f "$DROPIN" ]]; then
+  OLD_DROPIN=$(mktemp /root/kalender-vor-update-dropin.XXXXXX)
+  cp -p "$DROPIN" "$OLD_DROPIN"
+fi
+install -o root -g root -m 0644 deploy/kalender-predelete-backup.conf "$DROPIN"
+DROPIN_CHANGED=1
+
+echo "4b/6 Gesicherte Backup-Automatik aktivieren (03:15, 30 Tage)"
 install -o root -g root -m 0644 deploy/kalender-backup.service /etc/systemd/system/kalender-backup.service
 install -o root -g root -m 0644 deploy/kalender-backup.timer /etc/systemd/system/kalender-backup.timer
 systemctl daemon-reload
@@ -58,8 +80,16 @@ systemctl is-active --quiet kalender
 curl --fail --silent --show-error http://127.0.0.1:3102/health
 printf '\n'
 
+echo "Backup-Schreibrechte des laufenden Dienstes prüfen"
+systemctl show kalender -p ReadWritePaths -p Environment --no-pager
+test -d /var/backups/kalender/pre-delete
+# A systemd sandbox write check as the actual running app is handled by
+# the isolated calendar API; do not attempt destructive test requests here.
+
 echo "6/6 Kalender und Backup-Timer prüfen"
 systemctl list-timers kalender-backup.timer --no-pager
 echo "FERTIG. Nginx, Zertifikate, Roomdo und Synsight wurden nicht verändert."
 echo "Bitte auf Handy und PC Event-, Kalender- und Finance-Funktionen prüfen."
 UPDATED=0
+DROPIN_CHANGED=0
+if [[ -n "$OLD_DROPIN" ]]; then rm -f "$OLD_DROPIN"; fi

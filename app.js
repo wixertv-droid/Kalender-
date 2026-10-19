@@ -260,7 +260,11 @@ function openModal(editId = null) {
         document.getElementById('terminName').value = '';
         document.getElementById('terminKontakt').value = '';
         document.getElementById('terminNotizen').value = '';
-        document.getElementById('terminDatum').value = '';
+        const fromUrl = new URLSearchParams(window.location.search).get('d');
+        const today = new Date();
+        const localDay = new Date(today.getTime()-today.getTimezoneOffset()*60000).toISOString().slice(0,10);
+        document.getElementById('terminDatum').value =
+            fromUrl && /^\d{4}-\d{2}-\d{2}$/.test(fromUrl) ? fromUrl : localDay;
         bookingCustomerDetailFrom(null);
         document.getElementById('terminPlattform').value = 'none';
         document.getElementById('terminStart').value = '';
@@ -276,6 +280,8 @@ function openModal(editId = null) {
         kontaktContainer.style.display = (pValue !== 'none') ? 'block' : 'none';
     }
 
+    // Existing appointments may carry customer details, but booking always
+    // starts compact. Switching mode never discards form contents.
     setBookingCustomerMode('quick');
     refreshBookingPickers();
     modal.style.display = 'flex';

@@ -132,6 +132,54 @@ function generiereWochenAnsicht() {
     }
 }
 
+function setBookingCustomerMode(mode){
+    const modal=document.getElementById('terminModal');
+    if(!modal)return;
+    const detail=mode==='detail';
+    modal.dataset.mode=detail?'detail':'quick';
+    const section=document.getElementById('bookingCustomerAdvanced');
+    if(section)section.hidden=!detail;
+    document.getElementById('bookingModeQuick').setAttribute('aria-pressed',String(!detail));
+    document.getElementById('bookingModeDetail').setAttribute('aria-pressed',String(detail));
+    const linked=document.getElementById('terminKundeId');
+    const existing=linked&&linked.value;
+    document.getElementById('bookingModeHint').textContent=detail ?
+        (existing?'Dieser Kunde ist bereits gespeichert. Bestehende Profile bearbeitest du unter KUNDEN.':
+          'Bekannte Kontakte und Notizen ergänzen – unbekannte Angaben einfach leer lassen.') :
+        'Name und Kontakt genügen für die Schnelleingabe. Details kannst du später ergänzen.';
+}
+function refreshBookingPickers(){
+    document.querySelectorAll('#terminModal .calendar-picker-value[data-for]').forEach(face=>{
+        const input=document.getElementById(face.dataset.for);
+        if(!input)return;
+        let value=input.value;
+        if(input.type==='date'&&/^\d{4}-\d{2}-\d{2}$/.test(value)){
+            const [year,month,day]=value.split('-');
+            value=day+'.'+month+'.'+year;
+        }
+        face.textContent=value||(input.type==='date'?'Datum wählen':'Uhrzeit wählen');
+    });
+}
+function bookingCustomerDetailFrom(k){
+    const values=k||{};
+    const map={terminPlattform2:values.plattform2||'none',terminKontakt2:values.kontakt2||'',
+               terminProfilLink:values.profillink||values.profilLink||values.link||'',
+               terminVorlieben:values.vorlieben||'',terminKundenNotizen:values.notizen||''};
+    for(const [id,value] of Object.entries(map)){
+        const field=document.getElementById(id);
+        if(field)field.value=value;
+    }
+}
+function bookingSecondaryPlatforms(settings){
+    const sel=document.getElementById('terminPlattform2');
+    if(!sel)return;
+    sel.replaceChildren(new Option('Keine zweite Plattform','none'));
+    for(const name of [settings.plat1,settings.plat2,settings.plat3,settings.plat4]){
+        if(typeof name==='string'&&name.trim()&&![...sel.options].some(opt=>opt.value===name)){
+            sel.add(new Option(name,name));
+        }
+    }
+}
 function openModal(editId = null) {
     const modal = document.getElementById('terminModal');
     if (!modal) return;
@@ -140,6 +188,15 @@ function openModal(editId = null) {
 
     const storedSettings = JSON.parse(localStorage.getItem('appEinstellungen')) || {};
     const settings = { ...DEFAULTS, ...storedSettings };
+    bookingSecondaryPlatforms(settings);
+    const bookingInputs=modal.querySelectorAll('input.calendar-picker-native');
+    bookingInputs.forEach(input=>{
+        if(!input.dataset.pickerBound){
+            input.dataset.pickerBound='1';
+            input.addEventListener('change',refreshBookingPickers);
+            input.addEventListener('input',refreshBookingPickers);
+        }
+    });
     
     const catDropdown = document.getElementById('terminKategorie');
     if (catDropdown) {
@@ -189,6 +246,7 @@ function openModal(editId = null) {
             document.getElementById('terminKontakt').value = (liveKunde && liveKunde.kontakt) ? liveKunde.kontakt : (t.kontakt || '');
             
             document.getElementById('terminNotizen').value = t.notizen || '';
+            bookingCustomerDetailFrom(liveKunde);
             
             if(document.getElementById('terminPreis')) {
                 document.getElementById('terminPreis').value = (liveKunde && liveKunde.preis) ? liveKunde.preis : (t.preis || '');
@@ -202,6 +260,9 @@ function openModal(editId = null) {
         document.getElementById('terminName').value = '';
         document.getElementById('terminKontakt').value = '';
         document.getElementById('terminNotizen').value = '';
+        document.getElementById('terminDatum').value = '';
+        bookingCustomerDetailFrom(null);
+        document.getElementById('terminPlattform').value = 'none';
         document.getElementById('terminStart').value = '';
         document.getElementById('terminEnde').value = '';
         
@@ -215,7 +276,11 @@ function openModal(editId = null) {
         kontaktContainer.style.display = (pValue !== 'none') ? 'block' : 'none';
     }
 
+    setBookingCustomerMode('quick');
+    refreshBookingPickers();
     modal.style.display = 'flex';
+    const content=modal.querySelector('.modal-content');
+    if(content)content.scrollTop=0;
 }
 
 function closeModal() {
@@ -254,7 +319,7 @@ function saveAppointment() {
         let preis = preisInput ? preisInput.value : '';
         let praeferenz = praefInput ? praefInput.value : 'none';
 
-        if (!name || !datum || !start || !ende) {
+        if (!name.trim() || !datum || !start || !ende) {
             alert("Bitte alle Pflichtfelder ausfüllen.");
             return;
         }
@@ -337,8 +402,15 @@ function saveAppointment() {
                 kontakt: kontakt.trim(),
                 preis: preis,
                 praeferenz: praeferenz,
-                link: '', status: kat, 
-                notizen: 'Automatisch durch Termin erstellt.',
+                plattform2: document.getElementById('terminPlattform2').value,
+                kontakt2: document.getElementById('terminKontakt2').value.trim(),
+                profillink: document.getElementById('terminProfilLink').value.trim(),
+                link: document.getElementById('terminProfilLink').value.trim(),
+                profilLink: document.getElementById('terminProfilLink').value.trim(),
+                vorlieben: document.getElementById('terminVorlieben').value.trim(),
+                status: kat,
+                notizen: document.getElementById('terminKundenNotizen').value.trim() || '',
+                vibe: 0, perf: 0, noshows: 0, groesse: 'Unbekannt',
                 bild1: '', bild2: ''
             };
             kunden.push(neuerKunde);
@@ -393,7 +465,7 @@ function saveAppointment() {
         if(typeof closeModal === 'function') closeModal();
         refreshAllViews();
         
-    } catch (e) { console.error("Fehler beim Speichern:", e); }
+    } catch (e) { console.error("Fehler beim Speichern:", e); alert('Speichern fehlgeschlagen. Bitte Eingaben prüfen.'); }
 }
 
 function updateLiveSystem() {

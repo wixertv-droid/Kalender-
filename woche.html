@@ -245,7 +245,13 @@
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             
             // Wenn man tippt, löschen wir sicherheitshalber die alte ID
+            const priorCustomer=document.getElementById('terminKundeId').value;
             document.getElementById('terminKundeId').value = '';
+            if(priorCustomer){
+                bookingCustomerDetailFrom(null);
+                const bookingModal=document.getElementById('terminModal');
+                setBookingCustomerMode(bookingModal.dataset.mode||'quick');
+            }
             
             if (input.length < 1) { vBox.style.display = 'none'; return; }
             
@@ -267,6 +273,8 @@
                         
                         document.getElementById('terminPreis').value = k.preis || '';
                         document.getElementById('terminPraeferenz').value = k.praeferenz || 'none';
+                        bookingCustomerDetailFrom(k);
+                        setBookingCustomerMode(document.getElementById('terminModal').dataset.mode||'quick');
 
                         if(typeof toggleKontaktFeld === 'function') toggleKontaktFeld();
                         vBox.style.display = 'none';

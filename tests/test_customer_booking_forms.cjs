@@ -55,6 +55,9 @@ function setup(){
   const element=id=>{
     if(!values.has(id))values.set(id,{
         id,value:'',dataset:{},style:{},hidden:false,scrollTop:0,
+        options:[],
+        replaceChildren(){this.options=[];},
+        add(option){this.options.push(option);},
         setAttribute(k,v){this[k]=v},addEventListener(){},
         querySelectorAll(){return []},
         querySelector(){return {scrollTop:0}}

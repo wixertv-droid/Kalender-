@@ -335,7 +335,13 @@
             const vBox = document.getElementById('kundenVorschlaege');
             const kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             
+            const priorCustomer=document.getElementById('terminKundeId').value;
             document.getElementById('terminKundeId').value = '';
+            if(priorCustomer){
+                bookingCustomerDetailFrom(null);
+                const bookingModal=document.getElementById('terminModal');
+                setBookingCustomerMode(bookingModal.dataset.mode||'quick');
+            }
             if (input.length < 1) { vBox.style.display = 'none'; return; }
             
             const treffer = kunden.filter(k => (k.name && k.name.toLowerCase().includes(input)) || (k.kontakt && k.kontakt.toLowerCase().includes(input)));
@@ -355,6 +361,8 @@
                         document.getElementById('terminKontakt').value = k.kontakt || '';
                         document.getElementById('terminPreis').value = k.preis || '';
                         document.getElementById('terminPraeferenz').value = k.praeferenz || 'none';
+                        bookingCustomerDetailFrom(k);
+                        setBookingCustomerMode(document.getElementById('terminModal').dataset.mode||'quick');
                         
                         const selKat = document.getElementById('terminKategorie');
                         if (selKat && k.status && k.status !== 'none') { 

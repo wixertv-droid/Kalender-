@@ -24,7 +24,7 @@ jobs:
           node --check datenverwaltung.js
           node --check events.js
       - name: Event Business Tests
-        run: node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs tests/test_event_form_mobile.cjs
+        run: node --test tests/test_event_core.cjs tests/test_webmeldungen.cjs tests/test_event_form_mobile.cjs tests/test_customer_booking_forms.cjs
       - name: Safe VPS updater syntax
         run: |
           bash -n deploy/update-kalender.sh

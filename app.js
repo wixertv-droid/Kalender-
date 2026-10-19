@@ -414,7 +414,7 @@ function saveAppointment() {
                 link: document.getElementById('terminProfilLink').value.trim(),
                 profilLink: document.getElementById('terminProfilLink').value.trim(),
                 vorlieben: document.getElementById('terminVorlieben').value.trim(),
-                status: kat,
+                status: 'none', // no VIP/stamm classification assumed for a brand-new customer
                 notizen: document.getElementById('terminKundenNotizen').value.trim() || '',
                 vibe: 0, perf: 0, noshows: 0, groesse: 'Unbekannt',
                 bild1: '', bild2: ''

@@ -201,10 +201,15 @@
     </nav>
 
     <div class="modal-overlay" id="kundeModal">
-        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
-            <div class="form-title" style="color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); margin-bottom: 20px;">Profil Bearbeiten</div>
+        <div class="modal-content">
+            <div class="form-title" id="kundeFormTitle" style="color: var(--neon-cyan); border-bottom-color: var(--neon-cyan); margin-bottom: 14px;">Kundenprofil</div>
+            <div class="customer-mode-toggle" role="group" aria-label="Art der Kundeneingabe">
+                <button type="button" id="kundeModeQuick" onclick="setKundeFormMode('quick')" aria-pressed="true">⚡ Schnell</button>
+                <button type="button" id="kundeModeDetail" onclick="setKundeFormMode('detail')" aria-pressed="false">📝 Details</button>
+            </div>
+            <p class="customer-mode-hint" id="kundeModeHint">Name und Kontakt genügen zunächst. Weitere Angaben kannst du später ergänzen.</p>
             
-            <div class="img-upload-container">
+            <div class="img-upload-container customer-advanced">
                 <div class="img-upload-box">
                     <div style="position: relative;">
                         <div class="img-circle" id="previewBox1" onclick="handleImageClick(1)">1</div>
@@ -227,12 +232,12 @@
 
             <div class="form-section">
                 <div class="section-title">Identität</div>
-                <div style="display: flex; gap: 10px;">
-                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                <div class="customer-row">
+                    <div class="form-group">
                         <label>Name / Alias</label>
                         <input type="text" id="kName" class="cyber-input-full" placeholder="Pflichtfeld">
                     </div>
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <div class="form-group">
                         <label>Status</label>
                         <select id="kStatus" class="cyber-select">
                             </select>
@@ -242,27 +247,27 @@
 
             <div class="form-section">
                 <div class="section-title">Kontakte</div>
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <div class="customer-row">
+                    <div class="form-group">
                         <label>Platt. 1</label>
                         <select id="kPlattform" class="cyber-select"></select>
                     </div>
-                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                    <div class="form-group">
                         <label>Kontakt 1</label>
                         <input type="text" id="kKontakt" class="cyber-input-full" placeholder="Nummer / Name">
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <div class="customer-row customer-advanced">
+                    <div class="form-group">
                         <label>Platt. 2</label>
                         <select id="kPlattform2" class="cyber-select"></select>
                     </div>
-                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                    <div class="form-group">
                         <label>Kontakt 2</label>
                         <input type="text" id="kKontakt2" class="cyber-input-full" placeholder="Optional">
                     </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 0;">
+                <div class="form-group customer-advanced" style="margin-bottom: 0;">
                     <label>Profil-Link (URL)</label>
                     <input type="text" id="kLink" class="cyber-input-full" placeholder="https://...">
                 </div>
@@ -270,12 +275,12 @@
 
             <div class="form-section">
                 <div class="section-title">Konditionen & Werte</div>
-                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <div class="customer-row">
+                    <div class="form-group">
                         <label>Preis (€)</label>
                         <input type="number" id="kPreis" class="cyber-input-full" placeholder="z.B. 150">
                     </div>
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <div class="form-group">
                         <label>Präferenz</label>
                         <select id="kPraef" class="cyber-select">
                             <option value="none">Unbekannt</option>
@@ -283,7 +288,7 @@
                             <option value="Save">Save (Verhütung)</option>
                         </select>
                     </div>
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <div class="form-group customer-advanced">
                         <label>Penis</label>
                         <select id="kGroesse" class="cyber-select">
                             <option value="Unbekannt">Unbekannt</option>
@@ -294,15 +299,15 @@
                         </select>
                     </div>
                 </div>
-                <div style="display: flex; gap: 20px;">
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                <div class="customer-row customer-advanced customer-reviews" id="kundeReviews">
+                    <div class="form-group">
                         <label>Vibe (1-5)</label>
                         <div class="interactive-stars" data-target="kVibe" id="star-kVibe">
                             <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
                         </div>
                         <input type="hidden" id="kVibe" value="0">
                     </div>
-                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <div class="form-group">
                         <label>Performance (1-5)</label>
                         <div class="interactive-stars" data-target="kPerf" id="star-kPerf">
                             <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
@@ -312,7 +317,7 @@
                 </div>
             </div>
 
-            <div class="form-section" style="margin-bottom: 25px;">
+            <div class="form-section customer-advanced" style="margin-bottom: 25px;">
                 <div class="section-title">Akte</div>
                 <div class="form-group" style="margin-bottom: 10px;">
                     <label>Vorlieben / Tabus</label>
@@ -636,6 +641,23 @@
             }
         }
 
+        function setKundeFormMode(mode) {
+            const detail=mode==='detail';
+            const modal=document.getElementById('kundeModal');
+            modal.dataset.mode=detail?'detail':'quick';
+            modal.querySelectorAll('.customer-advanced').forEach(el=>{
+                el.hidden=!detail;
+            });
+            // Don't ask new customers for a performance/rating that is not known.
+            const reviews=document.getElementById('kundeReviews');
+            if(reviews)reviews.hidden=!detail||!currentKundeId;
+            document.getElementById('kundeModeQuick').setAttribute('aria-pressed',String(!detail));
+            document.getElementById('kundeModeDetail').setAttribute('aria-pressed',String(detail));
+            document.getElementById('kundeModeHint').textContent=detail ?
+                'Zusätzliche Angaben sind freiwillig. Bewertungen erst nach einem tatsächlichen Besuch erfassen.' :
+                'Für einen neuen Kunden reichen Name und Kontakt. Details bleiben erhalten und lassen sich später ergänzen.';
+        }
+
         function openKundeModal(id = null) {
             loadDropdowns();
             currentKundeId = id;
@@ -698,8 +720,11 @@
                 document.getElementById('kBild2').value = '';
                 updatePreviewVisuals(2, '');
             }
+            document.getElementById('kundeFormTitle').textContent=id?'KUNDENPROFIL BEARBEITEN':'NEUEN KUNDEN ANLEGEN';
+            setKundeFormMode(id?'detail':'quick');
             renderCustomerHistory(id);
             document.getElementById('kundeModal').style.display = 'flex';
+            document.querySelector('#kundeModal .modal-content').scrollTop=0;
         }
 
         function renderCustomerHistory(id) {
@@ -761,7 +786,9 @@
             let kunden = JSON.parse(localStorage.getItem('appKunden')) || [];
             const linkUrl = document.getElementById('kLink').value.trim();
 
+            const existing=currentKundeId?kunden.find(k=>String(k.id)===String(currentKundeId)):null;
             const data = {
+                ...(existing || {}),
                 id: currentKundeId || Date.now(),
                 name: name,
                 status: document.getElementById('kStatus').value,

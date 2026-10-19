@@ -138,45 +138,102 @@
 
 
     <div class="modal-overlay" id="terminModal">
-        <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
-            <div class="form-title">System-Eintrag</div>
-            
-<div class="form-group" style="position: relative;">
-                <label>Kunde / Bezeichnung</label>
-                <input type="text" id="terminName" class="cyber-input-full" placeholder="Name tippen..." onkeyup="sucheKundeFuerTermin()" autocomplete="off">
-                <div id="kundenVorschlaege" style="display: none;"></div>
+        <div class="modal-content">
+            <div class="form-title" style="color:var(--neon-cyan)">TERMIN / KUNDE ANLEGEN</div>
+            <div class="customer-mode-toggle" role="group" aria-label="Eingabeart auswählen">
+                <button type="button" id="bookingModeQuick" aria-pressed="true" onclick="setBookingCustomerMode('quick')">⚡ Schnelleingabe</button>
+                <button type="button" id="bookingModeDetail" aria-pressed="false" onclick="setBookingCustomerMode('detail')">📝 Detaileingabe</button>
             </div>
-
-            <div class="form-group"><label>Kategorie-Typ</label><select id="terminKategorie" class="cyber-select"></select></div>
-            
-            <div style="display: flex; gap: 15px; flex-wrap: wrap; background: rgba(5, 217, 232, 0.05); padding: 15px; border-radius: 12px; border: 1px dashed rgba(5,217,232,0.3); margin-bottom: 15px;">
-                <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
-                    <label style="color: var(--neon-gold);">Preis (€)</label>
-                    <input type="number" id="terminPreis" class="cyber-input-full" placeholder="z.B. 150">
+            <p id="bookingModeHint" class="customer-mode-hint">Für neue Kunden reichen Name und Kontaktdaten. Weitere Angaben sind freiwillig.</p>
+            <div class="form-group" style="position:relative">
+                <label class="input-label" for="terminName">Kunde / Bezeichnung</label>
+                <input type="hidden" id="terminKundeId">
+                <input type="text" id="terminName" class="cyber-input-full" placeholder="Name tippen..." oninput="sucheKundeFuerTermin()" autocomplete="off">
+                <div id="kundenVorschlaege" style="display:none"></div>
+            </div>
+            <div class="form-group">
+                <label class="input-label" for="terminKategorie">Kategorie</label>
+                <select id="terminKategorie" class="cyber-select"></select>
+            </div>
+            <div class="booking-price-box">
+                <div class="form-group">
+                    <label class="input-label" for="terminPreis" style="color:var(--neon-gold)">Preis (€)</label>
+                    <input type="number" id="terminPreis" class="cyber-input-full" min="0" step=".01" inputmode="decimal" placeholder="z.B. 150">
                 </div>
-                <div class="form-group" style="flex: 1; min-width: 120px; margin-bottom: 0;">
-                    <label style="color: var(--neon-violet);">Präferenz</label>
+                <div class="form-group">
+                    <label class="input-label" for="terminPraeferenz" style="color:var(--neon-violet)">Präferenz</label>
                     <select id="terminPraeferenz" class="cyber-select">
-                        <option value="none">Keine Angabe</option>
-                        <option value="AO">AO (Alles ohne)</option>
-                        <option value="Save">Save (Mit Schutz)</option>
+                        <option value="none">Noch unbekannt</option>
+                        <option value="AO">AO</option>
+                        <option value="Save">Safe (mit Schutz)</option>
                     </select>
                 </div>
             </div>
-
-            <div class="form-group"><label>Datum</label><input type="date" id="terminDatum" class="cyber-input-full"></div>
-
-            <div style="display:flex; gap:15px;">
-                <div class="form-group" style="flex:1;"><label>Startzeit</label><input type="time" id="terminStart" class="cyber-input-full"></div>
-                <div class="form-group" style="flex:1;"><label>Endzeit</label><input type="time" id="terminEnde" class="cyber-input-full"></div>
+            <div class="form-group">
+                <label class="input-label" for="terminDatum">Datum</label>
+                <div class="calendar-picker-shell">
+                    <div class="calendar-picker-face" aria-hidden="true"><span class="calendar-picker-value" data-for="terminDatum">Datum wählen</span><span>▦</span></div>
+                    <input type="date" id="terminDatum" class="calendar-picker-native" aria-label="Termindatum">
+                </div>
             </div>
-
-            <div class="form-group"><label>Kontakt-Plattform</label><select id="terminPlattform" class="cyber-select" onchange="toggleKontaktFeld()"></select></div>
-            <div class="form-group" id="kontaktContainer" style="display: none;"><label>Nummer / Username</label><input type="text" id="terminKontakt" class="cyber-input-full"></div>
-            <div class="form-group"><label>Notizen</label><textarea id="terminNotizen" class="cyber-input-full" rows="3"></textarea></div>
-
-            <button class="btn-save" onclick="saveAppointment()">SPEICHERN</button>
-            <button onclick="closeModal()" style="width:100%; background:none; border:none; color:#666; margin-top:15px; cursor:pointer; text-transform:uppercase; font-size:1.1rem; letter-spacing:2px; font-weight:bold;">Abbrechen</button>
+            <div class="customer-row">
+                <div class="form-group">
+                    <label class="input-label" for="terminStart">Startzeit</label>
+                    <div class="calendar-picker-shell">
+                        <div class="calendar-picker-face" aria-hidden="true"><span class="calendar-picker-value" data-for="terminStart">Uhrzeit wählen</span><span>◷</span></div>
+                        <input type="time" id="terminStart" class="calendar-picker-native" aria-label="Startzeit">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="input-label" for="terminEnde">Endzeit</label>
+                    <div class="calendar-picker-shell">
+                        <div class="calendar-picker-face" aria-hidden="true"><span class="calendar-picker-value" data-for="terminEnde">Uhrzeit wählen</span><span>◷</span></div>
+                        <input type="time" id="terminEnde" class="calendar-picker-native" aria-label="Endzeit">
+                    </div>
+                </div>
+            </div>
+            <div class="customer-row single">
+                <div class="form-group">
+                    <label class="input-label" for="terminPlattform">Kontakt-Plattform</label>
+                    <select id="terminPlattform" class="cyber-select" onchange="toggleKontaktFeld()"></select>
+                </div>
+            </div>
+            <div class="form-group" id="kontaktContainer" style="display:none">
+                <label class="input-label" for="terminKontakt">Nummer / Username</label>
+                <input type="text" id="terminKontakt" class="cyber-input-full" placeholder="Kontakt eingeben">
+            </div>
+            <div class="form-group">
+                <label class="input-label" for="terminNotizen">Terminnotizen</label>
+                <textarea id="terminNotizen" class="cyber-input-full" rows="2" placeholder="Nur für diesen Termin"></textarea>
+            </div>
+            <section class="booking-advanced" id="bookingCustomerAdvanced" hidden>
+                <h3>Zusätzliche Kundenangaben</h3>
+                <p class="customer-mode-hint">Nur ausfüllen, was du bereits weißt. Performance, Bewertungen und No-Shows werden erst nach einem Besuch erfasst.</p>
+                <div class="customer-row">
+                    <div class="form-group">
+                        <label for="terminPlattform2">Kontakt-Plattform 2</label>
+                        <select id="terminPlattform2" class="cyber-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="terminKontakt2">Kontakt 2</label>
+                        <input type="text" id="terminKontakt2" class="cyber-input-full" placeholder="Optional">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="terminProfilLink">Profil-Link</label>
+                    <input type="url" id="terminProfilLink" class="cyber-input-full" placeholder="https://..." autocapitalize="off">
+                </div>
+                <div class="form-group">
+                    <label for="terminVorlieben">Bekannte Vorlieben / Tabus</label>
+                    <textarea id="terminVorlieben" class="cyber-input-full" rows="2" placeholder="Nur bekannte Angaben"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="terminKundenNotizen">Kundennotizen</label>
+                    <textarea id="terminKundenNotizen" class="cyber-input-full" rows="2" placeholder="Allgemeine Notizen zum Kunden"></textarea>
+                </div>
+            </section>
+            <button type="button" class="btn-save" onclick="saveAppointment()">TERMIN SPEICHERN</button>
+            <button type="button" onclick="closeModal()" style="width:100%;border:none;background:none;color:#a2b2bf;min-height:44px;margin-top:9px;cursor:pointer">Abbrechen</button>
         </div>
     </div>
 
